@@ -28,16 +28,52 @@ export class DistributionService {
   }
 
   async simulate(id: number) {
-    const plan = await this.prisma.allocationPlan.update({ where: { id }, data: { status: 'SIMULATED' }, include: { puskesmas: true, items: { include: { obat: true } } } });
+    const plan = await this.prisma.allocationPlan.update({
+      where: { id },
+      data: { status: 'SIMULATED' },
+      include: { puskesmas: true, items: { include: { obat: true } } },
+    });
     const alerts = [];
-    if (plan.puskesmas.rainyAccess === 'TERGANGGU') {
-      alerts.push(await this.prisma.alert.create({ data: { puskesmasId: plan.puskesmasId, type: 'ROUTE_DISRUPTION', severity: 'HIGH', message: 'Route disrupted during rainy season access simulation' } }));
+    const routeRisk = plan.puskesmas.rainyAccess === 'TERGANGGU' || plan.puskesmas.rainyAccess === 'TERBATAS';
+
+    if (routeRisk) {
+      alerts.push(
+        await this.prisma.alert.create({
+          data: {
+            puskesmasId: plan.puskesmasId,
+            type: 'ROUTE_DISRUPTION',
+            severity: 'HIGH',
+            message: `Rainy-season access risk for ${plan.puskesmas.nama}; lead time ${plan.puskesmas.leadTimeHari ?? 0} days`,
+          },
+        }),
+      );
     }
+
     for (const item of plan.items) {
       if (item.obat.perluColdChain && !plan.puskesmas.coldChainReady) {
-        alerts.push(await this.prisma.alert.create({ data: { puskesmasId: plan.puskesmasId, type: 'COLD_CHAIN_MISMATCH', severity: 'CRITICAL', message: `${item.obatId} requires cold chain but puskesmas is not ready` } }));
+        alerts.push(
+          await this.prisma.alert.create({
+            data: {
+              puskesmasId: plan.puskesmasId,
+              type: 'COLD_CHAIN_MISMATCH',
+              severity: 'CRITICAL',
+              message: `${item.obatId} requires cold chain but ${plan.puskesmas.nama} is not cold-chain ready`,
+            },
+          }),
+        );
       }
     }
-    return { plan, alerts };
+
+    return {
+      plan,
+      riskSummary: {
+        rainyAccess: plan.puskesmas.rainyAccess,
+        skorAksesibilitas: plan.puskesmas.skorAksesibilitas,
+        leadTimeHari: plan.puskesmas.leadTimeHari,
+        coldChainReady: plan.puskesmas.coldChainReady,
+        alertCount: alerts.length,
+      },
+      alerts,
+    };
   }
 }
