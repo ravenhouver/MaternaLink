@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.worktrees
+.env
+.env.*
+!.env.example
+coverage
+npm-debug.log
+pnpm-debug.log
+Dockerfile
+docker-compose*.yml
+DATASET DIAGRAM.pdf
+Master Data.pdf
+Problem Research .pdf
+Rancangan.pdf
+docs/superpowers
