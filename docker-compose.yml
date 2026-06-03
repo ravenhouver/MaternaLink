@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: maternalink-postgres
+    environment:
+      POSTGRES_DB: maternalink
+      POSTGRES_USER: maternalink
+      POSTGRES_PASSWORD: maternalink
+    ports:
+      - "5432:5432"
+    volumes:
+      - maternalink-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maternalink -d maternalink"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  maternalink-postgres-data:
