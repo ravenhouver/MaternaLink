@@ -49,4 +49,73 @@ describe('MaternaLink API', () => {
     const listResponse = await request(app.getHttpServer()).get('/api/forecast/runs').expect(200);
     expect(listResponse.body.length).toBeGreaterThan(0);
   });
+
+  it('exposes remote puskesmas logistics metadata from master data', async () => {
+    const response = await request(app.getHttpServer()).get('/api/master/puskesmas').expect(200);
+
+    expect(response.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'PKM-REMOTE-001',
+          kabupatenKota: 'Kab. Manggarai',
+          provinsi: 'NTT',
+          skorAksesibilitas: 1,
+          leadTimeHari: 7,
+          coldChainReady: false,
+        }),
+      ]),
+    );
+  });
+
+  it('stores maternal context fields used by forecast and logistics reasoning', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/inputs/konteks')
+      .send({
+        puskesmasId: 'PKM-REMOTE-001',
+        periode: '2025-04-01',
+        season: 'HUJAN',
+        accessScore: 1,
+        rainyAccess: 'TERGANGGU',
+        routeDisrupted: true,
+        jumlahBumilT1: 10,
+        jumlahBumilT2: 15,
+        jumlahBumilT3: 12,
+        statusKlb: false,
+        riwayatStockout6Bln: { 'OBT-010': 2 },
+      })
+      .expect(201);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        puskesmasId: 'PKM-REMOTE-001',
+        jumlahBumilT1: 10,
+        jumlahBumilT2: 15,
+        jumlahBumilT3: 12,
+        statusKlb: false,
+        riwayatStockout6Bln: { 'OBT-010': 2 },
+      }),
+    );
+  });
+
+  it('simulates route and cold-chain alerts for remote allocation plan', async () => {
+    const planResponse = await request(app.getHttpServer())
+      .post('/api/distribution/plans')
+      .send({
+        puskesmasId: 'PKM-REMOTE-001',
+        periode: '2025-04-01',
+        items: [{ obatId: 'OBT-010', jumlah: 12, note: 'Emergency preeclampsia stock' }],
+      })
+      .expect(201);
+
+    const simulationResponse = await request(app.getHttpServer())
+      .post(`/api/distribution/plans/${planResponse.body.id}/simulate`)
+      .expect(201);
+
+    expect(simulationResponse.body.alerts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'ROUTE_DISRUPTION', severity: 'HIGH' }),
+        expect.objectContaining({ type: 'COLD_CHAIN_MISMATCH', severity: 'CRITICAL' }),
+      ]),
+    );
+  });
 });
