@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { DiagnosisSource, RainyAccess, Season } from '@prisma/client';
-import { IsBoolean, IsDateString, IsEnum, IsInt, IsString, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsObject, IsOptional, IsString, Min } from 'class-validator';
 
 export class DiagnosisInputDto {
   @ApiProperty({ example: 'PKM-001' }) @IsString() puskesmasId!: string;
@@ -24,6 +24,11 @@ export class KonteksInputDto {
   @ApiProperty({ example: 0 }) @IsInt() @Min(0) accessScore!: number;
   @ApiProperty({ enum: RainyAccess }) @IsEnum(RainyAccess) rainyAccess!: RainyAccess;
   @ApiProperty({ example: false }) @IsBoolean() routeDisrupted!: boolean;
+  @ApiProperty({ example: 10, required: false }) @IsOptional() @IsInt() @Min(0) jumlahBumilT1?: number;
+  @ApiProperty({ example: 15, required: false }) @IsOptional() @IsInt() @Min(0) jumlahBumilT2?: number;
+  @ApiProperty({ example: 12, required: false }) @IsOptional() @IsInt() @Min(0) jumlahBumilT3?: number;
+  @ApiProperty({ example: false, required: false }) @IsOptional() @IsBoolean() statusKlb?: boolean;
+  @ApiProperty({ example: { 'OBT-010': 2 }, required: false }) @IsOptional() @IsObject() riwayatStockout6Bln?: Record<string, number>;
 }
 
 export class StokInputDto {
@@ -38,5 +43,10 @@ export class StokInputDto {
 export class AnamnesisInputDto {
   @ApiProperty({ example: 'PKM-001' }) @IsString() puskesmasId!: string;
   @ApiProperty({ example: '2025-03-01' }) @IsDateString() periode!: string;
-  @ApiProperty({ example: 'Ibu hamil mengeluh lemas dan pusing.' }) @IsString() teks!: string;
+  @ApiProperty({ example: '/audio/pkm001_202504_001.webm', required: false }) @IsOptional() @IsString() audioPath?: string;
+  @ApiProperty({ example: 'Ibu hamil mengeluh lemas dan pusing.' }) @IsString() transkrip!: string;
+  @ApiProperty({ example: { gejala: 'Demam tinggi', confidence: 0.95 }, required: false }) @IsOptional() @IsObject() gejalaExtracted?: Record<string, unknown>;
+  @ApiProperty({ example: { gejala: 'Demam tinggi', confirmed: true }, required: false }) @IsOptional() @IsObject() gejalaValidated?: Record<string, unknown>;
+  @ApiProperty({ example: 'whisper-small', required: false }) @IsOptional() @IsString() sttModel?: string;
+  @ApiProperty({ example: 'bert-ner-symptom', required: false }) @IsOptional() @IsString() extractionModel?: string;
 }

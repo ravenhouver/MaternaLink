@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AnamnesisInputDto, DiagnosisInputDto, GejalaInputDto, KonteksInputDto, StokInputDto } from './inputs.dto';
 
@@ -27,8 +28,18 @@ export class InputsService {
   createKonteks(data: KonteksInputDto) {
     return this.prisma.konteksPeriode.upsert({
       where: { puskesmasId_periode: { puskesmasId: data.puskesmasId, periode: toDate(data.periode) } },
-      update: { season: data.season, accessScore: data.accessScore, rainyAccess: data.rainyAccess, routeDisrupted: data.routeDisrupted },
-      create: { ...data, periode: toDate(data.periode) },
+      update: {
+        season: data.season,
+        accessScore: data.accessScore,
+        rainyAccess: data.rainyAccess,
+        routeDisrupted: data.routeDisrupted,
+        jumlahBumilT1: data.jumlahBumilT1,
+        jumlahBumilT2: data.jumlahBumilT2,
+        jumlahBumilT3: data.jumlahBumilT3,
+        statusKlb: data.statusKlb ?? false,
+        riwayatStockout6Bln: data.riwayatStockout6Bln,
+      },
+      create: { ...data, periode: toDate(data.periode), statusKlb: data.statusKlb ?? false },
     });
   }
 
@@ -41,6 +52,17 @@ export class InputsService {
   }
 
   createAnamnesis(data: AnamnesisInputDto) {
-    return this.prisma.anamnesisRaw.create({ data: { ...data, periode: toDate(data.periode) } });
+    return this.prisma.anamnesisRaw.create({
+      data: {
+        puskesmasId: data.puskesmasId,
+        periode: toDate(data.periode),
+        audioPath: data.audioPath,
+        transkrip: data.transkrip,
+        gejalaExtracted: data.gejalaExtracted as Prisma.InputJsonValue | undefined,
+        gejalaValidated: data.gejalaValidated as Prisma.InputJsonValue | undefined,
+        sttModel: data.sttModel,
+        extractionModel: data.extractionModel,
+      },
+    });
   }
 }

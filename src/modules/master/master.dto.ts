@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MedicineCategory, MedicineType, PuskesmasType, RainyAccess } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CreatePuskesmasDto {
   @ApiProperty({ example: 'PKM-002' })
@@ -15,6 +15,16 @@ export class CreatePuskesmasDto {
   @IsString()
   kecamatan!: string;
 
+  @ApiPropertyOptional({ example: 'Kab. Manggarai' })
+  @IsOptional()
+  @IsString()
+  kabupatenKota?: string;
+
+  @ApiPropertyOptional({ example: 'NTT' })
+  @IsOptional()
+  @IsString()
+  provinsi?: string;
+
   @ApiProperty({ enum: PuskesmasType })
   @IsEnum(PuskesmasType)
   tipe!: PuskesmasType;
@@ -28,6 +38,41 @@ export class CreatePuskesmasDto {
   @IsOptional()
   @IsBoolean()
   coldChainReady?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  statusEndemisMalaria?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  ketersediaanLab?: boolean;
+
+  @ApiPropertyOptional({ example: 500 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  kapasitasSimpanObat?: number;
+
+  @ApiPropertyOptional({ example: 85.5 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  jarakKeIfkKm?: number;
+
+  @ApiPropertyOptional({ example: 7 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  leadTimeHari?: number;
+
+  @ApiPropertyOptional({ example: 1, minimum: 1, maximum: 3 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  skorAksesibilitas?: number;
 }
 
 export class CreateObatDto {
@@ -55,4 +100,16 @@ export class CreateObatDto {
   @ApiProperty({ example: 'tablet' })
   @IsString()
   satuan!: string;
+
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  dosisStandarHarian?: number;
+
+  @ApiPropertyOptional({ example: 14 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  durasiPengobatanHari?: number;
 }
