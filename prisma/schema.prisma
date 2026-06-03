@@ -79,23 +79,31 @@ enum AllocationStatus {
 }
 
 model Puskesmas {
-  id              String           @id @map("id")
-  nama            String           @unique @map("nama")
-  kecamatan       String           @map("kecamatan")
-  tipe            PuskesmasType    @map("tipe")
-  rainyAccess     RainyAccess      @default(AMAN) @map("rainy_access")
-  coldChainReady  Boolean          @default(false) @map("cold_chain_ready")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  diagnosis       DiagnosisPeriode[]
-  gejalaPeriode   GejalaPeriode[]
-  anamnesisRaw    AnamnesisRaw[]
-  konteksPeriode  KonteksPeriode[]
-  stok            StokPuskesmas[]
-  forecastRuns    ForecastRun[]
-  lplpo           LplpoPrediktif[]
-  allocationPlans AllocationPlan[]
-  alerts          Alert[]
+  id                   String             @id @map("id")
+  nama                 String             @unique @map("nama")
+  kecamatan            String             @map("kecamatan")
+  kabupatenKota        String?            @map("kabupaten_kota")
+  provinsi             String?            @map("provinsi")
+  tipe                 PuskesmasType      @map("tipe")
+  statusEndemisMalaria Boolean            @default(false) @map("status_endemis_malaria")
+  ketersediaanLab      Boolean            @default(false) @map("ketersediaan_lab")
+  coldChainReady       Boolean            @default(false) @map("cold_chain_ready")
+  kapasitasSimpanObat  Int?               @map("kapasitas_simpan_obat")
+  jarakKeIfkKm         Float?             @map("jarak_ke_ifk_km")
+  leadTimeHari         Float?             @map("lead_time_hari")
+  skorAksesibilitas    Int                @default(2) @map("skor_aksesibilitas")
+  rainyAccess          RainyAccess        @default(AMAN) @map("rainy_access")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  diagnosis            DiagnosisPeriode[]
+  gejalaPeriode        GejalaPeriode[]
+  anamnesisRaw         AnamnesisRaw[]
+  konteksPeriode       KonteksPeriode[]
+  stok                 StokPuskesmas[]
+  forecastRuns         ForecastRun[]
+  lplpo                LplpoPrediktif[]
+  allocationPlans      AllocationPlan[]
+  alerts               Alert[]
 
   @@map("puskesmas")
 }
@@ -107,6 +115,8 @@ model Obat {
   tipe                MedicineType         @map("tipe")
   perluColdChain      Boolean              @default(false) @map("perlu_cold_chain")
   satuan              String               @map("satuan")
+  dosisStandarHarian  Float?               @map("dosis_standar_harian")
+  durasiPengobatanHari Int?                @map("durasi_pengobatan_hari")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   kondisiObat         KondisiObat[]
@@ -146,12 +156,15 @@ model Gejala {
 }
 
 model KondisiObat {
-  id        Int      @id @default(autoincrement()) @map("id")
-  kondisiId String   @map("kondisi_id")
-  obatId    String   @map("obat_id")
-  dosis     String?  @map("dosis")
-  kondisi   Kondisi  @relation(fields: [kondisiId], references: [id])
-  obat      Obat     @relation(fields: [obatId], references: [id])
+  id                  Int      @id @default(autoincrement()) @map("id")
+  kondisiId           String   @map("kondisi_id")
+  obatId              String   @map("obat_id")
+  dosis               String?  @map("dosis")
+  trimesterApplicable String?  @map("trimester_applicable")
+  prioritas           Int      @default(1) @map("prioritas")
+  catatan             String?  @map("catatan")
+  kondisi             Kondisi  @relation(fields: [kondisiId], references: [id])
+  obat                Obat     @relation(fields: [obatId], references: [id])
 
   @@unique([kondisiId, obatId])
   @@map("kondisi_obat")
@@ -162,6 +175,8 @@ model GejalaKondisi {
   gejalaId  String   @map("gejala_id")
   kondisiId String   @map("kondisi_id")
   bobot     Int      @default(1) @map("bobot")
+  priorProbability Float?  @map("prior_probability")
+  bobotTanpaLab    Float?  @map("bobot_tanpa_lab")
   gejala    Gejala   @relation(fields: [gejalaId], references: [id])
   kondisi   Kondisi  @relation(fields: [kondisiId], references: [id])
 
@@ -197,12 +212,17 @@ model GejalaPeriode {
 }
 
 model AnamnesisRaw {
-  id          Int       @id @default(autoincrement()) @map("id")
-  puskesmasId String    @map("puskesmas_id")
-  periode     DateTime  @map("periode") @db.Date
-  teks        String    @map("teks")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  puskesmas   Puskesmas @relation(fields: [puskesmasId], references: [id])
+  id              Int       @id @default(autoincrement()) @map("id")
+  puskesmasId     String    @map("puskesmas_id")
+  periode         DateTime  @map("periode") @db.Date
+  audioPath       String?   @map("audio_path")
+  transkrip       String    @map("transkrip")
+  gejalaExtracted Json?     @map("gejala_extracted")
+  gejalaValidated Json?     @map("gejala_validated")
+  sttModel        String?   @map("stt_model")
+  extractionModel String?   @map("extraction_model")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  puskesmas       Puskesmas @relation(fields: [puskesmasId], references: [id])
 
   @@map("anamnesis_raw")
 }
@@ -215,6 +235,11 @@ model KonteksPeriode {
   accessScore    Int          @default(0) @map("access_score")
   rainyAccess    RainyAccess  @default(AMAN) @map("rainy_access")
   routeDisrupted Boolean      @default(false) @map("route_disrupted")
+  jumlahBumilT1  Int?         @map("jumlah_bumil_t1")
+  jumlahBumilT2  Int?         @map("jumlah_bumil_t2")
+  jumlahBumilT3  Int?         @map("jumlah_bumil_t3")
+  statusKlb      Boolean      @default(false) @map("status_klb")
+  riwayatStockout6Bln Json?   @map("riwayat_stockout_6bln")
   puskesmas      Puskesmas    @relation(fields: [puskesmasId], references: [id])
 
   @@unique([puskesmasId, periode])
