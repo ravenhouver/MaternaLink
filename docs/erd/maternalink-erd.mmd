@@ -2,13 +2,13 @@ erDiagram
   PUSKESMAS ||--o{ DIAGNOSIS_PERIODE : records
   PUSKESMAS ||--o{ GEJALA_PERIODE : records
   PUSKESMAS ||--o{ ANAMNESIS_RAW : records
-  PUSKESMAS ||--o{ KONTEKS_PERIODE : records
-  PUSKESMAS ||--o{ STOK_PUSKESMAS : records
-  PUSKESMAS ||--o{ FORECAST_RUN : runs
+  PUSKESMAS ||--o{ KONTEKS_PERIODE : contextualizes
+  PUSKESMAS ||--o{ STOK_PUSKESMAS : stocks
+  PUSKESMAS ||--o{ FORECAST_RUN : forecasts
   PUSKESMAS ||--o{ LPLPO_PREDIKTIF : requests
   PUSKESMAS ||--o{ ALLOCATION_PLAN : receives
-  PUSKESMAS ||--o{ ALERT : receives
-  OBAT ||--o{ KONDISI_OBAT : mapped_to
+  PUSKESMAS ||--o{ ALERT : triggers
+  OBAT ||--o{ KONDISI_OBAT : treats
   KONDISI ||--o{ KONDISI_OBAT : requires
   GEJALA ||--o{ GEJALA_KONDISI : indicates
   KONDISI ||--o{ GEJALA_KONDISI : suggested_by

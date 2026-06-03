@@ -2,6 +2,22 @@
 
 Backend-only MaternaLink prototype with NestJS, Prisma, PostgreSQL, Swagger, Jest, and Supertest.
 
+## Design Rationale
+
+This repository implements a normalized backend MVP for the MaternaLink problem research, not a 1:1 copy of the draft dataset PDFs. The PDFs are reference material for domain vocabulary and candidate fields. The implemented schema focuses on the stable workflow needed for the assignment: database setup, API setup, ERD, Swagger, and a demonstrable supply-chain flow.
+
+Core flow:
+
+```text
+puskesmas + obat + kondisi/gejala
+-> monthly clinical/context/stock inputs
+-> deterministic forecast run
+-> predictive LPLPO request
+-> allocation simulation and alerts
+```
+
+The forecast is intentionally deterministic for now. This keeps DB/API/Swagger verification reliable before replacing the placeholder with a real ML model.
+
 ## Setup
 
 ```powershell
@@ -15,6 +31,8 @@ pnpm run start:dev
 ```
 
 Swagger runs at `http://localhost:3000/api/docs`.
+
+Use `docs/demo-flow.md` for the recommended presentation script.
 
 The compose file maps PostgreSQL to host port `55432` because many Windows machines already run local PostgreSQL on `5432`. Container credentials remain `maternalink` / `maternalink`, database `maternalink`.
 
