@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PuskesmasType {
+  RAWAT_INAP
+  NON_RAWAT_INAP
+}
+
+enum RainyAccess {
+  AMAN
+  TERBATAS
+  TERGANGGU
+}
+
+enum MedicineCategory {
+  OBAT
+  VAKSIN
+  ALAT_KESEHATAN
+}
+
+enum MedicineType {
+  TABLET
+  SIRUP
+  INJEKSI
+  KAPSUL
+  CAIRAN
+  LAINNYA
+}
+
+enum DiagnosisSource {
+  DOKTER
+  BIDAN
+  SISTEM
+  IMPORT
+}
+
+enum Season {
+  KEMARAU
+  HUJAN
+  PANCAROBA
+}
+
+enum Confidence {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ForecastStatus {
+  DRAFT
+  COMPLETED
+  FAILED
+}
+
+enum AlertType {
+  ROUTE_DISRUPTION
+  COLD_CHAIN_MISMATCH
+  LOW_STOCK
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AllocationStatus {
+  DRAFT
+  SIMULATED
+  APPROVED
+  CANCELLED
+}
+
+model Puskesmas {
+  id              String           @id @map("id")
+  nama            String           @unique @map("nama")
+  kecamatan       String           @map("kecamatan")
+  tipe            PuskesmasType    @map("tipe")
+  rainyAccess     RainyAccess      @default(AMAN) @map("rainy_access")
+  coldChainReady  Boolean          @default(false) @map("cold_chain_ready")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  diagnosis       DiagnosisPeriode[]
+  gejalaPeriode   GejalaPeriode[]
+  anamnesisRaw    AnamnesisRaw[]
+  konteksPeriode  KonteksPeriode[]
+  stok            StokPuskesmas[]
+  forecastRuns    ForecastRun[]
+  lplpo           LplpoPrediktif[]
+  allocationPlans AllocationPlan[]
+  alerts          Alert[]
+
+  @@map("puskesmas")
+}
+
+model Obat {
+  id                  String               @id @map("id")
+  nama                String               @unique @map("nama")
+  kategori            MedicineCategory     @map("kategori")
+  tipe                MedicineType         @map("tipe")
+  perluColdChain      Boolean              @default(false) @map("perlu_cold_chain")
+  satuan              String               @map("satuan")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  kondisiObat         KondisiObat[]
+  stok                StokPuskesmas[]
+  prediksi            PrediksiStok[]
+  lplpo               LplpoPrediktif[]
+  logRekonsiliasi     LogRekonsiliasi[]
+  allocationPlanItems AllocationPlanItem[]
+
+  @@map("obat")
+}
+
+model Kondisi {
+  id              String             @id @map("id")
+  nama            String             @unique @map("nama")
+  deskripsi       String?            @map("deskripsi")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  kondisiObat     KondisiObat[]
+  gejalaKondisi   GejalaKondisi[]
+  diagnosis       DiagnosisPeriode[]
+  prediksi        PrediksiStok[]
+
+  @@map("kondisi")
+}
+
+model Gejala {
+  id            String           @id @map("id")
+  nama          String           @unique @map("nama")
+  deskripsi     String?          @map("deskripsi")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  gejalaKondisi GejalaKondisi[]
+  gejalaPeriode GejalaPeriode[]
+
+  @@map("gejala")
+}
+
+model KondisiObat {
+  id        Int      @id @default(autoincrement()) @map("id")
+  kondisiId String   @map("kondisi_id")
+  obatId    String   @map("obat_id")
+  dosis     String?  @map("dosis")
+  kondisi   Kondisi  @relation(fields: [kondisiId], references: [id])
+  obat      Obat     @relation(fields: [obatId], references: [id])
+
+  @@unique([kondisiId, obatId])
+  @@map("kondisi_obat")
+}
+
+model GejalaKondisi {
+  id        Int      @id @default(autoincrement()) @map("id")
+  gejalaId  String   @map("gejala_id")
+  kondisiId String   @map("kondisi_id")
+  bobot     Int      @default(1) @map("bobot")
+  gejala    Gejala   @relation(fields: [gejalaId], references: [id])
+  kondisi   Kondisi  @relation(fields: [kondisiId], references: [id])
+
+  @@unique([gejalaId, kondisiId])
+  @@map("gejala_kondisi")
+}
+
+model DiagnosisPeriode {
+  id          Int             @id @default(autoincrement()) @map("id")
+  puskesmasId String          @map("puskesmas_id")
+  kondisiId   String          @map("kondisi_id")
+  periode     DateTime        @map("periode") @db.Date
+  jumlahKasus Int             @map("jumlah_kasus")
+  source      DiagnosisSource @default(IMPORT) @map("source")
+  puskesmas   Puskesmas       @relation(fields: [puskesmasId], references: [id])
+  kondisi     Kondisi         @relation(fields: [kondisiId], references: [id])
+
+  @@unique([puskesmasId, kondisiId, periode])
+  @@map("diagnosis_periode")
+}
+
+model GejalaPeriode {
+  id          Int       @id @default(autoincrement()) @map("id")
+  puskesmasId String    @map("puskesmas_id")
+  gejalaId    String    @map("gejala_id")
+  periode     DateTime  @map("periode") @db.Date
+  jumlah      Int       @map("jumlah")
+  puskesmas   Puskesmas @relation(fields: [puskesmasId], references: [id])
+  gejala      Gejala    @relation(fields: [gejalaId], references: [id])
+
+  @@unique([puskesmasId, gejalaId, periode])
+  @@map("gejala_periode")
+}
+
+model AnamnesisRaw {
+  id          Int       @id @default(autoincrement()) @map("id")
+  puskesmasId String    @map("puskesmas_id")
+  periode     DateTime  @map("periode") @db.Date
+  teks        String    @map("teks")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  puskesmas   Puskesmas @relation(fields: [puskesmasId], references: [id])
+
+  @@map("anamnesis_raw")
+}
+
+model KonteksPeriode {
+  id             Int          @id @default(autoincrement()) @map("id")
+  puskesmasId    String       @map("puskesmas_id")
+  periode        DateTime     @map("periode") @db.Date
+  season         Season       @map("season")
+  accessScore    Int          @default(0) @map("access_score")
+  rainyAccess    RainyAccess  @default(AMAN) @map("rainy_access")
+  routeDisrupted Boolean      @default(false) @map("route_disrupted")
+  puskesmas      Puskesmas    @relation(fields: [puskesmasId], references: [id])
+
+  @@unique([puskesmasId, periode])
+  @@map("konteks_periode")
+}
+
+model StokPuskesmas {
+  id              Int       @id @default(autoincrement()) @map("id")
+  puskesmasId     String    @map("puskesmas_id")
+  obatId          String    @map("obat_id")
+  periode         DateTime  @map("periode") @db.Date
+  stokAwal        Int       @map("stok_awal")
+  konsumsiPeriode Int       @map("konsumsi_periode")
+  stokSaatIni     Int       @map("stok_saat_ini")
+  puskesmas       Puskesmas @relation(fields: [puskesmasId], references: [id])
+  obat            Obat      @relation(fields: [obatId], references: [id])
+
+  @@unique([puskesmasId, obatId, periode])
+  @@map("stok_puskesmas")
+}
+
+model ForecastRun {
+  id          Int             @id @default(autoincrement()) @map("id")
+  puskesmasId String          @map("puskesmas_id")
+  periode     DateTime        @map("periode") @db.Date
+  status      ForecastStatus  @default(COMPLETED) @map("status")
+  confidence  Confidence      @default(MEDIUM) @map("confidence")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  puskesmas   Puskesmas       @relation(fields: [puskesmasId], references: [id])
+  prediksi    PrediksiStok[]
+
+  @@map("forecast_run")
+}
+
+model PrediksiStok {
+  id                Int             @id @default(autoincrement()) @map("id")
+  forecastRunId     Int             @map("forecast_run_id")
+  obatId            String          @map("obat_id")
+  kondisiId         String?         @map("kondisi_id")
+  kebutuhanObat     Int             @map("kebutuhan_obat")
+  bufferPersen      Float           @map("buffer_persen")
+  totalRekomendasi  Int             @map("total_rekomendasi")
+  stokSaatIni       Int             @map("stok_saat_ini")
+  konsumsiPeriode   Int             @map("konsumsi_periode")
+  confidence        Confidence      @default(MEDIUM) @map("confidence")
+  forecastRun       ForecastRun     @relation(fields: [forecastRunId], references: [id])
+  obat              Obat            @relation(fields: [obatId], references: [id])
+  kondisi           Kondisi?        @relation(fields: [kondisiId], references: [id])
+  lplpo             LplpoPrediktif[]
+
+  @@unique([forecastRunId, obatId])
+  @@map("prediksi_stok")
+}
+
+model LplpoPrediktif {
+  id              Int           @id @default(autoincrement()) @map("id")
+  prediksiStokId  Int           @map("prediksi_stok_id")
+  puskesmasId     String        @map("puskesmas_id")
+  obatId          String        @map("obat_id")
+  periode         DateTime      @map("periode") @db.Date
+  jumlahDiminta   Int           @map("jumlah_diminta")
+  daysOfStock     Float?        @map("days_of_stock")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  prediksiStok    PrediksiStok  @relation(fields: [prediksiStokId], references: [id])
+  puskesmas       Puskesmas     @relation(fields: [puskesmasId], references: [id])
+  obat            Obat          @relation(fields: [obatId], references: [id])
+
+  @@unique([prediksiStokId])
+  @@map("lplpo_prediktif")
+}
+
+model LogRekonsiliasi {
+  id          Int      @id @default(autoincrement()) @map("id")
+  obatId      String   @map("obat_id")
+  periode     DateTime @map("periode") @db.Date
+  catatan     String   @map("catatan")
+  createdAt   DateTime @default(now()) @map("created_at")
+  obat        Obat     @relation(fields: [obatId], references: [id])
+
+  @@map("log_rekonsiliasi")
+}
+
+model AllocationPlan {
+  id          Int                  @id @default(autoincrement()) @map("id")
+  puskesmasId String               @map("puskesmas_id")
+  periode     DateTime             @map("periode") @db.Date
+  status      AllocationStatus     @default(DRAFT) @map("status")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  puskesmas   Puskesmas            @relation(fields: [puskesmasId], references: [id])
+  items       AllocationPlanItem[]
+
+  @@map("allocation_plan")
+}
+
+model AllocationPlanItem {
+  id               Int            @id @default(autoincrement()) @map("id")
+  allocationPlanId Int            @map("allocation_plan_id")
+  obatId           String         @map("obat_id")
+  jumlah           Int            @map("jumlah")
+  note             String?        @map("note")
+  allocationPlan   AllocationPlan @relation(fields: [allocationPlanId], references: [id])
+  obat             Obat           @relation(fields: [obatId], references: [id])
+
+  @@map("allocation_plan_item")
+}
+
+model Alert {
+  id          Int           @id @default(autoincrement()) @map("id")
+  puskesmasId String        @map("puskesmas_id")
+  type        AlertType     @map("type")
+  severity    AlertSeverity @map("severity")
+  message     String        @map("message")
+  resolved    Boolean       @default(false) @map("resolved")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  puskesmas   Puskesmas     @relation(fields: [puskesmasId], references: [id])
+
+  @@map("alert")
+}

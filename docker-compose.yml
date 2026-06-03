@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: maternalink
       POSTGRES_PASSWORD: maternalink
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - maternalink-postgres-data:/var/lib/postgresql/data
     healthcheck:
