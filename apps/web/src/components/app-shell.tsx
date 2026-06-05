@@ -1,15 +1,17 @@
 'use client';
 
-import {
-  AlertOutlined,
-  AppstoreOutlined,
-  BarChartOutlined,
-  DatabaseOutlined,
-  FormOutlined,
-  MedicineBoxOutlined,
-} from '@ant-design/icons';
-import { ConfigProvider, Layout, Menu, Typography, theme } from 'antd';
-import type { MenuProps } from 'antd';
+import AlertOutlined from '@ant-design/icons/AlertOutlined';
+import AppstoreOutlined from '@ant-design/icons/AppstoreOutlined';
+import BarChartOutlined from '@ant-design/icons/BarChartOutlined';
+import DatabaseOutlined from '@ant-design/icons/DatabaseOutlined';
+import FormOutlined from '@ant-design/icons/FormOutlined';
+import MedicineBoxOutlined from '@ant-design/icons/MedicineBoxOutlined';
+import ConfigProvider from 'antd/es/config-provider';
+import Layout from 'antd/es/layout';
+import Menu from 'antd/es/menu';
+import type { MenuProps } from 'antd/es/menu';
+import theme from 'antd/es/theme';
+import Typography from 'antd/es/typography';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
