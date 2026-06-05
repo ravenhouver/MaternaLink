@@ -128,11 +128,18 @@ Compose will run:
 4. `prisma migrate deploy` when the API container starts.
 5. Demo seed data when `RUN_SEED=true`.
 6. The NestJS API on port `3000`.
+7. The Next.js web dashboard on port `3001`.
 
 Open Swagger UI:
 
 ```text
 http://localhost:3000/api/docs
+```
+
+Open web dashboard:
+
+```text
+http://localhost:3001
 ```
 
 ### 3. Optional local development
@@ -183,7 +190,7 @@ http://localhost:3001
 
 ## Docker Local Usage
 
-This project can run fully through Docker Compose. The `api` service builds the NestJS image, waits for PostgreSQL to become healthy, runs `prisma migrate deploy`, runs demo seed data when `RUN_SEED=true`, and then starts the production API.
+This project can run fully through Docker Compose. The `api` service builds the NestJS image, waits for PostgreSQL to become healthy, runs `prisma migrate deploy`, runs demo seed data when `RUN_SEED=true`, and then starts the production API. The `web` service builds the Next.js dashboard and serves it on port `3001`.
 
 ### Start full stack
 
@@ -203,6 +210,12 @@ Swagger UI:
 http://localhost:3000/api/docs
 ```
 
+Web dashboard:
+
+```text
+http://localhost:3001
+```
+
 ### Run in background
 
 ```bash
@@ -219,6 +232,7 @@ Expected services:
 
 ```text
 api        Up   0.0.0.0:3000->3000/tcp
+web        Up   0.0.0.0:3001->3001/tcp
 postgres   Up   0.0.0.0:55432->5432/tcp
 ```
 
@@ -226,6 +240,7 @@ postgres   Up   0.0.0.0:55432->5432/tcp
 
 ```bash
 docker compose logs -f api
+docker compose logs -f web
 docker compose logs -f postgres
 ```
 
