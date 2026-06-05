@@ -99,8 +99,9 @@ http://localhost:3000/api/docs
 | API Docs | **Swagger / OpenAPI** |
 | Validation | **class-validator**, **class-transformer** |
 | Testing | **Jest**, **Supertest** |
+| Frontend | **Next.js**, **React**, **Ant Design** |
 | Local Infra | **Docker Compose** for API and PostgreSQL |
-| Package Manager | **pnpm** |
+| Package Manager | **pnpm workspaces** |
 
 ---
 
@@ -136,16 +137,29 @@ http://localhost:3000/api/docs
 
 ### 3. Optional local development
 
-Use these commands if you want to run the API directly on the host machine during development.
+Use these commands if you want to run the API and web dashboard directly on the host machine during development.
 
 ```bash
 pnpm install
-copy .env.example .env
+copy apps\api\.env.example apps\api\.env
 docker compose up -d postgres
 pnpm run prisma:generate
 pnpm run prisma:migrate -- --name init_normalized_schema
 pnpm run prisma:seed
-pnpm run start:dev
+pnpm run dev:api
+```
+
+In a second terminal:
+
+```bash
+copy apps\web\.env.example apps\web\.env
+pnpm run dev:web
+```
+
+Web dashboard:
+
+```text
+http://localhost:3001
 ```
 
 ---
@@ -161,7 +175,7 @@ pnpm run start:dev
 ### Environment Rules
 
 - Do not commit `.env` files containing real production values.
-- Use `.env.example` only for local placeholder configuration.
+- Use `apps/api/.env.example` and `apps/web/.env.example` only for local placeholder configuration.
 - Do not store production passwords, tokens, secret keys, private keys, or credentials in the repository.
 - Update `DATABASE_URL` if your local PostgreSQL port differs from the default setup.
 
@@ -250,9 +264,13 @@ postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public
 
 | Command | Description |
 |---|---|
-| `pnpm run start:dev` | Run NestJS development mode with watch. |
-| `pnpm run start` | Run the compiled app from `dist/src/main.js`. |
-| `pnpm run build` | Build the NestJS application. |
+| `pnpm run dev` | Run API and web workspaces in development mode. |
+| `pnpm run dev:api` | Run NestJS development mode with watch. |
+| `pnpm run dev:web` | Run the Next.js dashboard on port `3001`. |
+| `pnpm run start:api` | Run the compiled API from `apps/api/dist/src/main.js`. |
+| `pnpm run build` | Build the API and web workspaces. |
+| `pnpm run build:api` | Build the NestJS API workspace. |
+| `pnpm run build:web` | Build the Next.js web workspace. |
 | `pnpm run test:e2e` | Run Jest + Supertest end-to-end tests. |
 | `pnpm run prisma:generate` | Generate Prisma Client. |
 | `pnpm run prisma:migrate` | Run Prisma development migrations. |
@@ -264,9 +282,10 @@ Recommended validation before merge:
 
 ```bash
 pnpm run prisma:generate
-pnpm prisma migrate status
+pnpm --filter @maternalink/api prisma migrate status
 pnpm run prisma:seed
-pnpm run build
+pnpm run build:api
+pnpm run build:web
 pnpm run test:e2e
 ```
 
@@ -275,28 +294,34 @@ pnpm run test:e2e
 ## Project Structure
 
 ```text
-prisma/
-  schema.prisma                    # Database schema
-  seed.ts                          # Demo seed data
+apps/
+  api/
+    prisma/
+      schema.prisma                # Database schema
+      seed.ts                      # Demo seed data
+    src/
+      main.ts                      # Nest bootstrap, global prefix, Swagger setup
+      app.module.ts                # Root application module
+      prisma/                      # Prisma module and service
+      modules/
+        master/                    # Master data API
+        inputs/                    # Monthly input API
+        forecast/                  # Forecast API
+        lplpo/                     # Predictive LPLPO API
+        distribution/              # Allocation and alert API
+    test/
+      app.e2e-spec.ts              # End-to-end API tests
+  web/
+    src/app/                       # Next.js App Router routes
+    src/components/                # Dashboard shell and page components
+    src/lib/api.ts                 # API base URL and reachability helper
 Dockerfile                         # Production image for the NestJS API
 docker-compose.yml                 # Full local stack: API + PostgreSQL
-docker-entrypoint.sh               # Wait for DB, deploy migrations, seed, start API
-src/
-  main.ts                          # Nest bootstrap, global prefix, Swagger setup
-  app.module.ts                    # Root application module
-  prisma/                          # Prisma module and service
-  modules/
-    master/                        # Master data API
-    inputs/                        # Monthly input API
-    forecast/                      # Forecast API
-    lplpo/                         # Predictive LPLPO API
-    distribution/                  # Allocation and alert API
+pnpm-workspace.yaml                # pnpm workspace packages
 docs/
   api/openapi-notes.md             # OpenAPI notes
   erd/maternalink-erd.mmd          # Mermaid ERD
   demo-flow.md                     # Presentation demo script
-test/
-  app.e2e-spec.ts                  # End-to-end API tests
 ```
 
 ---
@@ -548,16 +573,18 @@ Recommended demo order:
 | Test Command | Description |
 |---|---|
 | `pnpm run test:e2e` | Run all end-to-end API tests. |
-| `pnpm run build` | Verify TypeScript and NestJS build output. |
-| `pnpm prisma migrate status` | Check database migration status. |
+| `pnpm run build:api` | Verify TypeScript and NestJS build output. |
+| `pnpm run build:web` | Verify Next.js dashboard build output. |
+| `pnpm --filter @maternalink/api prisma migrate status` | Check database migration status. |
 
 Full backend check:
 
 ```bash
 pnpm run prisma:generate
-pnpm prisma migrate status
+pnpm --filter @maternalink/api prisma migrate status
 pnpm run prisma:seed
-pnpm run build
+pnpm run build:api
+pnpm run build:web
 pnpm run test:e2e
 ```
 
@@ -589,7 +616,7 @@ Check with:
 ```bash
 docker compose ps
 docker compose logs postgres
-pnpm prisma migrate status
+pnpm --filter @maternalink/api prisma migrate status
 ```
 
 ### Migration fails because the database contains old local data
@@ -628,12 +655,14 @@ The global validation pipe uses whitelist mode and rejects fields that are not d
 ## Code Conventions
 
 - Use TypeScript for all application source files.
-- Place new API features under `src/modules/<feature>`.
+- Place new API features under `apps/api/src/modules/<feature>`.
+- Place new dashboard routes under `apps/web/src/app`.
 - Keep controller, DTO, service, and module files aligned with the existing NestJS pattern.
-- Access Prisma Client through `PrismaService` from `src/prisma`.
+- Access Prisma Client through `PrismaService` from `apps/api/src/prisma`.
 - Validate inputs through DTOs and `class-validator` decorators.
 - Do not bypass the global `/api` prefix when adding endpoints.
 - Update Swagger decorators when endpoint contracts change.
+- Use Ant Design components for the web dashboard shell and module placeholders.
 - Add or update E2E tests for important workflow changes.
 
 ---
@@ -643,9 +672,10 @@ The global validation pipe uses whitelist mode and rejects fields that are not d
 Before merging, verify:
 
 - [ ] `pnpm run prisma:generate` passes.
-- [ ] `pnpm prisma migrate status` has been checked.
+- [ ] `pnpm --filter @maternalink/api prisma migrate status` has been checked.
 - [ ] `pnpm run prisma:seed` works on a clean local database.
-- [ ] `pnpm run build` passes.
+- [ ] `pnpm run build:api` passes.
+- [ ] `pnpm run build:web` passes.
 - [ ] `pnpm run test:e2e` passes or relevant tests have been run.
 - [ ] No secret, credential, or production `.env` file is committed.
 - [ ] Prisma schema changes include the required migration.

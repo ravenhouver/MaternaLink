@@ -1,7 +1,12 @@
 .worktrees/
 node_modules/
 dist/
+apps/*/dist/
+apps/*/.next/
+apps/*/node_modules/
+apps/*/tsconfig.tsbuildinfo
 .env
+apps/*/.env
 DATASET DIAGRAM.pdf
 Master Data.pdf
 Problem Research .pdf
