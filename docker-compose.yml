@@ -3,8 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: deps
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 3000
       DB_HOST: postgres
       DB_PORT: 5432
@@ -12,6 +13,12 @@ services:
       RUN_SEED: "true"
     ports:
       - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/api/node_modules
+    working_dir: /app/apps/api
+    command: sh ./docker-entrypoint.sh
     depends_on:
       postgres:
         condition: service_healthy
@@ -21,11 +28,18 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      target: deps
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3000/api
     ports:
       - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+    working_dir: /app/apps/web
+    command: pnpm run dev
     depends_on:
       - api
     restart: unless-stopped

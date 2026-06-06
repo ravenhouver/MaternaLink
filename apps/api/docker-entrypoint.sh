@@ -10,6 +10,7 @@ until nc -z "$DB_HOST" "$DB_PORT"; do
 done
 
 echo "PostgreSQL is reachable. Applying migrations..."
+pnpm prisma generate
 pnpm prisma migrate deploy
 
 if [ "${RUN_SEED:-false}" = "true" ]; then
@@ -18,4 +19,8 @@ if [ "${RUN_SEED:-false}" = "true" ]; then
 fi
 
 echo "Starting MaternaLink API..."
+if [ "${NODE_ENV:-production}" = "development" ]; then
+  exec pnpm run start:dev
+fi
+
 exec pnpm run start

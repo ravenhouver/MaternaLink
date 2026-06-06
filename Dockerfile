@@ -3,7 +3,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 ARG PNPM_VERSION=10.11.0
-RUN apk add --no-cache openssl \
+RUN apk add --no-cache netcat-openbsd openssl \
   && npm install -g pnpm@${PNPM_VERSION}
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -30,8 +30,8 @@ ENV PORT=3000
 RUN apk add --no-cache netcat-openbsd openssl \
   && npm install -g pnpm@${PNPM_VERSION}
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
