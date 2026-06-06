@@ -62,49 +62,56 @@ apps/web/src/components/ui/
 
 apps/web/src/features/dashboard/
   dashboard-content.tsx
-  dashboard-header.tsx
-  alert-banner.tsx
-  stats-grid.tsx
-  quick-actions.tsx
-  activity-list.tsx
   dashboard-data.ts
+  components/
+    dashboard-header.tsx
+    alert-banner.tsx
+    stats-grid.tsx
+    quick-actions.tsx
+    activity-list.tsx
 
 apps/web/src/features/patients/
   patients-page-content.tsx
-  patients-header.tsx
-  patients-filters.tsx
-  patients-table.tsx
-  pagination-bar.tsx
   patients-data.ts
+  components/
+    patients-header.tsx
+    patients-filters.tsx
+    patients-table.tsx
+    pagination-bar.tsx
 
 apps/web/src/features/calendar/
   calendar-prediction-content.tsx
-  calendar-summary.tsx
-  calendar-toolbar.tsx
-  monthly-calendar.tsx
-  events-panel.tsx
   calendar-data.ts
+  components/
+    calendar-summary.tsx
+    calendar-toolbar.tsx
+    monthly-calendar.tsx
+    events-panel.tsx
 
 apps/web/src/features/medicine/
   medicine-needs-content.tsx
-  medicine-header.tsx
-  medicine-section-card.tsx
-  medicine-item-row.tsx
-  submission-card.tsx
   medicine-data.ts
+  components/
+    medicine-header.tsx
+    medicine-section-card.tsx
+    medicine-item-row.tsx
+    submission-card.tsx
 
 apps/web/src/features/patient-registration/
   add-patient-method-content.tsx
-  add-patient-method-selector.tsx
-  input-method-card.tsx
-  manual-patient-registration.tsx
-  registration-step-one.tsx
-  registration-step-two.tsx
-  registration-step-three.tsx
   registration-data.ts
+  components/
+    add-patient-method-selector.tsx
+    input-method-card.tsx
+    manual-patient-registration.tsx
+    registration-step-one.tsx
+    registration-step-two.tsx
+    registration-step-three.tsx
 ```
 
 Page files under `apps/web/src/app` should import from `src/features/*`, not from page-level files in `src/components`.
+
+Feature root folders should stay shallow. Each root contains only the entry-point composer, resource/data files, and other feature-level constants or types. Feature-specific UI parts live under that feature's `components/` folder.
 
 ## Layout Design
 
