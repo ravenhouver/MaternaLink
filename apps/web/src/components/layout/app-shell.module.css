@@ -1,0 +1,26 @@
+.shell {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.mainLayout {
+  min-height: 100vh;
+  margin-left: 256px;
+  background: var(--color-bg);
+  transition: margin-left 180ms ease;
+}
+
+.collapsed .mainLayout {
+  margin-left: 88px;
+}
+
+.content {
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  .mainLayout,
+  .collapsed .mainLayout {
+    margin-left: 0;
+  }
+}

@@ -1,0 +1,29 @@
+.container {
+  width: min(100%, var(--page-max-width, 1180px));
+  margin-inline: auto;
+  padding: var(--space-10);
+}
+
+.standard {
+  --page-max-width: 1180px;
+}
+
+.wide {
+  --page-max-width: 1280px;
+}
+
+.narrow {
+  --page-max-width: 768px;
+}
+
+@media (max-width: 1024px) {
+  .container {
+    padding: var(--space-8) var(--space-6);
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: var(--space-6) var(--space-5);
+  }
+}

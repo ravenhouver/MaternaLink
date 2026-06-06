@@ -1,0 +1,239 @@
+.sider:global(.ant-layout-sider) {
+  position: fixed !important;
+  inset: 0 auto 0 0;
+  z-index: 20;
+  height: 100vh;
+  padding: var(--space-4);
+  background: #f8fafc !important;
+  border-right: 1px solid var(--color-border);
+}
+
+.sider:global(.ant-layout-sider) :global(.ant-layout-sider-children) {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.brandBlock,
+.profileCard,
+.navItem {
+  display: flex;
+  align-items: center;
+}
+
+.brandBlock {
+  gap: var(--space-3);
+  padding: 0 var(--space-2) var(--space-8);
+}
+
+.toggle {
+  position: absolute;
+  top: 0;
+  right: -18px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-surface);
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+}
+
+.toggle img {
+  width: 8px;
+  height: 12px;
+  transform: rotate(180deg);
+}
+
+.brandIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+}
+
+.brandIcon img {
+  width: 20px;
+  height: 20px;
+}
+
+.brandCopy,
+.profileCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.brandTitle:global(.ant-typography) {
+  color: var(--color-primary-strong);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 28px;
+}
+
+.brandSubtitle:global(.ant-typography) {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.navItem {
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  color: var(--color-text-muted);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.active {
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  font-weight: 600;
+  box-shadow: var(--shadow-soft);
+}
+
+.navIcon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.profileArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settingsLink {
+  margin-bottom: var(--space-2);
+}
+
+.profileCard {
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.profilePhoto {
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px rgb(26 115 232 / 0.2);
+}
+
+.profilePhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileName:global(.ant-typography) {
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.profileRole:global(.ant-typography) {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+:global(.ant-layout-sider-collapsed) .sider,
+.sider:global(.ant-layout-sider-collapsed) {
+  padding: var(--space-4) 14px;
+}
+
+.sider:global(.ant-layout-sider-collapsed) .header,
+.sider:global(.ant-layout-sider-collapsed) .brandBlock,
+.sider:global(.ant-layout-sider-collapsed) .nav,
+.sider:global(.ant-layout-sider-collapsed) .profileArea {
+  align-items: center;
+}
+
+.sider:global(.ant-layout-sider-collapsed) .brandBlock {
+  justify-content: center;
+  padding: 0 0 var(--space-2);
+}
+
+.sider:global(.ant-layout-sider-collapsed) .header {
+  flex-direction: column;
+}
+
+.sider:global(.ant-layout-sider-collapsed) .toggle {
+  position: static;
+}
+
+.sider:global(.ant-layout-sider-collapsed) .toggle img {
+  transform: none;
+}
+
+.sider:global(.ant-layout-sider-collapsed) .brandCopy,
+.sider:global(.ant-layout-sider-collapsed) .navItem span,
+.sider:global(.ant-layout-sider-collapsed) .profileCopy {
+  display: none;
+}
+
+.sider:global(.ant-layout-sider-collapsed) .navItem,
+.sider:global(.ant-layout-sider-collapsed) .settingsLink {
+  width: 52px;
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+.sider:global(.ant-layout-sider-collapsed) .profileCard {
+  justify-content: center;
+  padding: var(--space-3);
+}
+
+@media (max-width: 991px) {
+  .sider:global(.ant-layout-sider) {
+    position: relative !important;
+    height: auto;
+    min-height: 0;
+  }
+
+  .sider:global(.ant-layout-sider) :global(.ant-layout-sider-children) {
+    min-height: 100vh;
+  }
+}
