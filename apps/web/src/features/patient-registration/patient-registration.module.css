@@ -1,0 +1,832 @@
+.page,
+.registrationPage {
+  display: flex;
+  min-height: calc(100vh - 164px);
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.header h1:global(.ant-typography),
+.registrationHeader h1:global(.ant-typography) {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 40px;
+}
+
+.header p:global(.ant-typography),
+.registrationHeader p:global(.ant-typography) {
+  max-width: 672px;
+  margin: 0;
+  color: #475569;
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.methodGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+.methodCard {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 361px;
+  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-soft);
+}
+
+.featuredMethod {
+  background: #105cb9;
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgb(16 92 185 / 0.1), 0 4px 6px -4px rgb(16 92 185 / 0.1);
+}
+
+.methodVisual {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 77px;
+  height: 82px;
+  pointer-events: none;
+}
+
+.methodOrb {
+  position: absolute;
+  right: -32px;
+  bottom: -31px;
+  width: 128px;
+  height: 128px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.05);
+}
+
+.methodIcon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: #d7e2ff;
+}
+
+.featuredMethod .methodIcon {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.methodIcon img {
+  max-width: 25px;
+  max-height: 24px;
+}
+
+.methodCopy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.methodTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.methodTitleRow h3 {
+  margin: 0;
+  color: #191c1d;
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.featuredMethod .methodTitleRow h3 {
+  color: #ffffff;
+}
+
+.popularPill {
+  border-radius: 9999px;
+  background: #2e8383;
+  color: #000707;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+}
+
+.methodSubtitle:global(.ant-typography) {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.featuredMethod .methodSubtitle:global(.ant-typography) {
+  color: rgb(255 255 255 / 0.8);
+}
+
+.methodCopy p:global(.ant-typography) {
+  margin: var(--space-2) 0 0;
+  color: #414754;
+  font-size: 14px;
+  line-height: 23px;
+}
+
+.featuredMethod .methodCopy p:global(.ant-typography) {
+  color: rgb(255 255 255 / 0.7);
+}
+
+.methodButton:global(.ant-btn) {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: #105cb9;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.featuredMethod .methodButton:global(.ant-btn) {
+  background: #ffffff;
+  color: #105cb9;
+}
+
+.methodButton img {
+  max-width: 12px;
+  max-height: 13px;
+}
+
+.methodNotice {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-3);
+  border: 1px solid rgb(193 198 214 / 0.1);
+  border-radius: 9999px;
+  background: #f3f4f5;
+  padding: 13px 25px;
+}
+
+.methodNotice img {
+  width: 12px;
+  height: 15px;
+}
+
+.methodNotice :global(.ant-typography) {
+  color: #414754;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.digitalContextCard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-8);
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: #f3f4f5;
+  padding: var(--space-8);
+}
+
+.digitalContextCopy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.digitalContextCopy h2:global(.ant-typography) {
+  margin: 0;
+  color: #191c1d;
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.digitalContextCopy p:global(.ant-typography) {
+  max-width: 620px;
+  margin: 0;
+  color: #414754;
+  font-size: 14px;
+  line-height: 23px;
+}
+
+.digitalStats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+}
+
+.digitalStats span {
+  display: flex;
+  flex-direction: column;
+}
+
+.digitalStats strong {
+  color: #105cb9;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.digitalStats small {
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  letter-spacing: 1px;
+}
+
+.digitalStats i {
+  width: 1px;
+  height: 40px;
+  background: rgb(193 198 214 / 0.3);
+}
+
+.digitalContextImage {
+  position: relative;
+  min-height: 256px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.digitalContextImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.digitalContextImage span {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.2), rgb(0 0 0 / 0));
+}
+
+.registrationPage {
+  align-items: center;
+}
+
+.registrationPanel {
+  display: flex;
+  width: min(100%, 768px);
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.registrationHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.registrationCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: 33px;
+  box-shadow: var(--shadow-soft);
+}
+
+.registrationFieldGrid,
+.pregnancyDataGrid,
+.riskFactorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+.registrationCard input,
+.inputAffix input {
+  width: 100%;
+  height: 56px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: #f0f4f9;
+  padding: 0 var(--space-4);
+  color: var(--color-text);
+  font-size: 16px;
+  line-height: 24px;
+  outline: none;
+}
+
+.registrationCard input:focus,
+.displayInput input:focus,
+.displayInput select:focus,
+.riskNoteField textarea:focus {
+  box-shadow: 0 0 0 2px rgb(26 115 232 / 0.24);
+}
+
+.inputAffix {
+  position: relative;
+  display: block;
+}
+
+.inputAffix input {
+  padding-right: 72px;
+}
+
+.inputAffix small {
+  position: absolute;
+  top: 50%;
+  right: var(--space-4);
+  color: #94a3b8;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  transform: translateY(-50%);
+}
+
+.aiCard {
+  display: flex;
+  gap: var(--space-4);
+  border: 1px solid rgb(26 115 232 / 0.1);
+  border-radius: var(--radius-lg);
+  background: rgb(211 227 253 / 0.2);
+  padding: 25px;
+}
+
+.aiIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: #d3e3fd;
+}
+
+.aiIcon img {
+  width: 22px;
+  height: 22px;
+}
+
+.aiCopy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.aiCopy h3:global(.ant-typography) {
+  margin: 0;
+  color: var(--color-primary);
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.aiCopy p:global(.ant-typography) {
+  margin: 0 0 14px;
+  color: #041e49;
+  font-size: 14px;
+  line-height: 22.75px;
+}
+
+.aiResult {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid rgb(26 115 232 / 0.1);
+  border-radius: var(--radius-md);
+  background: rgb(255 255 255 / 0.6);
+  padding: 17px;
+}
+
+.aiResult strong {
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.aiResult em {
+  color: var(--color-primary);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.aiActions {
+  display: flex;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.aiConfirmButton:global(.ant-btn),
+.aiEditButton:global(.ant-btn) {
+  height: 32px;
+  border: 0;
+  border-radius: 9999px;
+  padding: var(--space-2) var(--space-4);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.aiEditButton:global(.ant-btn) {
+  background: #e9eef6;
+  color: #475569;
+}
+
+.pregnancyStepFields,
+.pregnancyAgeSection,
+.riskStepFields {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+}
+
+.pregnancyStepFields {
+  gap: var(--space-10);
+}
+
+.pregnancyAgeSection,
+.riskStepFields {
+  gap: var(--space-6);
+}
+
+.pregnancyAgeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.pregnancyAgeHeader :global(.ant-typography) {
+  color: #191c1d;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.pregnancyWeekValue {
+  display: flex;
+  width: 120px;
+  height: 50px;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgb(16 92 185 / 0.2);
+  border-radius: 8px;
+  background: rgb(56 117 211 / 0.1);
+  padding: 0 var(--space-4);
+  color: #3875d3;
+}
+
+.pregnancyWeekValue strong {
+  color: #105cb9;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.pregnancySlider {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  padding-top: 6px;
+}
+
+.pregnancySliderTrack {
+  display: block;
+  width: 100%;
+  height: 8px;
+  border-radius: 8px;
+  background: #e7e8e9;
+}
+
+.pregnancySliderThumb {
+  position: absolute;
+  top: 0;
+  left: 49%;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-bg);
+}
+
+.pregnancyScale {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.displayInput {
+  position: relative;
+  display: flex;
+  height: 56px;
+  align-items: center;
+  gap: var(--space-3);
+  overflow: hidden;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: #e7e8e9;
+  padding: var(--space-4) var(--space-4) 18px;
+}
+
+.displayInput > img:first-child {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.displayInput input,
+.displayInput select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #191c1d;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  outline: none;
+}
+
+.displayInput select {
+  appearance: none;
+}
+
+.selectLike {
+  padding-right: 40px;
+}
+
+.selectChevron {
+  position: absolute;
+  right: var(--space-4);
+  width: 12px;
+  height: 8px;
+  pointer-events: none;
+}
+
+.trimesterStatusCard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgb(46 131 131 / 0.1);
+  padding: var(--space-6);
+}
+
+.trimesterStatusCard > img {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+}
+
+.trimesterStatusCard h3:global(.ant-typography) {
+  margin: 0 0 3px;
+  color: #191c1d;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.trimesterStatusCard p:global(.ant-typography) {
+  max-width: 610px;
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 22.75px;
+}
+
+.riskFactorCard {
+  position: relative;
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-6);
+  cursor: pointer;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.riskFactorCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.riskFactorCopy strong {
+  color: #191c1d;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.riskFactorCopy small {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.riskFactorCard input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.riskToggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background: #e1e3e4;
+}
+
+.riskToggle::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  background: #ffffff;
+  content: '';
+  transition: transform 160ms ease;
+}
+
+.riskFactorCard input:checked + .riskToggle {
+  background: #105cb9;
+}
+
+.riskFactorCard input:checked + .riskToggle::after {
+  border-color: #ffffff;
+  transform: translateX(20px);
+}
+
+.riskNoteField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: #105cb9;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: 0.35px;
+}
+
+.riskNoteField textarea {
+  width: 100%;
+  min-height: 102px;
+  resize: vertical;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: #e7e8e9;
+  padding: var(--space-4) var(--space-6);
+  color: #191c1d;
+  font-size: 16px;
+  line-height: 24px;
+  outline: none;
+}
+
+.registrationFormNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+
+.registrationBackButton:global(.ant-btn),
+.registrationNextButton:global(.ant-btn) {
+  display: inline-flex;
+  height: 56px;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  padding-inline: var(--space-6);
+  font-weight: 700;
+}
+
+.registrationBackButton:global(.ant-btn) {
+  border: 0;
+  background: #e9eef6;
+  color: #475569;
+}
+
+.registrationNextButton:global(.ant-btn),
+.savePatientButton:global(.ant-btn) {
+  border: 0;
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.registrationBackButton img,
+.registrationNextButton img {
+  width: 18px;
+  height: 18px;
+}
+
+.savePatientIcon {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #ffffff;
+}
+
+@media (max-width: 1180px) {
+  .methodGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .methodGrid,
+  .digitalContextCard,
+  .registrationFieldGrid,
+  .pregnancyDataGrid,
+  .riskFactorGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .header h1:global(.ant-typography),
+  .registrationHeader h1:global(.ant-typography) {
+    font-size: 32px;
+    line-height: 36px;
+  }
+
+  .methodNotice,
+  .pregnancyAgeHeader,
+  .trimesterStatusCard,
+  .aiCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .registrationFormNav {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .registrationFormNav :global(.ant-btn) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .registrationCard,
+  .aiCard,
+  .digitalContextCard,
+  .methodCard {
+    padding: var(--space-5);
+  }
+
+  .pregnancyScale {
+    flex-wrap: wrap;
+  }
+}

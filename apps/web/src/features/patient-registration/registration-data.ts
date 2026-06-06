@@ -1,0 +1,60 @@
+export type InputMethod = {
+  key: 'manual' | 'photo' | 'voice';
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: string;
+  visual?: string;
+  button: string;
+  buttonIcon: string;
+  featured?: boolean;
+};
+
+export const inputMethods: InputMethod[] = [
+  {
+    key: 'manual',
+    title: 'Ketik Manual',
+    subtitle: 'Isi form langkah demi langkah',
+    description: 'Pilihan terbaik untuk input data mendetail dengan kontrol penuh pada setiap kolom isian.',
+    icon: 'manual.svg',
+    visual: 'manual-bg.svg',
+    button: 'Mulai Mengetik',
+    buttonIcon: 'arrow.svg',
+  },
+  {
+    key: 'photo',
+    title: 'Upload Foto KIA',
+    subtitle: 'AI bantu baca foto, kamu cek hasilnya',
+    description: 'Cukup unggah foto buku KIA. Sistem AI kami akan mengekstraksi informasi secara otomatis.',
+    icon: 'camera.svg',
+    button: 'Ambil Foto',
+    buttonIcon: 'upload.svg',
+    featured: true,
+  },
+  {
+    key: 'voice',
+    title: 'Input Suara',
+    subtitle: 'Cukup bicara, AI yang catat',
+    description: 'Metode tercepat saat sedang menangani pasien. Bicara secara natural untuk mencatat anamnesa.',
+    icon: 'microphone.svg',
+    visual: 'voice-bg.svg',
+    button: 'Mulai Bicara',
+    buttonIcon: 'mic-small.svg',
+  },
+];
+
+export const registrationSteps = [
+  { number: 1, label: 'Data Diri' },
+  { number: 2, label: 'Data Kehamilan' },
+  { number: 3, label: 'Faktor Risiko' },
+];
+
+export const riskFactors = [
+  { title: 'Hipertensi', description: 'Tekanan darah tinggi' },
+  { title: 'Anemia', description: 'Kurang darah' },
+  { title: 'Diabetes Gestasional', description: 'Kadar gula darah tinggi saat hamil' },
+  { title: 'Kehamilan Bermasalah', description: 'Riwayat komplikasi sebelumnya' },
+  { title: 'Usia di bawah 18 tahun', description: 'Risiko kehamilan usia dini' },
+  { title: 'Usia di atas 35 tahun', description: 'Risiko tinggi usia matang' },
+  { title: 'Kehamilan kembar', description: 'Multiplet (Gemelli)', wide: true },
+];
