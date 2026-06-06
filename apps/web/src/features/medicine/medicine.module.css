@@ -1,0 +1,240 @@
+.page {
+  display: flex;
+  min-height: calc(100vh - 136px);
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.heading h1:global(.ant-typography) {
+  max-width: 672px;
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 40px;
+}
+
+.insight {
+  display: flex;
+  max-width: 420px;
+  align-items: center;
+  gap: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: #eff6ff;
+  padding: var(--space-4);
+}
+
+.insight img {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.insight :global(.ant-typography) {
+  color: #1e3a8a;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+.section {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.sectionInner {
+  display: flex;
+  min-height: 328px;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.sectionIcon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9999px;
+  background: #eff6ff;
+}
+
+.sectionIcon img {
+  max-width: 24px;
+  max-height: 24px;
+}
+
+.sectionTitle h2:global(.ant-typography) {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.item {
+  display: flex;
+  min-width: 0;
+  min-height: 80px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: #f8fafc;
+  padding: var(--space-4);
+}
+
+.safe {
+  border-left: 4px solid #16a34a;
+}
+
+.warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.danger {
+  border-left: 4px solid #ba1a1a;
+}
+
+.copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.copy h3:global(.ant-typography) {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.copy span:global(.ant-typography) {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.submissionCard {
+  border: 1px solid rgb(26 115 232 / 0.12);
+  border-radius: var(--radius-xl);
+  background: #eff6ff;
+  padding: var(--space-6);
+}
+
+.submissionInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.submissionInner h3:global(.ant-typography) {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.submissionLabel {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.submissionTextarea:global(.ant-input) {
+  resize: vertical;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: var(--space-4);
+  color: var(--color-text);
+  font-size: 16px;
+  line-height: 24px;
+  box-shadow: none;
+}
+
+.submitButton:global(.ant-btn) {
+  display: inline-flex;
+  width: fit-content;
+  height: 44px;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: 9999px;
+  padding-inline: var(--space-6);
+  font-weight: 700;
+}
+
+.submitButton img {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .heading {
+    flex-direction: column;
+  }
+
+  .insight {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .heading h1:global(.ant-typography) {
+    font-size: 32px;
+    line-height: 36px;
+  }
+
+  .item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .submitButton:global(.ant-btn) {
+    width: 100%;
+    justify-content: center;
+  }
+}
