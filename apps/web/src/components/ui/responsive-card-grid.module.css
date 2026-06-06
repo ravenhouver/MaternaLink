@@ -1,0 +1,6 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--min-card-width)), 1fr));
+  gap: var(--space-6);
+  width: 100%;
+}

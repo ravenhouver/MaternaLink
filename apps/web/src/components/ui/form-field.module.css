@@ -1,0 +1,22 @@
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.label {
+  color: inherit;
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 16px;
+}
