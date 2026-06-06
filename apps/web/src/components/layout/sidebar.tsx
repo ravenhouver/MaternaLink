@@ -37,7 +37,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     : { name: 'Bidan Sari', role: 'ADMIN UTAMA', photo: asset('profil-bidan.png') };
 
   return (
-    <Sider breakpoint="lg" collapsedWidth="0" width={collapsed ? 88 : 256} className={styles.sider}>
+    <Sider
+      breakpoint="lg"
+      collapsedWidth="0"
+      width={collapsed ? 88 : 256}
+      className={styles.sider}
+      zeroWidthTriggerStyle={{
+        top: 64,
+        background: '#ffffff',
+        color: '#1a73e8',
+        boxShadow: '0 8px 20px rgb(15 23 42 / 0.12)',
+      }}
+    >
       <div className={styles.main}>
         <div className={styles.header}>
           <Link href="/" className={styles.brandBlock} aria-label="MaternaLink beranda">
