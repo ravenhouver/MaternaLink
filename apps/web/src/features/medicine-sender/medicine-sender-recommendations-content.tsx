@@ -47,7 +47,7 @@ export function MedicineSenderRecommendationsContent() {
             <AppIcon name="package" width={18} height={18} />
             Semua Klinik
           </a>
-          <a href="#approval-metrics">
+          <a href="/medicine-sender/decision-history">
             <AppIcon name="clipboard" width={18} height={18} />
             Riwayat Keputusan
           </a>

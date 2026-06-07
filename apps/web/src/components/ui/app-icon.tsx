@@ -22,6 +22,7 @@ const iconNames = {
   edit: 'lucide:square-pen',
   eye: 'lucide:eye',
   fileText: 'lucide:file-text',
+  filter: 'lucide:funnel',
   grid: 'lucide:grid-2x2',
   heart: 'lucide:heart-pulse',
   home: 'lucide:house',

@@ -91,7 +91,7 @@ function ClinicsSidebar() {
         <a href="/medicine-sender/recommendations"><AppIcon name="truck" width={16} height={16} />Logistik Pengiriman</a>
         <a href="/medicine-sender/environment"><AppIcon name="activity" width={16} height={16} />Pemantauan Lingkungan</a>
         <a className={styles.clinicsNavActive} href="/medicine-sender/clinics"><AppIcon name="plus" width={16} height={16} />Semua Klinik</a>
-        <a href="#decision-history"><AppIcon name="clipboard" width={16} height={16} />Riwayat Keputusan</a>
+        <a href="/medicine-sender/decision-history"><AppIcon name="clipboard" width={16} height={16} />Riwayat Keputusan</a>
       </nav>
       <div className={styles.clinicsSidebarBottom}>
         <a href="#settings"><AppIcon name="settings" width={16} height={16} />Settings</a>

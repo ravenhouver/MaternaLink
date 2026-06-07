@@ -40,7 +40,7 @@ function RoleSidebar() {
         <a href="/medicine-sender/recommendations"><AppIcon name="send" width={18} height={18} />Rekomendasi Pengiriman</a>
         <a className={styles.navActive} href="/medicine-sender/environment"><AppIcon name="activity" width={18} height={18} />Pemantauan Lingkungan</a>
         <a href="/medicine-sender/clinics"><AppIcon name="package" width={18} height={18} />Semua Klinik</a>
-        <a href="#clinic-routes"><AppIcon name="clipboard" width={18} height={18} />Riwayat Keputusan</a>
+        <a href="/medicine-sender/decision-history"><AppIcon name="clipboard" width={18} height={18} />Riwayat Keputusan</a>
       </nav>
 
       <div className={styles.supportNav}>
