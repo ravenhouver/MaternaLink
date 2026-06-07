@@ -41,6 +41,12 @@
   padding: 0 var(--space-2) var(--space-8);
 }
 
+.brandButton {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .toggle {
   position: absolute;
   top: 0;
@@ -181,7 +187,9 @@
 
 :global(.ant-layout-sider-collapsed) .sider,
 .sider:global(.ant-layout-sider-collapsed) {
-  padding: var(--space-4) 14px;
+  padding: 32px 15px;
+  background: #f1f5f9 !important;
+  border-right: 0;
 }
 
 .sider:global(.ant-layout-sider-collapsed) .header,
@@ -193,19 +201,20 @@
 
 .sider:global(.ant-layout-sider-collapsed) .brandBlock {
   justify-content: center;
-  padding: 0 0 var(--space-2);
+  padding: 0;
 }
 
 .sider:global(.ant-layout-sider-collapsed) .header {
   flex-direction: column;
 }
 
-.sider:global(.ant-layout-sider-collapsed) .toggle {
-  position: static;
+.sider:global(.ant-layout-sider-collapsed) .main {
+  align-items: center;
+  gap: 32px;
 }
 
-.sider:global(.ant-layout-sider-collapsed) .toggle img {
-  transform: none;
+.sider:global(.ant-layout-sider-collapsed) .nav {
+  gap: 24px;
 }
 
 .sider:global(.ant-layout-sider-collapsed) .brandCopy,
@@ -216,14 +225,38 @@
 
 .sider:global(.ant-layout-sider-collapsed) .navItem,
 .sider:global(.ant-layout-sider-collapsed) .settingsLink {
-  width: 52px;
+  position: relative;
+  width: 50px;
+  min-height: 44px;
   justify-content: center;
-  padding: var(--space-3);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.sider:global(.ant-layout-sider-collapsed) .profileCard {
-  justify-content: center;
-  padding: var(--space-3);
+.sider:global(.ant-layout-sider-collapsed) .navIcon {
+  width: 22px;
+  height: 22px;
+}
+
+.sider:global(.ant-layout-sider-collapsed) .active {
+  color: var(--color-primary-strong);
+}
+
+.sider:global(.ant-layout-sider-collapsed) .active::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 3px;
+  height: 44px;
+  border-radius: 9999px;
+  background: #1d4ed8;
+  content: '';
+}
+
+.sider:global(.ant-layout-sider-collapsed) .settingsLink {
+  margin-bottom: 0;
 }
 
 @media (max-width: 991px) {

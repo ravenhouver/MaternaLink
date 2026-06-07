@@ -39,8 +39,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   return (
     <Sider
       breakpoint="lg"
-      collapsedWidth="0"
-      width={collapsed ? 88 : 256}
+      collapsed={collapsed}
+      collapsedWidth={80}
+      width={256}
       className={styles.sider}
       zeroWidthTriggerStyle={{
         top: 64,
@@ -51,18 +52,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       <div className={styles.main}>
         <div className={styles.header}>
-          <Link href="/" className={styles.brandBlock} aria-label="MaternaLink beranda">
-            <span className={styles.brandIcon}>
-              <img src={asset('logo.svg')} alt="" />
-            </span>
-            <span className={styles.brandCopy}>
-              <Typography.Text className={styles.brandTitle}>MaternaLink</Typography.Text>
-              <Typography.Text className={styles.brandSubtitle}>Digital Sanctuary</Typography.Text>
-            </span>
-          </Link>
-          <button type="button" className={styles.toggle} aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'} aria-expanded={!collapsed} onClick={onToggle}>
-            <img src={asset('chevron.svg')} alt="" />
-          </button>
+          {collapsed ? (
+            <button type="button" className={[styles.brandBlock, styles.brandButton].join(' ')} aria-label="Buka sidebar" aria-expanded={false} onClick={onToggle}>
+              <span className={styles.brandIcon}>
+                <img src={asset('logo.svg')} alt="" />
+              </span>
+            </button>
+          ) : (
+            <>
+              <Link href="/" className={styles.brandBlock} aria-label="MaternaLink beranda">
+                <span className={styles.brandIcon}>
+                  <img src={asset('logo.svg')} alt="" />
+                </span>
+                <span className={styles.brandCopy}>
+                  <Typography.Text className={styles.brandTitle}>MaternaLink</Typography.Text>
+                  <Typography.Text className={styles.brandSubtitle}>Digital Sanctuary</Typography.Text>
+                </span>
+              </Link>
+              <button type="button" className={styles.toggle} aria-label="Tutup sidebar" aria-expanded onClick={onToggle}>
+                <img src={asset('chevron.svg')} alt="" />
+              </button>
+            </>
+          )}
         </div>
 
         <nav className={styles.nav} aria-label="Navigasi utama">
@@ -80,21 +91,23 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       <div className={styles.profileArea}>
-        {hasTopbar ? (
+        {hasTopbar || collapsed ? (
           <Link href="/settings" className={[styles.navItem, styles.settingsLink].join(' ')} prefetch={false}>
             <img src="/figma-patients/settings.svg" alt="" className={styles.navIcon} />
             <span>Pengaturan</span>
           </Link>
         ) : null}
-        <div className={styles.profileCard}>
-          <span className={styles.profilePhoto}>
-            <img src={profile.photo} alt={profile.name} />
-          </span>
-          <span className={styles.profileCopy}>
-            <Typography.Text className={styles.profileName}>{profile.name}</Typography.Text>
-            <Typography.Text className={styles.profileRole}>{profile.role}</Typography.Text>
-          </span>
-        </div>
+        {collapsed ? null : (
+          <div className={styles.profileCard}>
+            <span className={styles.profilePhoto}>
+              <img src={profile.photo} alt={profile.name} />
+            </span>
+            <span className={styles.profileCopy}>
+              <Typography.Text className={styles.profileName}>{profile.name}</Typography.Text>
+              <Typography.Text className={styles.profileRole}>{profile.role}</Typography.Text>
+            </span>
+          </div>
+        )}
       </div>
     </Sider>
   );
