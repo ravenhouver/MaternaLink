@@ -37,7 +37,7 @@
   background: transparent;
 }
 
-.iconButton img {
+.iconButton svg {
   max-width: 20px;
   max-height: 20px;
 }

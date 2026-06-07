@@ -1,4 +1,5 @@
 import Typography from 'antd/es/typography';
+import { AppIcon } from '@/components/ui/app-icon';
 import type { MedicineSection } from '../medicine-data';
 import { MedicineItemRow } from './medicine-item-row';
 import styles from '../medicine.module.css';
@@ -7,15 +8,13 @@ type MedicineSectionCardProps = {
   section: MedicineSection;
 };
 
-const asset = (name: string) => `/figma-medicine/${name}`;
-
 export function MedicineSectionCard({ section }: MedicineSectionCardProps) {
   return (
     <article className={styles.section}>
       <div className={styles.sectionInner}>
         <div className={styles.sectionTitle}>
           <span className={styles.sectionIcon}>
-            <img src={asset(section.icon)} alt="" />
+            <AppIcon name={section.icon} width={24} height={24} />
           </span>
           <Typography.Title level={2}>
             <span aria-hidden="true">{section.emoji}</span> {section.title}

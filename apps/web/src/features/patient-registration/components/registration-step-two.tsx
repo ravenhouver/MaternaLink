@@ -1,5 +1,6 @@
 import Typography from 'antd/es/typography';
 import { FormField } from '@/components/ui/form-field';
+import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../patient-registration.module.css';
 
 export function RegistrationStepTwo() {
@@ -29,27 +30,27 @@ export function RegistrationStepTwo() {
       <div className={styles.pregnancyDataGrid}>
         <FormField label="Hari Perkiraan Lahir (HPL)" hint="Dihitung otomatis berdasarkan HPHT">
           <span className={styles.displayInput}>
-            <img src="/figma-registration/calendar.svg" alt="" />
+            <AppIcon name="calendar" width={20} height={20} />
             <input type="text" value="15 Januari 2026" readOnly />
           </span>
         </FormField>
 
         <FormField label="Kunjungan ANC Terakhir">
           <span className={[styles.displayInput, styles.selectLike].join(' ')}>
-            <img src="/figma-registration/anc-kit.svg" alt="" />
+            <AppIcon name="package" width={20} height={20} />
             <select defaultValue="K3" aria-label="Kunjungan ANC Terakhir">
               <option>K1</option>
               <option>K2</option>
               <option>K3</option>
               <option>K4</option>
             </select>
-            <img src="/figma-registration/select-chevron.svg" alt="" className={styles.selectChevron} />
+            <AppIcon name="chevronDown" className={styles.selectChevron} width={18} height={18} />
           </span>
         </FormField>
       </div>
 
       <aside className={styles.trimesterStatusCard} aria-label="Status Trimester">
-        <img src="/figma-registration/status-icon.svg" alt="" />
+        <AppIcon name="info" width={28} height={28} />
         <div>
           <Typography.Title level={3}>Status Trimester</Typography.Title>
           <Typography.Paragraph>

@@ -1,4 +1,5 @@
 import Typography from 'antd/es/typography';
+import { AppIcon } from '@/components/ui/app-icon';
 import styles from './topbar.module.css';
 
 export function Topbar() {
@@ -7,10 +8,10 @@ export function Topbar() {
       <Typography.Text className={styles.brand}>MaternaLink</Typography.Text>
       <div className={styles.actions}>
         <button type="button" className={styles.iconButton} aria-label="Notifikasi">
-          <img src="/figma-patients/top-bell.svg" alt="" />
+          <AppIcon name="bell" width={20} height={20} />
         </button>
         <button type="button" className={styles.iconButton} aria-label="Akun">
-          <img src="/figma-patients/top-user.svg" alt="" />
+          <AppIcon name="user" width={20} height={20} />
         </button>
       </div>
     </header>

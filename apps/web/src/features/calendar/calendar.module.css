@@ -32,7 +32,7 @@
   border-radius: 9999px;
 }
 
-.summaryIcon img {
+.summaryIcon svg {
   max-width: 22px;
   max-height: 22px;
 }
@@ -109,7 +109,7 @@
   background: var(--color-surface);
 }
 
-.arrows img {
+.arrows svg {
   width: 8px;
   height: 12px;
 }
@@ -333,7 +333,7 @@
   padding: var(--space-3);
 }
 
-.prepCard img {
+.prepCard svg {
   width: 24px;
   height: 24px;
 }
@@ -368,7 +368,7 @@
   color: #64748b;
 }
 
-.eventTime img {
+.eventTime svg {
   width: 15px;
   height: 15px;
 }

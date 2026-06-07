@@ -1,8 +1,7 @@
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../calendar.module.css';
-
-const asset = (name: string) => `/figma-calendar/${name}`;
 
 export function CalendarToolbar() {
   return (
@@ -11,10 +10,10 @@ export function CalendarToolbar() {
         <Typography.Title level={2}>Oktober 2024</Typography.Title>
         <div className={styles.arrows}>
           <Button shape="circle" aria-label="Bulan sebelumnya">
-            <img src={asset('prev.svg')} alt="" />
+            <AppIcon name="chevronLeft" width={18} height={18} />
           </Button>
           <Button shape="circle" aria-label="Bulan berikutnya">
-            <img src={asset('next.svg')} alt="" />
+            <AppIcon name="chevronRight" width={18} height={18} />
           </Button>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import Button from 'antd/es/button';
 import { PageContainer } from '@/components/layout/page-container';
+import { AppIcon } from '@/components/ui/app-icon';
 import { ActivityList } from './components/activity-list';
 import { AlertBanner } from './components/alert-banner';
 import { DashboardHeader } from './components/dashboard-header';
@@ -21,7 +22,7 @@ export function DashboardContent() {
         <ActivityList activities={recentActivities} />
       </section>
       <Button className={styles.floatingAction} shape="circle" type="primary" aria-label="Tambah data">
-        <img src="/figma-dashboard/plus.svg" alt="" />
+        <AppIcon name="plus" width={28} height={28} />
       </Button>
     </PageContainer>
   );

@@ -93,7 +93,7 @@
   background: rgb(255 255 255 / 0.2);
 }
 
-.methodIcon img {
+.methodIcon svg {
   max-width: 25px;
   max-height: 24px;
 }
@@ -180,7 +180,7 @@
   color: #105cb9;
 }
 
-.methodButton img {
+.methodButton svg {
   max-width: 12px;
   max-height: 13px;
 }
@@ -196,7 +196,7 @@
   padding: 13px 25px;
 }
 
-.methodNotice img {
+.methodNotice svg {
   width: 12px;
   height: 15px;
 }
@@ -390,7 +390,7 @@
   background: #d3e3fd;
 }
 
-.aiIcon img {
+.aiIcon svg {
   width: 22px;
   height: 22px;
 }
@@ -565,7 +565,7 @@
   padding: var(--space-4) var(--space-4) 18px;
 }
 
-.displayInput > img:first-child {
+.displayInput > svg:first-child {
   width: 20px;
   height: 20px;
   object-fit: contain;
@@ -609,7 +609,7 @@
   padding: var(--space-6);
 }
 
-.trimesterStatusCard > img {
+.trimesterStatusCard > svg {
   width: 44px;
   height: 44px;
   flex: 0 0 auto;
@@ -765,8 +765,8 @@
   color: #ffffff;
 }
 
-.registrationBackButton img,
-.registrationNextButton img {
+.registrationBackButton svg,
+.registrationNextButton svg {
   width: 18px;
   height: 18px;
 }

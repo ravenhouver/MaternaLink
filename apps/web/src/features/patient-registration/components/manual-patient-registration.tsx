@@ -3,6 +3,7 @@ import Typography from 'antd/es/typography';
 import { useState } from 'react';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
+import { AppIcon } from '@/components/ui/app-icon';
 import { StepIndicator } from '@/components/ui/step-indicator';
 import { registrationSteps } from '../registration-data';
 import { RegistrationStepOne } from './registration-step-one';
@@ -21,7 +22,6 @@ export function ManualPatientRegistration({ onBack }: ManualPatientRegistrationP
   return (
     <PageContainer size="narrow" className={styles.registrationPage}>
       <Breadcrumbs
-        separatorSrc="/figma-add-patient/chevron.svg"
         items={[{ label: 'Beranda', href: '/' }, { label: 'Daftar Pasien', href: '/master' }, { label: 'Tambah Pasien Baru' }]}
       />
 
@@ -37,7 +37,7 @@ export function ManualPatientRegistration({ onBack }: ManualPatientRegistrationP
 
         <footer className={styles.registrationFormNav}>
           <Button className={styles.registrationBackButton} onClick={registrationStep === 1 ? onBack : () => setRegistrationStep((current) => current - 1)}>
-            <img src="/figma-registration/arrow-left.svg" alt="" />
+            <AppIcon name="arrowLeft" width={18} height={18} />
             Kembali
           </Button>
           <Button className={[styles.registrationNextButton, isFinalStep ? styles.savePatientButton : ''].filter(Boolean).join(' ')} onClick={() => setRegistrationStep((current) => Math.min(3, current + 1))}>
@@ -49,7 +49,7 @@ export function ManualPatientRegistration({ onBack }: ManualPatientRegistrationP
             ) : (
               <>
                 Lanjut
-                <img src="/figma-registration/arrow-right.svg" alt="" />
+                <AppIcon name="arrowRight" width={18} height={18} />
               </>
             )}
           </Button>

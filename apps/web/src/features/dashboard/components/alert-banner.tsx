@@ -1,5 +1,6 @@
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../dashboard.module.css';
 
 export function AlertBanner() {
@@ -7,7 +8,7 @@ export function AlertBanner() {
     <section className={styles.alertBanner} aria-label="Pasien HPL minggu ini">
       <div className={styles.alertCopy}>
         <span className={styles.alertIcon}>
-          <img src="/figma-dashboard/alert.svg" alt="" />
+          <AppIcon name="alert" width={22} height={22} />
         </span>
         <span>
           <Typography.Text className={styles.alertTitle}>2 pasien HPL minggu ini</Typography.Text>

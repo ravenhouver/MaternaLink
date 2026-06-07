@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AppIcon } from '@/components/ui/app-icon';
 import styles from './breadcrumbs.module.css';
 
 type BreadcrumbItem = {
@@ -8,10 +9,9 @@ type BreadcrumbItem = {
 
 type BreadcrumbsProps = {
   items: BreadcrumbItem[];
-  separatorSrc?: string;
 };
 
-export function Breadcrumbs({ items, separatorSrc }: BreadcrumbsProps) {
+export function Breadcrumbs({ items }: BreadcrumbsProps) {
   return (
     <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
       {items.map((item, index) => {
@@ -20,7 +20,7 @@ export function Breadcrumbs({ items, separatorSrc }: BreadcrumbsProps) {
         return (
           <span className={styles.itemWrap} key={`${item.label}-${index}`}>
             {item.href && !isLast ? <Link href={item.href}>{item.label}</Link> : <strong>{item.label}</strong>}
-            {!isLast && separatorSrc ? <img src={separatorSrc} alt="" /> : null}
+            {!isLast ? <AppIcon name="chevronRight" className={styles.separator} width={14} height={14} /> : null}
           </span>
         );
       })}

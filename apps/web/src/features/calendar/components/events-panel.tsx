@@ -1,5 +1,6 @@
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../calendar.module.css';
 
 const asset = (name: string) => `/figma-calendar/${name}`;
@@ -21,7 +22,7 @@ export function EventsPanel() {
           <strong>UTAMA</strong>
         </div>
         <div className={styles.prepCard}>
-          <img src={asset('prep.svg')} alt="" />
+          <AppIcon name="clipboard" width={24} height={24} />
           <span>
             <Typography.Text className={styles.prepLabel}>BUTUH PERSIAPAN:</Typography.Text>
             <Typography.Text className={styles.prepCopy}>Oksitosin, Spuit, Benang Jahit</Typography.Text>
@@ -36,7 +37,7 @@ export function EventsPanel() {
         <Typography.Title level={4}>Ibu Anisa</Typography.Title>
         <Typography.Text className={styles.riskLabel}>KONTROL RISIKO TINGGI</Typography.Text>
         <div className={styles.eventTime}>
-          <img src={asset('time.svg')} alt="" />
+          <AppIcon name="clock" width={18} height={18} />
           <Typography.Text>Pukul 14:00 WIB</Typography.Text>
         </div>
       </article>

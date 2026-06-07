@@ -1,12 +1,14 @@
+import type { AppIconName } from '@/components/ui/app-icon';
+
 export type InputMethod = {
   key: 'manual' | 'photo' | 'voice';
   title: string;
   subtitle: string;
   description: string;
-  icon: string;
-  visual?: string;
+  icon: AppIconName;
+  visual?: 'softOrb';
   button: string;
-  buttonIcon: string;
+  buttonIcon: AppIconName;
   featured?: boolean;
 };
 
@@ -16,19 +18,19 @@ export const inputMethods: InputMethod[] = [
     title: 'Ketik Manual',
     subtitle: 'Isi form langkah demi langkah',
     description: 'Pilihan terbaik untuk input data mendetail dengan kontrol penuh pada setiap kolom isian.',
-    icon: 'manual.svg',
-    visual: 'manual-bg.svg',
+    icon: 'edit',
+    visual: 'softOrb',
     button: 'Mulai Mengetik',
-    buttonIcon: 'arrow.svg',
+    buttonIcon: 'arrowRight',
   },
   {
     key: 'photo',
     title: 'Upload Foto KIA',
     subtitle: 'AI bantu baca foto, kamu cek hasilnya',
     description: 'Cukup unggah foto buku KIA. Sistem AI kami akan mengekstraksi informasi secara otomatis.',
-    icon: 'camera.svg',
+    icon: 'camera',
     button: 'Ambil Foto',
-    buttonIcon: 'upload.svg',
+    buttonIcon: 'upload',
     featured: true,
   },
   {
@@ -36,10 +38,10 @@ export const inputMethods: InputMethod[] = [
     title: 'Input Suara',
     subtitle: 'Cukup bicara, AI yang catat',
     description: 'Metode tercepat saat sedang menangani pasien. Bicara secara natural untuk mencatat anamnesa.',
-    icon: 'microphone.svg',
-    visual: 'voice-bg.svg',
+    icon: 'mic',
+    visual: 'softOrb',
     button: 'Mulai Bicara',
-    buttonIcon: 'mic-small.svg',
+    buttonIcon: 'mic',
   },
 ];
 

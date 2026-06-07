@@ -4,18 +4,17 @@ import Layout from 'antd/es/layout';
 import Typography from 'antd/es/typography';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import styles from './sidebar.module.css';
 
 const { Sider } = Layout;
 
-const asset = (name: string) => `/figma-dashboard/${name}`;
-
 const navItems = [
-  { key: '/', href: '/', icon: 'nav-home.svg', label: 'Beranda' },
-  { key: '/master', href: '/master', icon: 'nav-patients.svg', label: 'Daftar Pasien' },
-  { key: '/forecast', href: '/forecast', icon: 'nav-calendar.svg', label: 'Kalender Prediksi' },
-  { key: '/lplpo', href: '/lplpo', icon: 'nav-medicine.svg', label: 'Kebutuhan Obat' },
-];
+  { key: '/', href: '/', icon: 'home', label: 'Beranda' },
+  { key: '/master', href: '/master', icon: 'users', label: 'Daftar Pasien' },
+  { key: '/forecast', href: '/forecast', icon: 'calendar', label: 'Kalender Prediksi' },
+  { key: '/lplpo', href: '/lplpo', icon: 'package', label: 'Kebutuhan Obat' },
+] satisfies Array<{ key: string; href: string; icon: AppIconName; label: string }>;
 
 type SidebarProps = {
   collapsed: boolean;
@@ -34,7 +33,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       : isForecast
       ? { name: 'Siti Aminah', role: 'Bidan Senior', photo: '/figma-calendar/bidan-profil.png' }
       : { name: 'Dr. Siti Aminah', role: 'Bidan Utama', photo: '/figma-patients/doctor-siti.png' }
-    : { name: 'Bidan Sari', role: 'ADMIN UTAMA', photo: asset('profil-bidan.png') };
+    : { name: 'Bidan Sari', role: 'ADMIN UTAMA', photo: '/figma-dashboard/profil-bidan.png' };
 
   return (
     <Sider
@@ -55,14 +54,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {collapsed ? (
             <button type="button" className={[styles.brandBlock, styles.brandButton].join(' ')} aria-label="Buka sidebar" aria-expanded={false} onClick={onToggle}>
               <span className={styles.brandIcon}>
-                <img src={asset('logo.svg')} alt="" />
+                <AppIcon name="shield" width={20} height={20} />
               </span>
             </button>
           ) : (
             <>
               <Link href="/" className={styles.brandBlock} aria-label="MaternaLink beranda">
                 <span className={styles.brandIcon}>
-                  <img src={asset('logo.svg')} alt="" />
+                  <AppIcon name="shield" width={20} height={20} />
                 </span>
                 <span className={styles.brandCopy}>
                   <Typography.Text className={styles.brandTitle}>MaternaLink</Typography.Text>
@@ -70,7 +69,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 </span>
               </Link>
               <button type="button" className={styles.toggle} aria-label="Tutup sidebar" aria-expanded onClick={onToggle}>
-                <img src={asset('chevron.svg')} alt="" />
+                <AppIcon name="chevronLeft" width={18} height={18} />
               </button>
             </>
           )}
@@ -82,7 +81,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
             return (
               <Link key={item.key} href={item.href} className={[styles.navItem, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
-                <img src={asset(item.icon)} alt="" className={styles.navIcon} />
+                <AppIcon name={item.icon} className={styles.navIcon} width={22} height={22} />
                 <span>{item.label}</span>
               </Link>
             );
@@ -93,7 +92,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <div className={styles.profileArea}>
         {hasTopbar || collapsed ? (
           <Link href="/settings" className={[styles.navItem, styles.settingsLink].join(' ')} prefetch={false}>
-            <img src="/figma-patients/settings.svg" alt="" className={styles.navIcon} />
+            <AppIcon name="settings" className={styles.navIcon} width={22} height={22} />
             <span>Pengaturan</span>
           </Link>
         ) : null}

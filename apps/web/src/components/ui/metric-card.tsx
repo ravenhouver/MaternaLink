@@ -1,21 +1,22 @@
 import Card from 'antd/es/card';
 import Tag from 'antd/es/tag';
 import Typography from 'antd/es/typography';
+import { AppIcon, type AppIconName } from './app-icon';
 import styles from './metric-card.module.css';
 
 type MetricCardProps = {
   label: string;
   value: string;
-  iconSrc: string;
+  icon: AppIconName;
   accent: string;
   tag?: string;
 };
 
-export function MetricCard({ label, value, iconSrc, accent, tag }: MetricCardProps) {
+export function MetricCard({ label, value, icon, accent, tag }: MetricCardProps) {
   return (
     <Card className={styles.card} style={{ borderTopColor: accent }}>
       <div className={styles.topline}>
-        <img src={iconSrc} alt="" className={styles.icon} />
+        <AppIcon name={icon} className={styles.icon} width={40} height={40} style={{ color: accent }} />
         {tag ? (
           <Tag className={styles.tag} style={{ color: accent, backgroundColor: `${accent}1A` }}>
             {tag}

@@ -1,6 +1,7 @@
 import Typography from 'antd/es/typography';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
+import { AppIcon } from '@/components/ui/app-icon';
 import { inputMethods } from '../registration-data';
 import { InputMethodCard } from './input-method-card';
 import styles from '../patient-registration.module.css';
@@ -13,7 +14,6 @@ export function AddPatientMethodSelector({ onSelectManual }: AddPatientMethodSel
   return (
     <PageContainer size="wide" className={styles.page}>
       <Breadcrumbs
-        separatorSrc="/figma-add-patient/chevron.svg"
         items={[{ label: 'Beranda', href: '/' }, { label: 'Daftar Pasien', href: '/master' }, { label: 'Tambah Pasien Baru' }]}
       />
 
@@ -31,7 +31,7 @@ export function AddPatientMethodSelector({ onSelectManual }: AddPatientMethodSel
       </section>
 
       <section className={styles.methodNotice} aria-label="Catatan metode input">
-        <img src="/figma-add-patient/shield.svg" alt="" />
+        <AppIcon name="shield" width={22} height={22} />
         <Typography.Text>Apapun metode yang dipilih, kamu tetap bisa edit data sebelum disimpan</Typography.Text>
       </section>
 

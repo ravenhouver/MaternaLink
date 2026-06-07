@@ -13,7 +13,7 @@ export function DashboardHeader() {
       </div>
 
       <div className={styles.headerActions}>
-        <IconButton className={styles.notificationButton} label="Notifikasi" src="/figma-dashboard/bell.svg" />
+        <IconButton className={styles.notificationButton} label="Notifikasi" icon="bell" />
         <div className={styles.clinicPill} aria-label="Profil klinik">
           <span>Klinik Sejahtera</span>
           <span className={styles.clinicAvatar}>KS</span>

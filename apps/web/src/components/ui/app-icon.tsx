@@ -1,0 +1,48 @@
+import { addCollection, Icon, type IconProps } from '@iconify/react';
+import { icons as lucideIcons } from '@iconify-json/lucide';
+
+addCollection(lucideIcons);
+
+const iconNames = {
+  activity: 'lucide:activity',
+  alert: 'lucide:triangle-alert',
+  archive: 'lucide:archive',
+  arrowLeft: 'lucide:arrow-left',
+  arrowRight: 'lucide:arrow-right',
+  bell: 'lucide:bell',
+  briefcase: 'lucide:briefcase',
+  calendar: 'lucide:calendar',
+  camera: 'lucide:camera',
+  chevronDown: 'lucide:chevron-down',
+  chevronLeft: 'lucide:chevron-left',
+  chevronRight: 'lucide:chevron-right',
+  clipboard: 'lucide:clipboard-list',
+  clock: 'lucide:clock',
+  edit: 'lucide:square-pen',
+  fileText: 'lucide:file-text',
+  heart: 'lucide:heart-pulse',
+  home: 'lucide:house',
+  info: 'lucide:info',
+  mic: 'lucide:mic',
+  package: 'lucide:package',
+  plus: 'lucide:plus',
+  search: 'lucide:search',
+  send: 'lucide:send',
+  settings: 'lucide:settings',
+  shield: 'lucide:shield',
+  upload: 'lucide:upload',
+  user: 'lucide:user',
+  userPlus: 'lucide:user-plus',
+  users: 'lucide:users',
+  zap: 'lucide:zap',
+} as const;
+
+export type AppIconName = keyof typeof iconNames;
+
+type AppIconProps = Omit<IconProps, 'icon'> & {
+  name: AppIconName;
+};
+
+export function AppIcon({ name, 'aria-hidden': ariaHidden = true, ...props }: AppIconProps) {
+  return <Icon aria-hidden={ariaHidden} icon={iconNames[name]} {...props} />;
+}

@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
+import { AppIcon, type AppIconName } from './app-icon';
 import styles from './action-card.module.css';
 
 type ActionCardProps = {
   title: string;
   description?: string;
-  iconSrc?: string;
+  icon?: AppIconName;
   active?: boolean;
   featured?: boolean;
   className?: string;
@@ -12,12 +13,12 @@ type ActionCardProps = {
   onClick?: () => void;
 };
 
-export function ActionCard({ title, description, iconSrc, active = false, featured = false, className = '', children, onClick }: ActionCardProps) {
+export function ActionCard({ title, description, icon, active = false, featured = false, className = '', children, onClick }: ActionCardProps) {
   return (
     <button type="button" className={[styles.card, active ? styles.active : '', featured ? styles.featured : '', className].filter(Boolean).join(' ')} onClick={onClick}>
-      {iconSrc ? (
+      {icon ? (
         <span className={styles.icon}>
-          <img src={iconSrc} alt="" />
+          <AppIcon name={icon} width={22} height={22} />
         </span>
       ) : null}
       <span className={styles.copy}>

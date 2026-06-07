@@ -1,3 +1,5 @@
+import type { AppIconName } from '@/components/ui/app-icon';
+
 export type CalendarEventType = 'anc' | 'delivery' | 'risk';
 
 export type CalendarDay = {
@@ -9,10 +11,10 @@ export type CalendarDay = {
 };
 
 export const summaryItems = [
-  { value: '5', label: 'Persalinan Bulan Ini', icon: 'summary-delivery.svg', tone: 'blueSoft' },
-  { value: '12', label: 'Kunjungan ANC', icon: 'summary-anc.svg', tone: 'blue' },
-  { value: '3', label: 'Pasien Risiko Tinggi', icon: 'summary-risk.svg', tone: 'red' },
-] as const;
+  { value: '5', label: 'Persalinan Bulan Ini', icon: 'heart', tone: 'blueSoft' },
+  { value: '12', label: 'Kunjungan ANC', icon: 'clipboard', tone: 'blue' },
+  { value: '3', label: 'Pasien Risiko Tinggi', icon: 'alert', tone: 'red' },
+] satisfies Array<{ value: string; label: string; icon: AppIconName; tone: 'blueSoft' | 'blue' | 'red' }>;
 
 export const weekdays = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
 

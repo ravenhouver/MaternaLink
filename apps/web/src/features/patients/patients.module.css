@@ -45,7 +45,7 @@
   box-shadow: 0 10px 15px -3px rgb(59 130 246 / 0.2), 0 4px 6px -4px rgb(59 130 246 / 0.2);
 }
 
-.addPatientButton img {
+.addPatientButton svg {
   width: 22px;
   height: 16px;
 }
@@ -91,7 +91,7 @@
   box-shadow: none;
 }
 
-.search img {
+.search svg {
   width: 18px;
   height: 18px;
   margin-right: var(--space-3);
@@ -339,7 +339,7 @@
   box-shadow: 0 1px 1px rgb(59 130 246 / 0.1);
 }
 
-.pageButton img {
+.pageButton svg {
   width: 8px;
   height: 12px;
 }

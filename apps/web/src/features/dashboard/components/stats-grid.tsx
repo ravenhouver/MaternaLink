@@ -6,13 +6,11 @@ type StatsGridProps = {
   stats: DashboardStat[];
 };
 
-const asset = (name: string) => `/figma-dashboard/${name}`;
-
 export function StatsGrid({ stats }: StatsGridProps) {
   return (
     <ResponsiveCardGrid minCardWidth="220px">
       {stats.map((item) => (
-        <MetricCard key={item.label} label={item.label} value={item.value} iconSrc={asset(item.icon)} accent={item.accent} tag={item.tag} />
+        <MetricCard key={item.label} label={item.label} value={item.value} icon={item.icon} accent={item.accent} tag={item.tag} />
       ))}
     </ResponsiveCardGrid>
   );

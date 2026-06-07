@@ -1,5 +1,6 @@
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../patients.module.css';
 
 export function PatientsHeader() {
@@ -14,7 +15,7 @@ export function PatientsHeader() {
         </Typography.Paragraph>
       </div>
       <Button type="primary" className={styles.addPatientButton} href="/master/add-patient">
-        <img src="/figma-patients/add-patient-white.svg" alt="" />
+        <AppIcon name="userPlus" width={20} height={20} />
         Tambah Pasien Baru
       </Button>
     </section>

@@ -1,5 +1,6 @@
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { AppIcon } from '@/components/ui/app-icon';
 import type { InputMethod } from '../registration-data';
 import styles from '../patient-registration.module.css';
 
@@ -8,14 +9,12 @@ type InputMethodCardProps = {
   onSelectManual: () => void;
 };
 
-const asset = (name: string) => `/figma-add-patient/${name}`;
-
 export function InputMethodCard({ method, onSelectManual }: InputMethodCardProps) {
   return (
     <article className={[styles.methodCard, method.featured ? styles.featuredMethod : ''].filter(Boolean).join(' ')}>
-      {method.featured ? <span className={styles.methodOrb} /> : method.visual ? <img src={asset(method.visual)} alt="" className={styles.methodVisual} /> : null}
+      {method.featured || method.visual ? <span className={styles.methodOrb} /> : null}
       <div className={styles.methodIcon}>
-        <img src={asset(method.icon)} alt="" />
+        <AppIcon name={method.icon} width={28} height={28} />
       </div>
       <div className={styles.methodCopy}>
         <div className={styles.methodTitleRow}>
@@ -27,7 +26,7 @@ export function InputMethodCard({ method, onSelectManual }: InputMethodCardProps
       </div>
       <Button className={styles.methodButton} onClick={method.key === 'manual' ? onSelectManual : undefined}>
         {method.button}
-        <img src={asset(method.buttonIcon)} alt="" />
+        <AppIcon name={method.buttonIcon} width={18} height={18} />
       </Button>
     </article>
   );

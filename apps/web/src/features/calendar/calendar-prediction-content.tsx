@@ -13,7 +13,6 @@ export function CalendarPredictionContent() {
   return (
     <PageContainer size="wide" className={styles.page}>
       <Breadcrumbs
-        separatorSrc="/figma-calendar/breadcrumb-chevron.svg"
         items={[{ label: 'Beranda', href: '/' }, { label: 'Daftar Pasien', href: '/master' }, { label: 'Kalender Prediksi' }]}
       />
       <CalendarSummary items={summaryItems} />

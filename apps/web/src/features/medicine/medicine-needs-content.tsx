@@ -11,7 +11,7 @@ import styles from './medicine.module.css';
 export function MedicineNeedsContent() {
   return (
     <PageContainer size="wide" className={styles.page}>
-      <Breadcrumbs separatorSrc="/figma-medicine/breadcrumb-chevron.svg" items={[{ label: 'Beranda', href: '/' }, { label: 'Kebutuhan Obat' }]} />
+      <Breadcrumbs items={[{ label: 'Beranda', href: '/' }, { label: 'Kebutuhan Obat' }]} />
       <MedicineHeader />
       <section className={styles.grid} aria-label="Daftar kebutuhan obat">
         {medicineSections.map((section) => (

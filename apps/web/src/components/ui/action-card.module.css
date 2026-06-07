@@ -34,7 +34,7 @@
   background: var(--color-primary);
 }
 
-.icon img {
+.icon svg {
   max-width: 22px;
   max-height: 22px;
 }

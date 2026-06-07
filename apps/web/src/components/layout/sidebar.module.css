@@ -63,7 +63,7 @@
   box-shadow: var(--shadow-soft);
 }
 
-.toggle img {
+.toggle svg {
   width: 8px;
   height: 12px;
   transform: rotate(180deg);
@@ -78,9 +78,10 @@
   background: var(--color-primary);
 }
 
-.brandIcon img {
+.brandIcon svg {
   width: 20px;
   height: 20px;
+  color: #ffffff;
 }
 
 .brandCopy,
