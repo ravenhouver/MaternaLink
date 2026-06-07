@@ -43,7 +43,7 @@ export function MedicineSenderContent() {
             <AppIcon name="activity" width={18} height={18} />
             Pemantauan Lingkungan
           </a>
-          <a href="#urgent-actions-title">
+          <a href="/medicine-sender/clinics">
             <AppIcon name="package" width={18} height={18} />
             Semua Klinik
           </a>
