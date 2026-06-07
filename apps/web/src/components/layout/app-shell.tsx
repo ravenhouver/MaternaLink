@@ -18,26 +18,31 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const isMedicineSender = pathname.startsWith('/medicine-sender');
   const hasTopbar = pathname !== '/';
 
+  const themeConfig = {
+    algorithm: theme.defaultAlgorithm,
+    token: {
+      colorPrimary: '#1a73e8',
+      borderRadius: 16,
+      colorBgLayout: '#f8fafd',
+      fontFamily: 'Inter, Arial, sans-serif',
+    },
+    components: {
+      Typography: {
+        titleMarginBottom: 0,
+        titleMarginTop: 0,
+      },
+    },
+  };
+
+  if (isMedicineSender) {
+    return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
+  }
+
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: theme.defaultAlgorithm,
-        token: {
-          colorPrimary: '#1a73e8',
-          borderRadius: 16,
-          colorBgLayout: '#f8fafd',
-          fontFamily: 'Inter, Arial, sans-serif',
-        },
-        components: {
-          Typography: {
-            titleMarginBottom: 0,
-            titleMarginTop: 0,
-          },
-        },
-      }}
-    >
+    <ConfigProvider theme={themeConfig}>
       <Layout className={[styles.shell, isSidebarCollapsed ? styles.collapsed : ''].filter(Boolean).join(' ')}>
         <Sidebar collapsed={isSidebarCollapsed} onToggle={() => setIsSidebarCollapsed((current) => !current)} />
         <Layout className={styles.mainLayout}>

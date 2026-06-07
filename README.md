@@ -46,13 +46,13 @@ The project is designed for database setup, API setup, ERD documentation, Swagge
 Local API URL:
 
 ```text
-http://localhost:3000/api
+http://localhost:3001/api
 ```
 
 Swagger UI:
 
 ```text
-http://localhost:3000/api/docs
+http://localhost:3001/api/docs
 ```
 
 ---
@@ -127,19 +127,19 @@ Compose will run:
 3. Prisma Client generation during the image build.
 4. `prisma migrate deploy` when the API container starts.
 5. Demo seed data when `RUN_SEED=true`.
-6. The NestJS API on port `3000`.
-7. The Next.js web dashboard on port `3001`.
+6. The NestJS API on port `3001`.
+7. The Next.js web dashboard on port `3000`.
 
 Open Swagger UI:
 
 ```text
-http://localhost:3000/api/docs
+http://localhost:3001/api/docs
 ```
 
 Open web dashboard:
 
 ```text
-http://localhost:3001
+http://localhost:3000
 ```
 
 ### 3. Optional local development
@@ -166,7 +166,7 @@ pnpm run dev:web
 Web dashboard:
 
 ```text
-http://localhost:3001
+http://localhost:3000
 ```
 
 ---
@@ -176,7 +176,7 @@ http://localhost:3001
 | Variable | Required | Example | Description |
 |---|:---:|---|---|
 | `DATABASE_URL` | Yes | `postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public` | PostgreSQL connection string used by Prisma. |
-| `PORT` | No | `3000` | NestJS HTTP port. The application defaults to `3000` when this is not set. |
+| `PORT` | No | `3001` | NestJS HTTP port. The application defaults to `3001` when this is not set. |
 | `RUN_SEED` | No | `true` | When set to `true`, the API entrypoint runs demo seed data after migrations. |
 
 ### Environment Rules
@@ -190,7 +190,7 @@ http://localhost:3001
 
 ## Docker Local Usage
 
-This project can run fully through Docker Compose. The `api` service builds the NestJS image, waits for PostgreSQL to become healthy, runs `prisma migrate deploy`, runs demo seed data when `RUN_SEED=true`, and then starts the production API. The `web` service builds the Next.js dashboard and serves it on port `3001`.
+This project can run fully through Docker Compose. The `api` service builds the NestJS image, waits for PostgreSQL to become healthy, runs `prisma migrate deploy`, runs demo seed data when `RUN_SEED=true`, and then starts the production API on port `3001`. The `web` service builds the Next.js dashboard and serves it on port `3000`.
 
 ### Start full stack
 
@@ -201,19 +201,19 @@ docker compose up --build
 Local API URL:
 
 ```text
-http://localhost:3000/api
+http://localhost:3001/api
 ```
 
 Swagger UI:
 
 ```text
-http://localhost:3000/api/docs
+http://localhost:3001/api/docs
 ```
 
 Web dashboard:
 
 ```text
-http://localhost:3001
+http://localhost:3000
 ```
 
 ### Run in background
@@ -231,8 +231,8 @@ docker compose ps
 Expected services:
 
 ```text
-api        Up   0.0.0.0:3000->3000/tcp
-web        Up   0.0.0.0:3001->3001/tcp
+api        Up   0.0.0.0:3001->3001/tcp
+web        Up   0.0.0.0:3000->3000/tcp
 postgres   Up   0.0.0.0:55432->5432/tcp
 ```
 
@@ -281,7 +281,7 @@ postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public
 |---|---|
 | `pnpm run dev` | Run API and web workspaces in development mode. |
 | `pnpm run dev:api` | Run NestJS development mode with watch. |
-| `pnpm run dev:web` | Run the Next.js dashboard on port `3001`. |
+| `pnpm run dev:web` | Run the Next.js dashboard on port `3000`. |
 | `pnpm run start:api` | Run the compiled API from `apps/api/dist/src/main.js`. |
 | `pnpm run build` | Build the API and web workspaces. |
 | `pnpm run build:api` | Build the NestJS API workspace. |
@@ -655,7 +655,7 @@ docker compose logs -f api
 Swagger URL:
 
 ```text
-http://localhost:3000/api/docs
+http://localhost:3001/api/docs
 ```
 
 If you run the API on another port, update `PORT` accordingly.

@@ -25,7 +25,7 @@ WORKDIR /app
 
 ARG PNPM_VERSION=10.11.0
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=3001
 
 RUN apk add --no-cache netcat-openbsd openssl \
   && npm install -g pnpm@${PNPM_VERSION}
@@ -40,6 +40,6 @@ COPY apps/api/docker-entrypoint.sh ./apps/api/docker-entrypoint.sh
 
 WORKDIR /app/apps/api
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["sh", "./docker-entrypoint.sh"]

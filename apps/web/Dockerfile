@@ -23,7 +23,7 @@ WORKDIR /app
 
 ARG PNPM_VERSION=10.11.0
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=3000
 
 RUN npm install -g pnpm@${PNPM_VERSION}
 
@@ -34,6 +34,6 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/web/next.config.ts ./apps/web/next.config.ts
 
-EXPOSE 3001
+EXPOSE 3000
 
 CMD ["pnpm", "--filter", "@maternalink/web", "start"]
