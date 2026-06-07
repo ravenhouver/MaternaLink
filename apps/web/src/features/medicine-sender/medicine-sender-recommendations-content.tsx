@@ -39,7 +39,7 @@ export function MedicineSenderRecommendationsContent() {
             <AppIcon name="send" width={18} height={18} />
             Rekomendasi Pengiriman
           </a>
-          <a href="#tactical-view">
+          <a href="/medicine-sender/environment">
             <AppIcon name="activity" width={18} height={18} />
             Pemantauan Lingkungan
           </a>
