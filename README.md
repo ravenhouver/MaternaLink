@@ -2,383 +2,243 @@
 
 # MaternaLink
 
-### Backend MVP for Maternal Health Supply-Chain Planning
+Full-stack maternal health supply-chain planning app for puskesmas medicine needs, forecast runs, LPLPO planning, and distribution risk simulation.
 
-REST API backend for modeling puskesmas data, maternal clinical signals, medicine stock, demand forecasting, predictive LPLPO requests, and distribution risk alerts. The application is built with **NestJS**, **TypeScript**, **Prisma**, and **PostgreSQL**.
-
-<br />
-
-<img src="https://img.shields.io/badge/NestJS-10.4-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS" />
-<img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-<img src="https://img.shields.io/badge/Prisma-5.22-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
-<img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-
-<br />
-
-<img src="https://img.shields.io/badge/Node.js-%3E%3D20-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
-<img src="https://img.shields.io/badge/pnpm-ready-F69220?style=flat-square&logo=pnpm&logoColor=white" alt="pnpm" />
-<img src="https://img.shields.io/badge/Jest-E2E-C21325?style=flat-square&logo=jest&logoColor=white" alt="Jest" />
-<img src="https://img.shields.io/badge/Swagger-OpenAPI-85EA2D?style=flat-square&logo=swagger&logoColor=111111" alt="Swagger" />
-<img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose" />
-<img src="https://img.shields.io/badge/E2E-6%20passing-brightgreen?style=flat-square" alt="E2E" />
-
-<br />
-<br />
-
-<a href="#overview"><strong>Overview</strong></a> .
-<a href="#features"><strong>Features</strong></a> .
-<a href="#tech-stack"><strong>Tech Stack</strong></a> .
-<a href="#quick-start"><strong>Quick Start</strong></a> .
-<a href="#architecture"><strong>Architecture</strong></a> .
-<a href="#api-modules"><strong>API Modules</strong></a> .
-<a href="#troubleshooting"><strong>Troubleshooting</strong></a>
+![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-5.22-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 
 </div>
 
----
-
 ## Overview
 
-**MaternaLink API** is a backend MVP for maternal health supply-chain planning. It connects puskesmas master data, medicine master data, clinical conditions, symptoms, stock inputs, access context, deterministic forecasts, predictive LPLPO rows, and distribution simulations.
+MaternaLink models a puskesmas medicine planning workflow from master data to prediction and delivery decisions. The repository contains:
 
-The project is designed for database setup, API setup, ERD documentation, Swagger documentation, and a repeatable demo workflow.
+- NestJS REST API with Prisma and PostgreSQL.
+- Next.js dashboard for bidan/admin workflows.
+- Docker Compose stack for local API, web, and database.
+- Demo seed data and e2e tests for presentation-ready flows.
 
-Local API URL:
+Default local URLs:
 
-```text
-http://localhost:3001/api
-```
-
-Swagger UI:
-
-```text
-http://localhost:3001/api/docs
-```
-
----
+| Service | URL |
+|---|---|
+| Web dashboard | `http://localhost:3000` |
+| API base | `http://localhost:3001/api` |
+| Swagger docs | `http://localhost:3001/api/docs` |
+| PostgreSQL | `localhost:55432` |
 
 ## Features
 
-<table>
-  <tr>
-    <td width="50%">
-      <h3>Clinical Data and Inputs</h3>
-      <ul>
-        <li>Puskesmas master data with location and logistics metadata.</li>
-        <li>Medicine, maternal condition, and symptom master data.</li>
-        <li>Monthly diagnosis inputs per puskesmas.</li>
-        <li>Monthly symptom inputs per puskesmas.</li>
-        <li>Raw anamnesis records for clinical data traceability.</li>
-        <li>Access, season, pregnancy, and stockout context inputs.</li>
-      </ul>
-    </td>
-    <td width="50%">
-      <h3>Forecast and Distribution</h3>
-      <ul>
-        <li>Deterministic stock forecasting for backend validation.</li>
-        <li>Medicine demand prediction rows per period.</li>
-        <li>Predictive LPLPO generation from forecast results.</li>
-        <li>Allocation plan simulation for puskesmas facilities.</li>
-        <li>Route disruption and cold-chain mismatch alerts.</li>
-        <li>Ready-to-run demo flow for presentation.</li>
-      </ul>
-    </td>
-  </tr>
-</table>
-
----
+- Puskesmas, medicine, clinical condition, and symptom master data.
+- Monthly diagnosis, symptom, context, stock, and anamnesis inputs.
+- Deterministic demand forecast per puskesmas and period.
+- Predictive LPLPO generation from forecast output.
+- Allocation plan simulation with route disruption and cold-chain alerts.
+- Responsive dashboard pages for overview, patients/master data, forecast calendar, medicine needs, and medicine sender flows.
 
 ## Tech Stack
 
-| Layer | Technology |
+| Area | Stack |
 |---|---|
-| Runtime | **Node.js**, **TypeScript `5.7`** |
-| Framework | **NestJS `10.4`** |
-| Database | **PostgreSQL `16`** |
-| ORM | **Prisma `5.22`** |
-| API Docs | **Swagger / OpenAPI** |
-| Validation | **class-validator**, **class-transformer** |
-| Testing | **Jest**, **Supertest** |
-| Frontend | **Next.js**, **React**, **Ant Design** |
-| Local Infra | **Docker Compose** for API and PostgreSQL |
-| Package Manager | **pnpm workspaces** |
+| Monorepo | pnpm workspace |
+| API | NestJS 10, TypeScript, Swagger |
+| Database | PostgreSQL 16, Prisma 5 |
+| Web | Next.js 15, React 18, Ant Design 5, Leaflet |
+| Test | Jest, Supertest |
+| Local runtime | Docker Compose |
 
----
+## Repository Structure
 
-## Quick Start
-
-### 1. Clone repository
-
-```bash
-git clone https://github.com/0xSyam/MaternaLink
-cd MaternaLink
+```text
+.
++-- apps
+|   +-- api          # NestJS API, Prisma schema, migrations, seed, e2e test
+|   +-- web          # Next.js dashboard and UI assets
++-- docker-compose.yml
++-- Dockerfile       # API Docker build
++-- package.json     # Root pnpm scripts
++-- pnpm-workspace.yaml
 ```
 
-### 2. Run full Docker stack
+## Quick Start With Docker
+
+Requirements:
+
+- Docker Desktop
+- pnpm only needed if you also run local host commands
+
+Run full stack:
 
 ```bash
 docker compose up --build
 ```
 
-Compose will run:
+Compose starts:
 
-1. PostgreSQL `16`.
-2. The `maternalink-api` image build.
-3. Prisma Client generation during the image build.
-4. `prisma migrate deploy` when the API container starts.
+1. PostgreSQL on host port `55432`.
+2. API on host port `3001`.
+3. Web dashboard on host port `3000`.
+4. Prisma migrations through API entrypoint.
 5. Demo seed data when `RUN_SEED=true`.
-6. The NestJS API on port `3001`.
-7. The Next.js web dashboard on port `3000`.
 
-Open Swagger UI:
-
-```text
-http://localhost:3001/api/docs
-```
-
-Open web dashboard:
-
-```text
-http://localhost:3000
-```
-
-### 3. Optional local development
-
-Use these commands if you want to run the API and web dashboard directly on the host machine during development.
-
-```bash
-pnpm install
-copy apps\api\.env.example apps\api\.env
-docker compose up -d postgres
-pnpm run prisma:generate
-pnpm run prisma:migrate -- --name init_normalized_schema
-pnpm run prisma:seed
-pnpm run dev:api
-```
-
-In a second terminal:
-
-```bash
-copy apps\web\.env.example apps\web\.env
-pnpm run dev:web
-```
-
-Web dashboard:
-
-```text
-http://localhost:3000
-```
-
----
-
-## Environment Variables
-
-| Variable | Required | Example | Description |
-|---|:---:|---|---|
-| `DATABASE_URL` | Yes | `postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public` | PostgreSQL connection string used by Prisma. |
-| `PORT` | No | `3001` | NestJS HTTP port. The application defaults to `3001` when this is not set. |
-| `RUN_SEED` | No | `true` | When set to `true`, the API entrypoint runs demo seed data after migrations. |
-
-### Environment Rules
-
-- Do not commit `.env` files containing real production values.
-- Use `apps/api/.env.example` and `apps/web/.env.example` only for local placeholder configuration.
-- Do not store production passwords, tokens, secret keys, private keys, or credentials in the repository.
-- Update `DATABASE_URL` if your local PostgreSQL port differs from the default setup.
-
----
-
-## Docker Local Usage
-
-This project can run fully through Docker Compose. The `api` service builds the NestJS image, waits for PostgreSQL to become healthy, runs `prisma migrate deploy`, runs demo seed data when `RUN_SEED=true`, and then starts the production API on port `3001`. The `web` service builds the Next.js dashboard and serves it on port `3000`.
-
-### Start full stack
-
-```bash
-docker compose up --build
-```
-
-Local API URL:
-
-```text
-http://localhost:3001/api
-```
-
-Swagger UI:
-
-```text
-http://localhost:3001/api/docs
-```
-
-Web dashboard:
-
-```text
-http://localhost:3000
-```
-
-### Run in background
-
-```bash
-docker compose up -d --build
-```
-
-### Check service status
-
-```bash
-docker compose ps
-```
-
-Expected services:
-
-```text
-api        Up   0.0.0.0:3001->3001/tcp
-web        Up   0.0.0.0:3000->3000/tcp
-postgres   Up   0.0.0.0:55432->5432/tcp
-```
-
-### View logs
-
-```bash
-docker compose logs -f api
-docker compose logs -f web
-docker compose logs -f postgres
-```
-
-### Stop stack
+Stop stack:
 
 ```bash
 docker compose down
 ```
 
-### Reset database volume
-
-Use this only when you want to remove local database data and recreate it from migrations and seed data.
+Reset database volume:
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
 
-### Database URLs
+## Local Development
 
-The API container uses the internal Compose network:
+Requirements:
 
-```text
-postgresql://maternalink:maternalink@postgres:5432/maternalink?schema=public
+- Node.js 20 or newer
+- pnpm
+- Docker Desktop for PostgreSQL
+
+Install dependencies:
+
+```bash
+pnpm install
 ```
 
-Tools running from the Windows host can use port `55432`:
+Create env files:
 
-```text
-postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public
+```bash
+copy apps\api\.env.example apps\api\.env
+copy apps\web\.env.example apps\web\.env
 ```
 
----
+Start PostgreSQL only:
 
-## Available Scripts
+```bash
+docker compose up -d postgres
+```
 
-| Command | Description |
-|---|---|
-| `pnpm run dev` | Run API and web workspaces in development mode. |
-| `pnpm run dev:api` | Run NestJS development mode with watch. |
-| `pnpm run dev:web` | Run the Next.js dashboard on port `3000`. |
-| `pnpm run start:api` | Run the compiled API from `apps/api/dist/src/main.js`. |
-| `pnpm run build` | Build the API and web workspaces. |
-| `pnpm run build:api` | Build the NestJS API workspace. |
-| `pnpm run build:web` | Build the Next.js web workspace. |
-| `pnpm run test:e2e` | Run Jest + Supertest end-to-end tests. |
-| `pnpm run prisma:generate` | Generate Prisma Client. |
-| `pnpm run prisma:migrate` | Run Prisma development migrations. |
-| `pnpm run prisma:deploy` | Run Prisma production migrations for containers or deploys. |
-| `pnpm run prisma:seed` | Insert demo seed data. |
-| `docker compose up --build` | Build and run the API + PostgreSQL stack. |
-
-Recommended validation before merge:
+Generate Prisma client, run migration, and seed demo data:
 
 ```bash
 pnpm run prisma:generate
-pnpm --filter @maternalink/api prisma migrate status
+pnpm run prisma:migrate -- --name init_normalized_schema
 pnpm run prisma:seed
-pnpm run build:api
-pnpm run build:web
-pnpm run test:e2e
 ```
 
----
+Run API and web in one command:
 
-## Project Structure
-
-```text
-apps/
-  api/
-    prisma/
-      schema.prisma                # Database schema
-      seed.ts                      # Demo seed data
-    src/
-      main.ts                      # Nest bootstrap, global prefix, Swagger setup
-      app.module.ts                # Root application module
-      prisma/                      # Prisma module and service
-      modules/
-        master/                    # Master data API
-        inputs/                    # Monthly input API
-        forecast/                  # Forecast API
-        lplpo/                     # Predictive LPLPO API
-        distribution/              # Allocation and alert API
-    test/
-      app.e2e-spec.ts              # End-to-end API tests
-  web/
-    src/app/                       # Next.js App Router routes
-    src/components/                # Dashboard shell and page components
-    src/lib/api.ts                 # API base URL and reachability helper
-Dockerfile                         # Production image for the NestJS API
-docker-compose.yml                 # Full local stack: API + PostgreSQL
-pnpm-workspace.yaml                # pnpm workspace packages
-docs/
-  api/openapi-notes.md             # OpenAPI notes
-  erd/maternalink-erd.mmd          # Mermaid ERD
-  demo-flow.md                     # Presentation demo script
+```bash
+pnpm run dev
 ```
 
----
+Or run separately:
+
+```bash
+pnpm run dev:api
+pnpm run dev:web
+```
+
+## Environment Variables
+
+### API
+
+File: `apps/api/.env`
+
+| Variable | Required | Default/example | Description |
+|---|:---:|---|---|
+| `DATABASE_URL` | Yes | `postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public` | Prisma PostgreSQL connection string. |
+| `PORT` | No | `3001` | NestJS HTTP port. |
+| `RUN_SEED` | No | `true` | Docker entrypoint runs seed data when set to `true`. |
+
+### Web
+
+File: `apps/web/.env`
+
+| Variable | Required | Default/example | Description |
+|---|:---:|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | No | `http://localhost:3001/api` | API base URL used by the dashboard. |
+
+Do not commit real production credentials or secrets.
+
+## Root Scripts
+
+| Command | Description |
+|---|---|
+| `pnpm run dev` | Run API and web dev servers in parallel. |
+| `pnpm run dev:api` | Run NestJS API in watch mode. |
+| `pnpm run dev:web` | Run Next.js dashboard on port `3000`. |
+| `pnpm run build` | Build API then web. |
+| `pnpm run build:api` | Build API only. |
+| `pnpm run build:web` | Build web only. |
+| `pnpm run start:api` | Start compiled API from `dist`. |
+| `pnpm run test:e2e` | Run API e2e tests. |
+| `pnpm run prisma:generate` | Generate Prisma client. |
+| `pnpm run prisma:migrate` | Run Prisma dev migration. |
+| `pnpm run prisma:deploy` | Deploy existing Prisma migrations. |
+| `pnpm run prisma:seed` | Seed demo data. |
+
+## Web Pages
+
+| Route | Purpose |
+|---|---|
+| `/` | Main dashboard overview. |
+| `/master` | Patient/master data view. |
+| `/master/add-patient` | Add patient flow. |
+| `/forecast` | Prediction calendar. |
+| `/lplpo` | Medicine needs/LPLPO view. |
+| `/medicine-sender` | Medicine sender dashboard. |
+| `/medicine-sender/clinics` | Clinic delivery context. |
+| `/medicine-sender/recommendations` | Recommendation view. |
+| `/medicine-sender/decision-history` | Decision history view. |
+| `/medicine-sender/environment` | Environment/risk context view. |
+| `/inputs` | Input workflow route. |
+| `/distribution` | Distribution workflow route. |
 
 ## API Modules
 
-### Master Data
+All endpoints use the `/api` global prefix.
 
-| Method | Endpoint | Purpose |
+### Master
+
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/master/puskesmas` | List puskesmas reference data. |
-| `POST` | `/api/master/puskesmas` | Create puskesmas reference data. |
-| `GET` | `/api/master/obat` | List medicine reference data. |
-| `POST` | `/api/master/obat` | Create medicine reference data. |
-| `GET` | `/api/master/kondisi` | List maternal condition master data. |
-| `GET` | `/api/master/gejala` | List symptom master data. |
+| `GET` | `/api/master/puskesmas` | List puskesmas master data. |
+| `POST` | `/api/master/puskesmas` | Create puskesmas master data. |
+| `GET` | `/api/master/obat` | List medicine master data. |
+| `POST` | `/api/master/obat` | Create medicine master data. |
+| `GET` | `/api/master/kondisi` | List clinical conditions. |
+| `GET` | `/api/master/gejala` | List maternal symptoms. |
 
-### Monthly Inputs
+### Inputs
 
-| Method | Endpoint | Purpose |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/inputs/diagnosis` | Save monthly diagnosis input. |
-| `POST` | `/api/inputs/gejala` | Save monthly symptom input. |
-| `POST` | `/api/inputs/konteks` | Save context, access, pregnancy, and stockout signals. |
-| `POST` | `/api/inputs/stok` | Save medicine stock and consumption input. |
-| `POST` | `/api/inputs/anamnesis` | Save raw anamnesis transcript data. |
+| `POST` | `/api/inputs/diagnosis` | Upsert monthly diagnosis input. |
+| `POST` | `/api/inputs/gejala` | Upsert monthly symptom input. |
+| `POST` | `/api/inputs/konteks` | Upsert monthly puskesmas context input. |
+| `POST` | `/api/inputs/stok` | Upsert monthly medicine stock input. |
+| `POST` | `/api/inputs/anamnesis` | Create raw anamnesis transcript input. |
 
 ### Forecast, LPLPO, Distribution
 
-| Method | Endpoint | Purpose |
+| Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/forecast/run` | Run deterministic stock forecast. |
 | `GET` | `/api/forecast/runs` | List forecast runs. |
-| `GET` | `/api/forecast/runs/:id/results` | Inspect forecast results. |
-| `POST` | `/api/lplpo/generate` | Generate predictive LPLPO request rows. |
-| `GET` | `/api/lplpo` | Filter generated LPLPO rows. |
-| `GET` | `/api/distribution/alerts` | List route and cold-chain alerts. |
+| `GET` | `/api/forecast/runs/:id/results` | Get forecast result rows. |
+| `POST` | `/api/lplpo/generate` | Generate predictive LPLPO rows from latest forecast. |
+| `GET` | `/api/lplpo` | List LPLPO rows, optionally filtered by `puskesmasId` and `periode`. |
+| `GET` | `/api/distribution/alerts` | List distribution alerts. |
 | `POST` | `/api/distribution/plans` | Create allocation plan. |
-| `GET` | `/api/distribution/plans/:id` | Inspect allocation plan. |
-| `POST` | `/api/distribution/plans/:id/simulate` | Simulate allocation risk. |
-
----
+| `GET` | `/api/distribution/plans/:id` | Get allocation plan. |
+| `POST` | `/api/distribution/plans/:id/simulate` | Simulate route and cold-chain risk. |
 
 ## Architecture
 
@@ -434,8 +294,6 @@ erDiagram
   ALLOCATION_PLAN ||--o{ ALLOCATION_PLAN_ITEM : contains
   OBAT ||--o{ ALLOCATION_PLAN_ITEM : allocates
 ```
-
-
 
 ### Prisma Schema Overview
 
@@ -563,148 +421,66 @@ classDiagram
   AllocationPlan "1" --> "many" AllocationPlanItem
 ```
 
-
-
----
-
 ## Demo Flow
-
 
 Recommended demo order:
 
-1. Open Swagger UI.
-2. Inspect puskesmas and medicine master data.
-3. Submit puskesmas monthly context.
-4. Run forecast.
-5. Generate LPLPO.
-6. Create an allocation plan.
-7. Simulate distribution risk.
-8. Inspect generated alerts.
-
----
+1. Open web dashboard.
+2. Open Swagger UI.
+3. Inspect puskesmas and medicine master data.
+4. Submit puskesmas monthly context.
+5. Run forecast.
+6. Generate LPLPO.
+7. Create an allocation plan.
+8. Simulate distribution risk.
+9. Inspect generated alerts.
 
 ## Testing
 
-| Test Command | Description |
-|---|---|
-| `pnpm run test:e2e` | Run all end-to-end API tests. |
-| `pnpm run build:api` | Verify TypeScript and NestJS build output. |
-| `pnpm run build:web` | Verify Next.js dashboard build output. |
-| `pnpm --filter @maternalink/api prisma migrate status` | Check database migration status. |
-
-Full backend check:
+Run API e2e tests:
 
 ```bash
-pnpm run prisma:generate
-pnpm --filter @maternalink/api prisma migrate status
-pnpm run prisma:seed
-pnpm run build:api
-pnpm run build:web
 pnpm run test:e2e
 ```
 
-Latest verified state:
+The e2e suite expects the database to be reachable and seeded with demo data.
 
-| Check | Status |
-|---|---|
-| Prisma generate | Passing |
-| Prisma migrations | Up to date |
-| Seed | Passing |
-| Build | Passing |
-| E2E tests | 6 passing |
-| Swagger UI | Available at `/api/docs` |
+Build both apps:
 
----
+```bash
+pnpm run build
+```
 
 ## Troubleshooting
 
-### Prisma cannot connect to the database
+### API cannot connect to PostgreSQL
 
-Possible causes:
-
-- PostgreSQL container is not running.
-- Port `55432` is already used by another service.
-- `DATABASE_URL` does not match `docker-compose.yml`.
-
-Check with:
+Check that PostgreSQL is running on port `55432`:
 
 ```bash
-docker compose ps
-docker compose logs postgres
-pnpm --filter @maternalink/api prisma migrate status
+docker compose ps postgres
 ```
 
-### Migration fails because the database contains old local data
+If the database is fresh, run migrations and seed again:
 
-Reset the volume only when local database data can be removed.
+```bash
+pnpm run prisma:migrate -- --name init_normalized_schema
+pnpm run prisma:seed
+```
+
+### Web cannot reach API
+
+Make sure `apps/web/.env` points to API port `3001`:
+
+```text
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api
+```
+
+Then restart `pnpm run dev:web`.
+
+### Need clean local Docker state
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
-
-### Swagger does not open
-
-Make sure the API is running and the port is correct.
-
-```bash
-docker compose ps
-docker compose logs -f api
-```
-
-Swagger URL:
-
-```text
-http://localhost:3001/api/docs
-```
-
-If you run the API on another port, update `PORT` accordingly.
-
-### Endpoint returns a validation error
-
-The global validation pipe uses whitelist mode and rejects fields that are not defined in the DTO. Make sure request bodies only contain fields supported by the target endpoint.
-
-
----
-
-## Code Conventions
-
-- Use TypeScript for all application source files.
-- Place new API features under `apps/api/src/modules/<feature>`.
-- Place new dashboard routes under `apps/web/src/app`.
-- Keep controller, DTO, service, and module files aligned with the existing NestJS pattern.
-- Access Prisma Client through `PrismaService` from `apps/api/src/prisma`.
-- Validate inputs through DTOs and `class-validator` decorators.
-- Do not bypass the global `/api` prefix when adding endpoints.
-- Update Swagger decorators when endpoint contracts change.
-- Use Ant Design components for the web dashboard shell and module placeholders.
-- Add or update E2E tests for important workflow changes.
-
----
-
-## Pull Request Checklist
-
-Before merging, verify:
-
-- [ ] `pnpm run prisma:generate` passes.
-- [ ] `pnpm --filter @maternalink/api prisma migrate status` has been checked.
-- [ ] `pnpm run prisma:seed` works on a clean local database.
-- [ ] `pnpm run build:api` passes.
-- [ ] `pnpm run build:web` passes.
-- [ ] `pnpm run test:e2e` passes or relevant tests have been run.
-- [ ] No secret, credential, or production `.env` file is committed.
-- [ ] Prisma schema changes include the required migration.
-- [ ] Endpoint changes are reflected in Swagger and related documentation.
-
----
-
-<div align="center">
-
-**MaternaLink API**
-
-Backend MVP for maternal health supply-chain planning.
-
-Built with NestJS, Prisma, and PostgreSQL.
-
-</div>
-
