@@ -35,6 +35,7 @@ const iconNames = {
   mic: 'lucide:mic',
   package: 'lucide:package',
   plus: 'lucide:plus',
+  rotateCcw: 'lucide:rotate-ccw',
   search: 'lucide:search',
   send: 'lucide:send',
   settings: 'lucide:settings',

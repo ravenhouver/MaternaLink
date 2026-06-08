@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { ManualPatientRegistration } from './components/manual-patient-registration';
 import styles from './patient-registration.module.css';
 
 const methods = [
@@ -28,12 +26,6 @@ const methods = [
 ];
 
 export function AddPatientMethodContent() {
-  const [mode, setMode] = useState<'method' | 'manual'>('method');
-
-  if (mode === 'manual') {
-    return <ManualPatientRegistration onBack={() => setMode('method')} />;
-  }
-
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.methodHeader}>
@@ -61,10 +53,10 @@ export function AddPatientMethodContent() {
                 {method.action}
               </Link>
             ) : (
-              <button type="button" className={styles.methodAction} onClick={() => setMode('manual')}>
+              <Link href="/master/add-patient/manual" className={styles.methodAction}>
                 {method.action}
                 <AppIcon name="arrowRight" width={14} height={14} />
-              </button>
+              </Link>
             )}
           </article>
         ))}
