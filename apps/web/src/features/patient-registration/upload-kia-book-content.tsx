@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
+import { createPatient, createQueue } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './patient-registration.module.css';
 
 const guidanceCards = [
@@ -35,8 +38,13 @@ const extractedFields = [
 type UploadState = 'idle' | 'processing' | 'success';
 
 export function UploadKiaBookContent() {
+  const router = useRouter();
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [progress, setProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -59,6 +67,17 @@ export function UploadKiaBookContent() {
     };
   }, [uploadState]);
 
+  useEffect(() => {
+    if (!selectedFile || !selectedFile.type.startsWith('image/')) {
+      setPreviewUrl(null);
+      return undefined;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(selectedFile);
+    setPreviewUrl(nextPreviewUrl);
+    return () => URL.revokeObjectURL(nextPreviewUrl);
+  }, [selectedFile]);
+
   const progressLabel = useMemo(() => Math.min(progress, 100), [progress]);
 
   function startProcessing() {
@@ -67,7 +86,10 @@ export function UploadKiaBookContent() {
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    if (event.target.files?.length) {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setError(null);
       startProcessing();
     }
   }
@@ -76,8 +98,34 @@ export function UploadKiaBookContent() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setError(null);
     setProgress(0);
     setUploadState('idle');
+  }
+
+  async function confirmExtraction() {
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const suffix = Date.now().toString().slice(-6);
+      const created = await createPatient({
+        fullName: 'Rina Safitri',
+        nik: `327105${suffix.padStart(10, '0')}`.slice(0, 16),
+        phone: '08123456789',
+        address: 'Alamat hasil ekstraksi KIA',
+        gestationalAge: 28,
+        ancVisit: 'K3',
+        riskLevel: 'MEDIUM',
+      });
+      await createQueue({ patientId: created.patient.id, pregnancyId: created.pregnancy.id });
+      router.push(routes.queue);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Gagal menyimpan hasil ekstraksi');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -93,7 +141,8 @@ export function UploadKiaBookContent() {
 
       {uploadState === 'idle' ? <IdleUploadPanel onFileChange={handleFileChange} inputRef={fileInputRef} /> : null}
       {uploadState === 'processing' ? <ProcessingPanel progress={progressLabel} /> : null}
-      {uploadState === 'success' ? <SuccessPanel onRetake={resetUpload} /> : null}
+      {error ? <p className={styles.formError}>{error}</p> : null}
+      {uploadState === 'success' ? <SuccessPanel isSubmitting={isSubmitting} previewUrl={previewUrl} selectedFileName={selectedFile?.name ?? 'KIA book photo'} onConfirm={confirmExtraction} onRetake={resetUpload} /> : null}
 
       {uploadState !== 'success' ? <GuidanceCards active={uploadState === 'processing'} /> : null}
     </PageContainer>
@@ -158,7 +207,7 @@ function ProcessingPanel({ progress }: { progress: number }) {
   );
 }
 
-function SuccessPanel({ onRetake }: { onRetake: () => void }) {
+function SuccessPanel({ isSubmitting, onConfirm, onRetake, previewUrl, selectedFileName }: { isSubmitting: boolean; onConfirm: () => void; onRetake: () => void; previewUrl: string | null; selectedFileName: string }) {
   return (
     <section className={styles.successPanel} aria-label="KIA book extraction result">
       <div className={styles.previewPane}>
@@ -166,7 +215,7 @@ function SuccessPanel({ onRetake }: { onRetake: () => void }) {
           <AppIcon name="checkCircle" width={12} height={12} />
           Analysis Complete
         </span>
-        <img src="/figma-upload/kia-preview.png" alt="KIA book preview" />
+        <img src={previewUrl ?? '/figma-upload/kia-preview.png'} alt={selectedFileName} />
       </div>
 
       <div className={styles.resultPane}>
@@ -198,10 +247,10 @@ function SuccessPanel({ onRetake }: { onRetake: () => void }) {
             <AppIcon name="rotateCcw" width={18} height={18} />
             Retake Photo
           </button>
-          <Link href="/master/add-patient" className={styles.continueButton}>
-            Continue to Registration Form
+          <button type="button" className={styles.continueButton} disabled={isSubmitting} onClick={onConfirm}>
+            {isSubmitting ? 'Saving...' : 'Confirm and Queue Patient'}
             <AppIcon name="arrowRight" width={18} height={18} />
-          </Link>
+          </button>
         </div>
       </div>
     </section>

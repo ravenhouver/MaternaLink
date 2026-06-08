@@ -351,6 +351,23 @@
   text-transform: uppercase;
 }
 
+.primaryAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.examError {
+  margin: 0;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
 .voiceAction {
   position: relative;
   z-index: 1;
@@ -531,6 +548,23 @@
   min-width: 0;
   flex: 1;
   overflow-wrap: anywhere;
+}
+
+.inputShell input,
+.inputShell select,
+.inputShell textarea {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #191c20;
+  font: inherit;
+  outline: none;
+}
+
+.inputShell textarea {
+  min-height: 44px;
+  resize: vertical;
 }
 
 .inputShell small {

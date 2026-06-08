@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
+import { createExamination, getTodayQueue, type ExaminationSource, type QueueRecord } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
 
 type FlowMode = 'method' | 'recording' | 'transcript' | 'manual';
@@ -19,6 +22,20 @@ type ExaminationField = {
   type?: 'input' | 'textarea' | 'select';
   wide?: boolean;
   icon?: boolean;
+};
+
+type ExaminationFormState = {
+  complaint: string;
+  bloodPressure: string;
+  pulse: string;
+  gestationalAge: string;
+  ancVisit: string;
+  symptoms: string;
+  diagnosis: string;
+  medicine: string;
+  dosage: string;
+  unit: string;
+  notes: string;
 };
 
 const transcriptFields: ExaminationField[] = [
@@ -41,16 +58,110 @@ const manualFields: ExaminationField[] = transcriptFields.map((field) => ({
   value: field.id === 'complaint' ? 'Perut mules' : field.id === 'bloodPressure' ? '160/110' : field.id === 'gestationalAge' ? '36' : field.id === 'ancVisit' ? 'K5 - Trimester 3' : field.value,
 }));
 
+const defaultForm: ExaminationFormState = {
+  complaint: 'Perut mules',
+  bloodPressure: '160/110',
+  pulse: '',
+  gestationalAge: '36',
+  ancVisit: 'K5 - Trimester 3',
+  symptoms: '',
+  diagnosis: 'K03',
+  medicine: 'OBT-010',
+  dosage: '1',
+  unit: 'Ampul',
+  notes: '',
+};
+
+const voiceFallbackForm: ExaminationFormState = {
+  complaint: 'Pusing dan bengkak kaki setelah aktivitas',
+  bloodPressure: '145/95',
+  pulse: '88',
+  gestationalAge: '36',
+  ancVisit: 'K5 - Trimester 3',
+  symptoms: 'Pusing, bengkak kaki',
+  diagnosis: 'K03',
+  medicine: 'OBT-010',
+  dosage: '1',
+  unit: 'Ampul',
+  notes: 'Data diisi dari fallback voice transcript.',
+};
+
 export function PatientExaminationContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queueId = searchParams.get('queueId') ?? undefined;
   const [mode, setMode] = useState<FlowMode>('method');
+  const [queue, setQueue] = useState<QueueRecord | null>(null);
+  const [form, setForm] = useState<ExaminationFormState>(defaultForm);
+  const [source, setSource] = useState<ExaminationSource>('MANUAL');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isFormMode = mode === 'transcript' || mode === 'manual';
+
+  useEffect(() => {
+    let cancelled = false;
+    getTodayQueue().then((rows) => {
+      if (cancelled) return;
+      const activeQueue = queueId ? rows.find((row) => row.id === queueId) : rows.find((row) => row.status === 'EXAMINING') ?? rows[0];
+      if (activeQueue) {
+        setQueue(activeQueue);
+        setForm((current) => ({
+          ...current,
+          gestationalAge: String(activeQueue.pregnancy.gestationalAge ?? current.gestationalAge),
+          ancVisit: activeQueue.pregnancy.ancVisit ?? current.ancVisit,
+        }));
+      }
+    }).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat data antrian'));
+    return () => {
+      cancelled = true;
+    };
+  }, [queueId]);
+
+  function updateForm(key: keyof ExaminationFormState, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function finishRecording() {
+    setForm(voiceFallbackForm);
+    setSource('VOICE_TRANSCRIPT_FALLBACK');
+    setMode('transcript');
+  }
+
+  async function saveExamination() {
+    if (!queue) {
+      setError('Pilih antrian pasien sebelum menyimpan pemeriksaan.');
+      return;
+    }
+    setError(null);
+    setIsSaving(true);
+    try {
+      await createExamination({
+        queueId: queue.id,
+        patientId: queue.patient.id,
+        pregnancyId: queue.pregnancy.id,
+        source,
+        complaint: form.complaint,
+        gestationalAge: Number(form.gestationalAge),
+        ancVisit: form.ancVisit,
+        diagnosis: form.diagnosis ? [{ kondisiId: form.diagnosis, jumlahKasus: 1 }] : [],
+        symptoms: form.symptoms ? [{ gejalaId: 'G05', jumlah: 1 }] : [],
+        medication: form.medicine ? [{ obatId: form.medicine, quantity: Number(form.dosage || 1) }] : [],
+        notes: form.notes,
+      });
+      router.push(routes.forecastCalendar);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan pemeriksaan');
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.breadcrumbs} aria-label="Breadcrumb">
-        <Link href="/inputs">Daftar Pasien</Link>
+        <Link href={routes.queue}>Daftar Pasien</Link>
         <AppIcon name="chevronRight" width={14} height={14} />
-        <span>Ny. Anisa Rahmawati</span>
+        <span>{queue?.patient.fullName ?? 'Pasien'}</span>
         <AppIcon name="chevronRight" width={14} height={14} />
         <strong>Pemeriksaan</strong>
       </header>
@@ -62,33 +173,34 @@ export function PatientExaminationContent() {
         </div>
         <div className={styles.sessionId}>
           <span>Examination Session</span>
-          <strong>ID: #EXM-20240520-001</strong>
+          <strong>ID: {queue?.queueNo ?? '-'}</strong>
         </div>
       </section>
 
-      <PatientInfoBar />
+      <PatientInfoBar queue={queue} />
+      {error ? <p className={styles.examError}>{error}</p> : null}
 
       {mode === 'method' ? <MethodSelector onManual={() => setMode('manual')} onRecord={() => setMode('recording')} /> : null}
-      {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={() => setMode('transcript')} /> : null}
-      {mode === 'transcript' ? <ExaminationForm fields={transcriptFields} mode="transcript" onRecordAgain={() => setMode('recording')} /> : null}
-      {mode === 'manual' ? <ExaminationForm fields={manualFields} mode="manual" onRecordAgain={() => setMode('recording')} /> : null}
+      {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={finishRecording} /> : null}
+      {mode === 'transcript' ? <ExaminationForm fields={transcriptFields} form={form} isSaving={isSaving} mode="transcript" onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
+      {mode === 'manual' ? <ExaminationForm fields={manualFields} form={form} isSaving={isSaving} mode="manual" onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
     </PageContainer>
   );
 }
 
-function PatientInfoBar() {
+function PatientInfoBar({ queue }: { queue: QueueRecord | null }) {
   return (
     <section className={styles.patientInfo} aria-label="Patient information">
       <div className={styles.patientIdentity}>
         <span className={styles.patientPhoto}><img src="/figma-dashboard/profil-bidan.png" alt="Mrs. Anisa Rahmawati" /></span>
         <div>
-          <h2>Name: Mrs. Anisa Rahmawati</h2>
-          <p>No. RM: #RM-202405012</p>
+          <h2>Name: {queue?.patient.fullName ?? '-'}</h2>
+          <p>NIK: {queue?.patient.nik ?? '-'}</p>
         </div>
       </div>
       <div className={styles.pregnancyBadge}>
         <span>Active Pregnancy</span>
-        <strong>36 weeks</strong>
+        <strong>{queue?.pregnancy.gestationalAge ?? '-'} weeks</strong>
         <small>Gestational Age</small>
       </div>
     </section>
@@ -155,7 +267,7 @@ function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: ()
   );
 }
 
-function ExaminationForm({ fields, mode, onRecordAgain }: { fields: ExaminationField[]; mode: 'transcript' | 'manual'; onRecordAgain: () => void }) {
+function ExaminationForm({ fields, form, isSaving, mode, onChange, onRecordAgain, onSave }: { fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; mode: 'transcript' | 'manual'; onChange: (key: keyof ExaminationFormState, value: string) => void; onRecordAgain: () => void; onSave: () => void }) {
   const manualCount = fields.filter((field) => field.status === 'manual').length;
 
   return (
@@ -166,7 +278,7 @@ function ExaminationForm({ fields, mode, onRecordAgain }: { fields: ExaminationF
       </div>
 
       <div className={styles.formGrid}>
-        {fields.map((field) => <FormField key={field.id} field={field} />)}
+        {fields.map((field) => <FormField key={field.id} field={field} form={form} onChange={onChange} />)}
       </div>
 
       <footer className={styles.formFooter}>
@@ -183,9 +295,9 @@ function ExaminationForm({ fields, mode, onRecordAgain }: { fields: ExaminationF
               Re-record
             </button>
           ) : null}
-          <button type="button" className={styles.primaryAction}>
+          <button type="button" className={styles.primaryAction} disabled={isSaving} onClick={onSave}>
             <AppIcon name="save" width={18} height={18} />
-            Save Examination
+            {isSaving ? 'Saving...' : 'Save Examination'}
           </button>
         </div>
         <p>Make sure all data is filled in correctly before saving.</p>
@@ -194,9 +306,10 @@ function ExaminationForm({ fields, mode, onRecordAgain }: { fields: ExaminationF
   );
 }
 
-function FormField({ field }: { field: ExaminationField }) {
+function FormField({ field, form, onChange }: { field: ExaminationField; form: ExaminationFormState; onChange: (key: keyof ExaminationFormState, value: string) => void }) {
   const className = [styles.formField, field.wide ? styles.wideField : '', field.status === 'manual' ? styles.manualField : '', field.status === 'verified' ? styles.verifiedField : ''].filter(Boolean).join(' ');
-  const value = field.value ?? field.placeholder ?? '';
+  const key = field.id as keyof ExaminationFormState;
+  const value = form[key] ?? '';
 
   return (
     <label className={className}>
@@ -207,9 +320,23 @@ function FormField({ field }: { field: ExaminationField }) {
       </span>
       <span className={[styles.inputShell, field.type === 'textarea' ? styles.textareaShell : ''].join(' ')}>
         {field.icon ? <AppIcon name="search" width={16} height={16} /> : null}
-        <span className={!field.value ? styles.placeholder : undefined}>{value}</span>
+        {field.type === 'textarea' ? (
+          <textarea placeholder={field.placeholder} value={value} onChange={(event) => onChange(key, event.target.value)} />
+        ) : field.type === 'select' ? (
+          <select value={value} onChange={(event) => onChange(key, event.target.value)}>
+            <option value="">{field.placeholder ?? 'Select'}</option>
+            <option value="K1">K1</option>
+            <option value="K2">K2</option>
+            <option value="K3">K3</option>
+            <option value="K4">K4</option>
+            <option value="K5 - Trimester 3">K5 - Trimester 3</option>
+            <option value="Tablet">Tablet</option>
+            <option value="Ampul">Ampul</option>
+          </select>
+        ) : (
+          <input placeholder={field.placeholder} value={value} onChange={(event) => onChange(key, event.target.value)} />
+        )}
         {field.suffix ? <small>{field.suffix}</small> : null}
-        {field.type === 'select' ? <AppIcon name="chevronDown" width={18} height={18} /> : null}
       </span>
     </label>
   );

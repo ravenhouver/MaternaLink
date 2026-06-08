@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
+import { createPatient, createQueue, type PregnancyRiskLevel } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './patient-registration.module.css';
 
 type ManualStage = 'manual-personal' | 'autofill-personal' | 'pregnancy' | 'screening';
@@ -50,8 +53,32 @@ const screeningFactors: ReadonlyArray<{ checked?: boolean; label: string; tag?: 
   { label: 'Infection' },
 ] as const;
 
+type ManualRegistrationForm = {
+  fullName: string;
+  nik: string;
+  phone: string;
+  address: string;
+  gestationalAge: string;
+  ancVisit: string;
+  riskLevel: PregnancyRiskLevel;
+};
+
+const emptyForm: ManualRegistrationForm = {
+  fullName: '',
+  nik: '',
+  phone: '',
+  address: '',
+  gestationalAge: '28',
+  ancVisit: 'K3',
+  riskLevel: 'MEDIUM',
+};
+
 export function ManualEntryFlowContent() {
+  const router = useRouter();
   const [stage, setStage] = useState<ManualStage>('manual-personal');
+  const [form, setForm] = useState<ManualRegistrationForm>(emptyForm);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const stageIndex = stages.indexOf(stage);
   const visualStep = stage === 'manual-personal' || stage === 'autofill-personal' ? 1 : stage === 'pregnancy' ? 2 : 3;
 
@@ -60,6 +87,15 @@ export function ManualEntryFlowContent() {
   }, [stage]);
 
   function goNext() {
+    setError(null);
+    if (stage === 'manual-personal' && (!form.fullName.trim() || !form.nik.trim() || !form.phone.trim() || !form.address.trim())) {
+      setError('Lengkapi nama, NIK, nomor HP, dan alamat pasien.');
+      return;
+    }
+    if (stage === 'pregnancy' && (!form.gestationalAge.trim() || !form.ancVisit.trim())) {
+      setError('Lengkapi usia kehamilan dan kunjungan ANC.');
+      return;
+    }
     setStage((current) => stages[Math.min(stages.indexOf(current) + 1, stages.length - 1)]);
   }
 
@@ -70,14 +106,46 @@ export function ManualEntryFlowContent() {
     setStage(stages[stageIndex - 1]);
   }
 
+  function updateField<K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function submitRegistration() {
+    setError(null);
+    if (!form.fullName.trim() || !form.nik.trim() || !form.phone.trim() || !form.address.trim() || !form.gestationalAge.trim() || !form.ancVisit.trim()) {
+      setError('Lengkapi semua field wajib sebelum submit.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const created = await createPatient({
+        fullName: form.fullName.trim(),
+        nik: form.nik.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+        gestationalAge: Number(form.gestationalAge),
+        ancVisit: form.ancVisit,
+        riskLevel: form.riskLevel,
+      });
+      await createQueue({ patientId: created.patient.id, pregnancyId: created.pregnancy.id });
+      router.push(routes.queue);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Registrasi gagal');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <PageContainer size="wide" className={styles.manualFlowPage}>
       <WizardStepper currentStep={visualStep} />
+      {error ? <p className={styles.formError}>{error}</p> : null}
 
-      {stage === 'manual-personal' ? <ManualPersonalPanel onNext={goNext} /> : null}
+      {stage === 'manual-personal' ? <ManualPersonalPanel form={form} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'autofill-personal' ? <AutofillPersonalPanel onBack={goBack} onNext={goNext} /> : null}
-      {stage === 'pregnancy' ? <PregnancyPanel onBack={goBack} onNext={goNext} /> : null}
-      {stage === 'screening' ? <ScreeningPanel onBack={goBack} /> : null}
+      {stage === 'pregnancy' ? <PregnancyPanel form={form} onFieldChange={updateField} onBack={goBack} onNext={goNext} /> : null}
+      {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
   );
 }
@@ -104,19 +172,24 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
   );
 }
 
-function ManualPersonalPanel({ onNext }: { onNext: () => void }) {
+function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Manual patient identity form">
       <div className={styles.manualBanner}>
         <span><AppIcon name="edit" width={18} height={18} /></span>
         <strong>Manual input — fill all fields below</strong>
-        <Link href="/master/add-patient/upload">Use KIA Upload instead?</Link>
+        <Link href={routes.kiaUpload}>Use KIA Upload instead?</Link>
       </div>
 
       <div className={styles.manualFormBody}>
         <FormSection icon="user" title="PATIENT IDENTITY">
           <div className={styles.manualFormGrid}>
-            {identityFields.map((field) => <ManualField key={field.label} {...field} />)}
+            <ManualField label="Patient Full Name *" placeholder="Example: Siti Aminah" wide value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
+            <ManualField label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
+            <ManualField label="Date of Birth *" placeholder="mm/dd/yyyy" />
+            <ManualField label="Residential Address *" placeholder="Street, RT/RW, Sub-district, District" wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
+            <ManualField label="Phone Number (WhatsApp) *" placeholder="8123456789" prefix="+62" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
+            <ManualField label="BPJS / Insurance Number (Optional)" placeholder="Enter number if available" />
           </div>
         </FormSection>
 
@@ -135,7 +208,7 @@ function ManualPersonalPanel({ onNext }: { onNext: () => void }) {
         </FormSection>
       </div>
 
-      <ActionFooter backHref="/master/add-patient" nextLabel="Continue to Pregnancy Data" onNext={onNext} />
+      <ActionFooter backHref={routes.newPatient} nextLabel="Continue to Pregnancy Data" onNext={onNext} />
     </section>
   );
 }
@@ -149,7 +222,7 @@ function AutofillPersonalPanel({ onBack, onNext }: { onBack: () => void; onNext:
           <strong>Data from KIA Book has been auto-filled</strong>
           <p>Review and correct if anything is not as expected.</p>
         </div>
-        <Link href="/master/add-patient/upload">Change KIA photo</Link>
+        <Link href={routes.kiaUpload}>Change KIA photo</Link>
       </div>
 
       <div className={styles.manualFormBody}>
@@ -180,13 +253,13 @@ function AutofillPersonalPanel({ onBack, onNext }: { onBack: () => void; onNext:
   );
 }
 
-function PregnancyPanel({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
+function PregnancyPanel({ form, onBack, onFieldChange, onNext }: { form: ManualRegistrationForm; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Pregnancy data form">
       <div className={styles.autoBanner}>
         <span><AppIcon name="checkCircle" width={20} height={20} /></span>
         <strong>Data from the MCH Handbook has been auto-filled by MaternaLink AI.</strong>
-        <Link href="/master/add-patient/upload">Change Handbook Photo</Link>
+        <Link href={routes.kiaUpload}>Change Handbook Photo</Link>
       </div>
 
       <div className={styles.manualFormBody}>
@@ -199,7 +272,8 @@ function PregnancyPanel({ onBack, onNext }: { onBack: () => void; onNext: () => 
               <div className={styles.gestationTrack}><span /></div>
               <div className={styles.gestationScale}><small>1 Week</small><small>20 Weeks</small><small>40 Weeks</small></div>
             </div>
-            <AutoField label="Last ANC Visit" value="K3" fromKia />
+            <ManualField label="Current Gestational Age *" placeholder="28" value={form.gestationalAge} onChange={(value) => onFieldChange('gestationalAge', value)} />
+            <ManualField label="Last ANC Visit *" placeholder="K3" value={form.ancVisit} onChange={(value) => onFieldChange('ancVisit', value)} />
           </div>
         </FormSection>
 
@@ -235,13 +309,13 @@ function PregnancyPanel({ onBack, onNext }: { onBack: () => void; onNext: () => 
   );
 }
 
-function ScreeningPanel({ onBack }: { onBack: () => void }) {
+function ScreeningPanel({ form, isSubmitting, onBack, onFieldChange, onSubmit }: { form: ManualRegistrationForm; isSubmitting: boolean; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onSubmit: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Screening and risk form">
       <div className={styles.autoBanner}>
         <span><AppIcon name="checkCircle" width={20} height={20} /></span>
         <strong>Data from the MCH Handbook has been auto-filled by MaternaLink AI.</strong>
-        <Link href="/master/add-patient/upload">Change Handbook Photo</Link>
+        <Link href={routes.kiaUpload}>Change Handbook Photo</Link>
       </div>
 
       <div className={styles.screeningLayout}>
@@ -281,6 +355,14 @@ function ScreeningPanel({ onBack }: { onBack: () => void }) {
             <label className={styles.manualLabel}>Responsible Doctor</label>
             <input className={styles.manualInput} value="dr. Ratna Wulandari, Sp.OG" readOnly />
           </div>
+          <div className={styles.sideCard}>
+            <label className={styles.manualLabel}>Risk Level</label>
+            <select className={styles.manualInput} value={form.riskLevel} onChange={(event) => onFieldChange('riskLevel', event.target.value as PregnancyRiskLevel)}>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+            </select>
+          </div>
           <div className={styles.priorityCard}><small>PRIORITY SUGGESTION</small><strong>PRIORITY: HIGH</strong><AppIcon name="alert" width={18} height={18} /></div>
           <div className={styles.riskSummaryCard}>
             <strong><AppIcon name="alert" width={16} height={16} /> RISK SUMMARY</strong>
@@ -295,7 +377,7 @@ function ScreeningPanel({ onBack }: { onBack: () => void }) {
         </aside>
       </div>
 
-      <ActionFooter backLabel="Back to Pregnancy Data" nextLabel="Submit" onBack={onBack} onNext={() => undefined} />
+      <ActionFooter backLabel="Back to Pregnancy Data" nextLabel={isSubmitting ? 'Submitting...' : 'Submit'} onBack={onBack} onNext={onSubmit} disabled={isSubmitting} />
     </section>
   );
 }
@@ -303,25 +385,27 @@ function ScreeningPanel({ onBack }: { onBack: () => void }) {
 type ManualFieldProps = {
   alert?: boolean;
   label: string;
+  onChange?: (value: string) => void;
   placeholder: string;
   prefix?: string;
   select?: boolean;
   textarea?: boolean;
+  value?: string;
   wide?: boolean;
 };
 
-function ManualField({ alert, label, placeholder, prefix, select, textarea, wide }: ManualFieldProps) {
+function ManualField({ alert, label, onChange, placeholder, prefix, select, textarea, value, wide }: ManualFieldProps) {
   return (
     <label className={`${styles.manualField} ${wide ? styles.wideManualField : ''} ${alert ? styles.alertManualField : ''}`}>
       <span className={styles.manualLabel}>{label}</span>
       {prefix ? (
-        <span className={styles.prefixInput}><small>{prefix}</small><input placeholder={placeholder} /></span>
+        <span className={styles.prefixInput}><small>{prefix}</small><input placeholder={placeholder} value={value} onChange={(event) => onChange?.(event.target.value)} /></span>
       ) : textarea ? (
-        <textarea placeholder={placeholder} />
+        <textarea placeholder={placeholder} value={value} onChange={(event) => onChange?.(event.target.value)} />
       ) : select ? (
         <span className={styles.selectInput}><select defaultValue=""><option value="">{placeholder}</option></select><AppIcon name="chevronDown" width={18} height={18} /></span>
       ) : (
-        <input placeholder={placeholder} />
+        <input placeholder={placeholder} value={value} onChange={(event) => onChange?.(event.target.value)} />
       )}
     </label>
   );
@@ -358,7 +442,7 @@ function FormSection({ children, icon, title, tone = 'dark' }: { children: React
   );
 }
 
-function ActionFooter({ backHref, backLabel = 'Back', nextLabel, onBack, onNext }: { backHref?: string; backLabel?: string; nextLabel: string; onBack?: () => void; onNext: () => void }) {
+function ActionFooter({ backHref, backLabel = 'Back', disabled, nextLabel, onBack, onNext }: { backHref?: string; backLabel?: string; disabled?: boolean; nextLabel: string; onBack?: () => void; onNext: () => void }) {
   return (
     <footer className={styles.manualFooter}>
       {backHref ? (
@@ -366,7 +450,7 @@ function ActionFooter({ backHref, backLabel = 'Back', nextLabel, onBack, onNext 
       ) : (
         <button type="button" className={styles.manualBack} onClick={onBack}><AppIcon name="arrowLeft" width={18} height={18} />{backLabel}</button>
       )}
-      <button type="button" className={styles.manualNext} onClick={onNext}>{nextLabel}<AppIcon name="arrowRight" width={18} height={18} /></button>
+      <button type="button" className={styles.manualNext} disabled={disabled} onClick={onNext}>{nextLabel}<AppIcon name="arrowRight" width={18} height={18} /></button>
     </footer>
   );
 }

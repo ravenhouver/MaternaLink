@@ -10,6 +10,59 @@ export type CurrentUser = {
   puskesmasId: string | null;
 };
 
+export type PregnancyRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type QueueStatus = 'WAITING' | 'EXAMINING' | 'COMPLETED' | 'CANCELLED';
+export type ExaminationSource = 'MANUAL' | 'VOICE_TRANSCRIPT_FALLBACK' | 'VOICE_TRANSCRIPT_AI';
+
+export type PatientRecord = {
+  id: string;
+  fullName: string;
+  nik: string;
+  phone?: string | null;
+  address?: string | null;
+};
+
+export type PregnancyRecord = {
+  id: string;
+  gestationalAge?: number | null;
+  ancVisit?: string | null;
+  riskLevel: PregnancyRiskLevel;
+};
+
+export type QueueRecord = {
+  id: string;
+  queueNo: string;
+  assignedDoctor?: string | null;
+  status: QueueStatus;
+  queuedAt: string;
+  patient: PatientRecord;
+  pregnancy: PregnancyRecord;
+};
+
+export type CreatePatientPayload = {
+  fullName: string;
+  nik: string;
+  phone?: string;
+  address?: string;
+  gestationalAge?: number;
+  ancVisit?: string;
+  riskLevel?: PregnancyRiskLevel;
+};
+
+export type CreateExaminationPayload = {
+  queueId?: string;
+  patientId: string;
+  pregnancyId: string;
+  source?: ExaminationSource;
+  complaint?: string;
+  gestationalAge?: number;
+  ancVisit?: string;
+  diagnosis?: Array<{ kondisiId: string; jumlahKasus: number }>;
+  symptoms?: Array<{ gejalaId: string; jumlah: number }>;
+  medication?: Array<{ obatId: string; quantity: number }>;
+  notes?: string;
+};
+
 export type ApiReachability = {
   ok: boolean;
   status?: number;
@@ -85,4 +138,25 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   } catch {
     return null;
   }
+}
+
+export async function createPatient(payload: CreatePatientPayload): Promise<{ patient: PatientRecord; pregnancy: PregnancyRecord }> {
+  return apiFetch('/patients', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function createQueue(payload: { patientId: string; pregnancyId: string }): Promise<QueueRecord> {
+  return apiFetch('/queue', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function getTodayQueue(params?: { puskesmasId?: string }): Promise<QueueRecord[]> {
+  const query = params?.puskesmasId ? `?puskesmasId=${encodeURIComponent(params.puskesmasId)}` : '';
+  return apiFetch(`/queue/today${query}`);
+}
+
+export async function updateQueueStatus(id: string, status: QueueStatus): Promise<QueueRecord> {
+  return apiFetch(`/queue/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+}
+
+export async function createExamination(payload: CreateExaminationPayload) {
+  return apiFetch('/examinations', { method: 'POST', body: JSON.stringify(payload) });
 }
