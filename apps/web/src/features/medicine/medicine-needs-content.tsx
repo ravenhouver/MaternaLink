@@ -3,7 +3,9 @@
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { getLplpoRows } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
 type MedicationStatus = 'safe' | 'warning' | 'critical';
@@ -34,7 +36,28 @@ const statusLabel: Record<MedicationStatus, string> = {
 
 export function MedicineNeedsContent() {
   const [activeModal, setActiveModal] = useState<'edit' | 'shipment' | 'upload' | null>(null);
+  const [rows, setRows] = useState<MedicationRow[]>(medications);
   const [selectedMedication, setSelectedMedication] = useState<MedicationRow>(medications[0]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getLplpoRows({ puskesmasId: 'PKM-001', periode: '2026-06-01' })
+      .then((lplpoRows) => {
+        if (!lplpoRows.length) return;
+        const mappedRows = lplpoRows.map((row) => ({
+          slug: row.obatId.toLowerCase(),
+          name: row.obatId,
+          stock: row.jumlahDiminta,
+          unit: 'unit',
+          estimatedEmpty: row.daysOfStock ? `${Math.round(row.daysOfStock)} days` : 'Needs review',
+          status: row.jumlahDiminta > 20 ? 'critical' as const : row.jumlahDiminta > 0 ? 'warning' as const : 'safe' as const,
+          lastUpdated: new Date(row.periode).toLocaleDateString('id-ID'),
+        }));
+        setRows(mappedRows);
+        setSelectedMedication(mappedRows[0]);
+      })
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat LPLPO'));
+  }, []);
 
   const closeModal = () => setActiveModal(null);
 
@@ -70,7 +93,7 @@ export function MedicineNeedsContent() {
             <span>Medication Name</span>
             <select defaultValue="">
               <option value="" disabled>Select Medication...</option>
-              {medications.map((item) => <option key={item.name}>{item.name}</option>)}
+              {rows.map((item) => <option key={item.name}>{item.name}</option>)}
             </select>
           </label>
           <label className={styles.fieldGroup}>
@@ -108,7 +131,7 @@ export function MedicineNeedsContent() {
               </tr>
             </thead>
             <tbody>
-              {medications.map((item) => (
+              {rows.map((item) => (
                 <tr key={item.name}>
                   <td data-label="Medication Name"><strong>{item.name}</strong></td>
                   <td data-label="Stock">{item.stock}</td>
@@ -118,7 +141,7 @@ export function MedicineNeedsContent() {
                   <td data-label="Last Updated">{item.lastUpdated}</td>
                   <td data-label="Action">
                     <div className={styles.rowActions}>
-                      <Link href={`/lplpo/${item.slug}`} aria-label={`View ${item.name}`}><AppIcon name="eye" width={16} height={16} /></Link>
+                      <Link href={`${routes.medicineNeeds}/${item.slug}`} aria-label={`View ${item.name}`}><AppIcon name="eye" width={16} height={16} /></Link>
                       <button
                         type="button"
                         aria-label={`Edit ${item.name}`}
@@ -148,7 +171,7 @@ export function MedicineNeedsContent() {
         </div>
 
         <footer className={styles.pagination}>
-          <p>Showing 5 from 42 entries</p>
+          <p>Showing {rows.length} entries</p>
           <div className={styles.paginationControls}>
             <button type="button" aria-label="Previous page"><AppIcon name="chevronLeft" width={16} height={16} /></button>
             <button type="button" aria-current="page">1</button>
@@ -163,6 +186,8 @@ export function MedicineNeedsContent() {
         <AppIcon name="fileText" width={18} height={18} />
         Save Stock Update
       </button>
+
+      {error ? <p className={styles.medicineError}>{error}</p> : null}
 
       {activeModal === 'edit' ? <EditStockModal item={selectedMedication} onClose={closeModal} /> : null}
       {activeModal === 'shipment' ? <RequestShipmentModal item={selectedMedication} onClose={closeModal} /> : null}

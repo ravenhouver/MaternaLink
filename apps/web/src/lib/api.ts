@@ -39,6 +39,52 @@ export type QueueRecord = {
   pregnancy: PregnancyRecord;
 };
 
+export type RecommendationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISPATCHED' | 'RECEIVED' | 'CANCELLED';
+export type RecommendationUrgency = 'ROUTINE' | 'WARNING' | 'CRITICAL';
+export type TrackingStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'DISPATCHED' | 'RECEIVED' | 'ISSUE_REPORTED';
+
+export type LplpoRow = {
+  id: number;
+  puskesmasId: string;
+  obatId: string;
+  periode: string;
+  jumlahDiminta: number;
+  daysOfStock?: number | null;
+};
+
+export type RecommendationItem = {
+  id: string;
+  obatId: string;
+  aiQuantity: number;
+  overrideQuantity?: number | null;
+  finalQuantity: number;
+  overrideReason?: string | null;
+  obat?: { id: string; nama: string; satuan: string };
+};
+
+export type TrackingEvent = {
+  id: string;
+  status: TrackingStatus;
+  note?: string | null;
+  createdAt: string;
+  actor?: { username: string } | null;
+};
+
+export type DistributionRecommendation = {
+  id: string;
+  puskesmasId: string;
+  periode: string;
+  urgency: RecommendationUrgency;
+  status: RecommendationStatus;
+  source: string;
+  priorityRank: number;
+  justification?: string | null;
+  routeSummary?: Record<string, unknown> | null;
+  puskesmas?: { id: string; nama: string; kecamatan?: string };
+  items: RecommendationItem[];
+  trackingEvents?: TrackingEvent[];
+};
+
 export type CreatePatientPayload = {
   fullName: string;
   nik: string;
@@ -159,4 +205,56 @@ export async function updateQueueStatus(id: string, status: QueueStatus): Promis
 
 export async function createExamination(payload: CreateExaminationPayload) {
   return apiFetch('/examinations', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function runDemoWorkflow() {
+  return apiFetch('/workflow/demo/run', { method: 'POST' });
+}
+
+export async function getDemoWorkflowState() {
+  return apiFetch('/workflow/demo/state');
+}
+
+export async function getForecastRuns() {
+  return apiFetch('/forecast/runs');
+}
+
+export async function getLplpoRows(params?: { puskesmasId?: string; periode?: string }): Promise<LplpoRow[]> {
+  const query = new URLSearchParams();
+  if (params?.puskesmasId) query.set('puskesmasId', params.puskesmasId);
+  if (params?.periode) query.set('periode', params.periode);
+  const suffix = query.size ? `?${query.toString()}` : '';
+  return apiFetch(`/lplpo${suffix}`);
+}
+
+export async function getRecommendations(filters?: { status?: RecommendationStatus; puskesmasId?: string }): Promise<DistributionRecommendation[]> {
+  const query = new URLSearchParams();
+  if (filters?.status) query.set('status', filters.status);
+  if (filters?.puskesmasId) query.set('puskesmasId', filters.puskesmasId);
+  const suffix = query.size ? `?${query.toString()}` : '';
+  return apiFetch(`/distribution/recommendations${suffix}`);
+}
+
+export async function updateRecommendationItem(recommendationId: string, itemId: string, payload: { overrideQuantity?: number; overrideReason?: string }) {
+  return apiFetch(`/distribution/recommendations/${recommendationId}/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
+export async function reorderRecommendations(orderedIds: string[]): Promise<DistributionRecommendation[]> {
+  return apiFetch('/distribution/recommendations/reorder', { method: 'PATCH', body: JSON.stringify({ orderedIds }) });
+}
+
+export async function approveRecommendation(id: string): Promise<DistributionRecommendation> {
+  return apiFetch(`/distribution/recommendations/${id}/approve`, { method: 'PATCH' });
+}
+
+export async function rejectRecommendation(id: string, note: string): Promise<DistributionRecommendation> {
+  return apiFetch(`/distribution/recommendations/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ note }) });
+}
+
+export async function getRecommendationTracking(id: string): Promise<TrackingEvent[]> {
+  return apiFetch(`/distribution/recommendations/${id}/tracking`);
+}
+
+export async function addTrackingEvent(id: string, payload: { status: TrackingStatus; note?: string }) {
+  return apiFetch(`/distribution/recommendations/${id}/tracking/events`, { method: 'POST', body: JSON.stringify(payload) });
 }

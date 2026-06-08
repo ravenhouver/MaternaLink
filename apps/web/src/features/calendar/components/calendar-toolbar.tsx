@@ -3,16 +3,16 @@ import Typography from 'antd/es/typography';
 import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../calendar.module.css';
 
-export function CalendarToolbar() {
+export function CalendarToolbar({ isRunning, monthLabel, onNextMonth, onPrevMonth, onRunWorkflow }: { isRunning: boolean; monthLabel: string; onNextMonth: () => void; onPrevMonth: () => void; onRunWorkflow: () => void }) {
   return (
     <section className={styles.toolbar} aria-label="Kontrol kalender">
       <div className={styles.monthControl}>
-        <Typography.Title level={2}>Oktober 2024</Typography.Title>
+        <Typography.Title level={2}>{monthLabel}</Typography.Title>
         <div className={styles.arrows}>
-          <Button shape="circle" aria-label="Bulan sebelumnya">
+          <Button shape="circle" aria-label="Bulan sebelumnya" onClick={onPrevMonth}>
             <AppIcon name="chevronLeft" width={18} height={18} />
           </Button>
-          <Button shape="circle" aria-label="Bulan berikutnya">
+          <Button shape="circle" aria-label="Bulan berikutnya" onClick={onNextMonth}>
             <AppIcon name="chevronRight" width={18} height={18} />
           </Button>
         </div>
@@ -24,6 +24,9 @@ export function CalendarToolbar() {
         </button>
         <button type="button" role="tab" aria-selected="false">
           Mingguan
+        </button>
+        <button type="button" disabled={isRunning} onClick={onRunWorkflow}>
+          {isRunning ? 'Running...' : 'Run Workflow'}
         </button>
       </div>
     </section>

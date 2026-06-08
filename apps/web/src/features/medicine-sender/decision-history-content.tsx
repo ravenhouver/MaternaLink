@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
+import { getRecommendations } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './decision-history.module.css';
 
 type Metric = { label: string; value: string; note: string; icon: AppIconName; tone: 'green' | 'blue' };
@@ -34,10 +37,10 @@ function Sidebar() {
     <aside className={styles.dhSidebar}>
       <div className={styles.dhBrand}><span><AppIcon name="briefcase" width={20} height={20} /></span><div><strong>IFK</strong><small>District Monitoring</small></div></div>
       <nav className={styles.dhNav}>
-        <a href="/medicine-sender"><AppIcon name="home" width={20} height={20} />Dashboard</a>
-        <a className={styles.dhNavActive} href="/medicine-sender/recommendations"><AppIcon name="userPlus" width={20} height={20} />Distribution</a>
-        <a href="/medicine-sender/clinics"><AppIcon name="users" width={20} height={20} />Clinic List</a>
-        <a href="/medicine-sender/environment"><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
+        <a href={routes.ifk}><AppIcon name="home" width={20} height={20} />Dashboard</a>
+        <a className={styles.dhNavActive} href={routes.ifkRecommendations}><AppIcon name="userPlus" width={20} height={20} />Distribution</a>
+        <a href={routes.ifkClinics}><AppIcon name="users" width={20} height={20} />Clinic List</a>
+        <a href={routes.ifkEnvironment}><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
       </nav>
     </aside>
   );
@@ -57,6 +60,30 @@ function MetricCard({ item }: { item: Metric }) {
 }
 
 export function DecisionHistoryContent() {
+  const [ledgerRows, setLedgerRows] = useState<Row[]>(rows);
+
+  useEffect(() => {
+    getRecommendations()
+      .then((recommendations) => {
+        const finalRows = recommendations
+          .filter((recommendation) => recommendation.status !== 'PENDING')
+          .map((recommendation) => {
+            const lastEvent = recommendation.trackingEvents?.[0];
+            return {
+              date: lastEvent ? new Date(lastEvent.createdAt).toLocaleString('id-ID') : new Date(recommendation.periode).toLocaleDateString('id-ID'),
+              officer: lastEvent?.actor?.username ?? 'IFK',
+              clinic: recommendation.puskesmas?.nama ?? recommendation.puskesmasId,
+              action: recommendation.items.map((item) => `${item.obat?.nama ?? item.obatId} (${item.finalQuantity})`).join(', '),
+              prediction: recommendation.justification ?? recommendation.source,
+              decision: recommendation.status,
+              tone: recommendation.status === 'REJECTED' ? 'red' as const : 'green' as const,
+            };
+          });
+        if (finalRows.length) setLedgerRows(finalRows);
+      })
+      .catch(() => undefined);
+  }, []);
+
   return (
     <div className={styles.dhShell}>
       <Sidebar />
@@ -67,7 +94,7 @@ export function DecisionHistoryContent() {
           <section className={styles.dhMetrics}>{metrics.map((item) => <MetricCard item={item} key={item.label} />)}</section>
           <section className={styles.dhTablePanel}>
             <div className={styles.dhTableHeader}><h2>Chronological Intelligence Log</h2><div><label><AppIcon name="search" width={14} height={14} />Search Petugas or Klinik...</label><button><AppIcon name="filter" width={14} height={14} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button></div></div>
-            <div className={styles.dhScroller}><table className={styles.dhTable}><thead><tr><th>Tanggal</th><th>Petugas</th><th>Klinik</th><th>Tindakan</th><th>AI Prediction Stocks</th><th>Actual Decision</th></tr></thead><tbody>{rows.map((row) => <tr key={`${row.date}-${row.clinic}`}>{Object.entries(row).filter(([key]) => key !== 'tone').map(([key, value]) => <td className={key === 'prediction' ? styles.predictionCell : row.tone ? styles[row.tone] : undefined} key={key}>{String(value).split('\n').map((line) => <span key={line}>{line}</span>)}</td>)}</tr>)}</tbody></table></div>
+            <div className={styles.dhScroller}><table className={styles.dhTable}><thead><tr><th>Tanggal</th><th>Petugas</th><th>Klinik</th><th>Tindakan</th><th>AI Prediction Stocks</th><th>Actual Decision</th></tr></thead><tbody>{ledgerRows.map((row) => <tr key={`${row.date}-${row.clinic}`}>{Object.entries(row).filter(([key]) => key !== 'tone').map(([key, value]) => <td className={key === 'prediction' ? styles.predictionCell : row.tone ? styles[row.tone] : undefined} key={key}>{String(value).split('\n').map((line) => <span key={line}>{line}</span>)}</td>)}</tr>)}</tbody></table></div>
             <div className={styles.dhPagination}><span>Showing entries 1-4 of 1,240 Total Actions</span><div><button><AppIcon name="chevronLeft" width={14} height={14} /></button><button className={styles.current}>1</button><button>2</button><button>3</button><button><AppIcon name="chevronRight" width={14} height={14} /></button></div></div>
           </section>
           <section className={styles.dhBottomGrid}>
