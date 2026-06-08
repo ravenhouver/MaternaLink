@@ -10,10 +10,12 @@ import styles from './sidebar.module.css';
 const { Sider } = Layout;
 
 const navItems = [
-  { key: '/', href: '/', icon: 'home', label: 'Beranda' },
-  { key: '/master', href: '/master', icon: 'users', label: 'Daftar Pasien' },
-  { key: '/forecast', href: '/forecast', icon: 'calendar', label: 'Kalender Prediksi' },
-  { key: '/lplpo', href: '/lplpo', icon: 'package', label: 'Kebutuhan Obat' },
+  { key: '/', href: '/', icon: 'home', label: 'Dashboard' },
+  { key: '/inputs', href: '/inputs', icon: 'userPlus', label: 'Patient Queue' },
+  { key: '/master', href: '/master', icon: 'users', label: 'Patient List' },
+  { key: '/forecast', href: '/forecast', icon: 'calendar', label: 'Prediction Calendar' },
+  { key: '/lplpo', href: '/lplpo', icon: 'plus', label: 'Medicine Needs' },
+  { key: '/distribution', href: '/distribution', icon: 'package', label: 'Delivering' },
 ] satisfies Array<{ key: string; href: string; icon: AppIconName; label: string }>;
 
 type SidebarProps = {
@@ -21,19 +23,26 @@ type SidebarProps = {
   onToggle: () => void;
 };
 
+function resolveSelectedKey(pathname: string) {
+  if (pathname.startsWith('/master')) return '/master';
+  if (pathname.startsWith('/forecast')) return '/forecast';
+  if (pathname.startsWith('/lplpo')) return '/lplpo';
+  if (pathname.startsWith('/distribution')) return '/distribution';
+  if (pathname.startsWith('/inputs')) return '/inputs';
+  return '/';
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const hasTopbar = pathname !== '/';
   const isForecast = pathname === '/forecast';
   const isMedicine = pathname === '/lplpo';
-  const selectedKey = pathname.startsWith('/master') ? '/master' : navItems.some((item) => item.key === pathname) ? pathname : '/';
-  const profile = hasTopbar
-    ? isMedicine
-      ? { name: 'Bidan Sarah', role: 'Puskesmas Melati', photo: '/figma-medicine/bidan-sarah.png' }
-      : isForecast
-      ? { name: 'Siti Aminah', role: 'Bidan Senior', photo: '/figma-calendar/bidan-profil.png' }
-      : { name: 'Dr. Siti Aminah', role: 'Bidan Utama', photo: '/figma-patients/doctor-siti.png' }
-    : { name: 'Bidan Sari', role: 'ADMIN UTAMA', photo: '/figma-dashboard/profil-bidan.png' };
+  const selectedKey = resolveSelectedKey(pathname);
+  const profile = isMedicine
+    ? { name: 'Bidan Sarah', role: 'Puskesmas Melati', photo: '/figma-medicine/bidan-sarah.png' }
+    : isForecast
+    ? { name: 'Siti Aminah', role: 'Bidan Senior', photo: '/figma-calendar/bidan-profil.png' }
+    : { name: 'Dr. Siti Aminah', role: 'Bidan Utama', photo: '/figma-patients/doctor-siti.png' };
 
   return (
     <Sider
@@ -81,7 +90,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
             return (
               <Link key={item.key} href={item.href} className={[styles.navItem, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
-                <AppIcon name={item.icon} className={styles.navIcon} width={22} height={22} />
+                <AppIcon name={item.icon} className={styles.navIcon} width={20} height={20} />
                 <span>{item.label}</span>
               </Link>
             );
@@ -96,7 +105,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <span>Pengaturan</span>
           </Link>
         ) : null}
-        {collapsed ? null : (
+        {hasTopbar && !collapsed ? (
           <div className={styles.profileCard}>
             <span className={styles.profilePhoto}>
               <img src={profile.photo} alt={profile.name} />
@@ -106,7 +115,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <Typography.Text className={styles.profileRole}>{profile.role}</Typography.Text>
             </span>
           </div>
-        )}
+        ) : null}
       </div>
     </Sider>
   );

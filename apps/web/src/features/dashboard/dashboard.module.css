@@ -1,131 +1,232 @@
 .page {
   position: relative;
   display: flex;
-  min-height: calc(100vh - 80px);
+  min-height: 100vh;
   flex-direction: column;
-  gap: var(--space-10);
-}
-
-.header,
-.headerActions,
-.alertBanner,
-.alertCopy,
-.activityRow {
-  display: flex;
-  align-items: center;
+  gap: 40px;
+  padding-bottom: 114px;
+  color: #1b1b1f;
 }
 
 .header {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-6);
+  gap: 24px;
 }
 
-.title:global(.ant-typography) {
+.header h1,
+.header p,
+.alertBanner h2,
+.alertBanner p,
+.sectionTitle,
+.statCard h3,
+.statCard strong {
   margin: 0;
-  color: var(--color-text-strong);
+}
+
+.header h1 {
   font-family: var(--font-heading);
   font-size: 30px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.75px;
   line-height: 36px;
 }
 
-.subtitle:global(.ant-typography) {
-  display: block;
-  margin-top: var(--space-1);
-  color: var(--color-text-muted);
+.header p {
+  margin-top: 4px;
+  color: #64748b;
   font-size: 16px;
   line-height: 24px;
 }
 
 .headerActions {
-  flex-shrink: 0;
-  gap: var(--space-4);
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 16px;
 }
 
-.notificationButton:global(.ant-btn) svg {
-  width: 16px;
-  height: 20px;
+.bellButton,
+.clinicPill,
+.alertButton,
+.quickAction,
+.activityHeader button,
+.activityRow,
+.fab {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.bellButton {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #334155;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
 }
 
 .clinicPill {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 12px;
   padding: 9px 9px 9px 17px;
-  border: 1px solid var(--color-border);
+  border: 1px solid #f1f5f9;
   border-radius: 9999px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  box-shadow: var(--shadow-soft);
+  background: #ffffff;
+  color: #334155;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
 }
 
-.clinicAvatar {
+.clinicPill span {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.clinicPill strong {
   display: grid;
   width: 32px;
   height: 32px;
   place-items: center;
   border-radius: 9999px;
-  background: var(--color-primary);
+  background: #1a73e8;
   color: #ffffff;
   font-size: 12px;
   line-height: 16px;
 }
 
 .alertBanner {
+  position: relative;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--space-6);
-  padding: var(--space-6);
-  border-radius: var(--radius-xl);
-  background: var(--color-danger);
+  gap: 24px;
+  overflow: hidden;
+  padding: 24px;
+  border-radius: 24px;
+  background: #d92d20;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .alertCopy {
-  gap: var(--space-4);
+  display: flex;
   min-width: 0;
+  align-items: center;
+  gap: 16px;
 }
 
-.alertIcon svg {
+.alertIcon {
+  display: grid;
   width: 46px;
-  height: 43px;
-}
-
-.alertTitle:global(.ant-typography),
-.alertSubtitle:global(.ant-typography) {
-  display: block;
-}
-
-.alertTitle:global(.ant-typography) {
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.18);
   color: #ffffff;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 23px;
 }
 
-.alertSubtitle:global(.ant-typography) {
-  color: rgb(255 255 255 / 0.8);
+.alertBanner h2 {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.alertBanner p {
+  margin-top: 2px;
+  color: rgb(255 255 255 / 0.88);
   font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
   line-height: 20px;
 }
 
-.alertButton:global(.ant-btn) {
-  min-width: 165px;
-  height: 36px;
-  border: 0;
+.alertButton {
+  flex: 0 0 auto;
+  min-width: 126px;
+  padding: 8px 24px;
   border-radius: 9999px;
-  color: var(--color-danger);
+  background: #ffffff;
+  color: #a33d23;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 20px;
 }
 
-.contentGrid {
+.statsGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: var(--space-8);
-  padding-top: var(--space-2);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.statCard {
+  min-height: 196px;
+  padding: 28px 24px 44px;
+  border-top: 4px solid var(--accent);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+}
+
+.statTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.statIcon {
+  display: grid;
+  width: 40px;
+  height: 34px;
+  place-items: center;
+  color: var(--accent);
+}
+
+.statTag {
+  max-width: 132px;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  line-height: 16px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.statCard h3 {
+  padding-top: 16px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+  text-transform: uppercase;
+}
+
+.statCard strong {
+  display: block;
+  margin-top: 4px;
+  color: #1b1b1f;
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 40px;
+}
+
+.lowerGrid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  gap: 32px;
+  padding-top: 8px;
 }
 
 .quickColumn,
@@ -133,74 +234,90 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: 24px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1b1b1f;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.sectionTitle svg {
+  color: #1a73e8;
 }
 
 .quickGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
+  gap: 16px;
 }
 
 .quickAction {
   display: flex;
-  min-height: 139px;
-  cursor: pointer;
+  min-height: 138px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  color: var(--color-text);
+  gap: 12px;
+  padding: 28px 16px;
+  border: 1px solid #f1f5f9;
+  border-radius: 24px;
+  background: #ffffff;
+  color: #334155;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
   line-height: 20px;
-  box-shadow: var(--shadow-soft);
+  text-align: center;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
 }
 
-.quickIcon {
+.quickAction span {
   display: grid;
   width: 48px;
   height: 48px;
   place-items: center;
   border-radius: 9999px;
-  background: #f1f5f9;
+  background: #004eeb;
+  color: #ffffff;
 }
 
-.quickIconActive {
-  background: var(--color-primary);
+.activityHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.quickIcon svg {
-  max-width: 22px;
-  max-height: 22px;
-}
-
-.viewAllButton:global(.ant-btn) {
-  padding: 0;
-  color: var(--color-primary);
+.activityHeader button {
+  background: transparent;
+  color: #1a73e8;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 20px;
 }
 
-.activityCard:global(.ant-card) {
+.activityCard {
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-soft);
+  border: 1px solid #f1f5f9;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
 }
 
 .activityRow {
+  display: flex;
   width: 100%;
-  cursor: pointer;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  border: 0;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  color: #cbd5e1;
   text-align: left;
 }
 
@@ -217,12 +334,22 @@
   border-radius: 9999px;
 }
 
-.activityIcon svg {
-  max-width: 22px;
-  max-height: 22px;
+.blue {
+  background: #eff6ff;
+  color: #1a73e8;
 }
 
-.activityCopy {
+.red {
+  background: #fef2f2;
+  color: #d92d20;
+}
+
+.green {
+  background: #f0fdf4;
+  color: #22c55e;
+}
+
+.activityText {
   display: flex;
   min-width: 0;
   flex: 1;
@@ -230,82 +357,141 @@
   gap: 2px;
 }
 
-.activityTitle:global(.ant-typography) {
-  color: var(--color-text-muted);
+.activityText span {
+  overflow: hidden;
+  color: #9aa4b2;
   font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.15px;
   line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.activityTitle strong {
+.activityText strong {
   color: #1e293b;
-  font-weight: 600;
 }
 
-.activityMeta:global(.ant-typography) {
+.activityText small {
+  overflow: hidden;
   color: #94a3b8;
-  font-size: 12px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
   line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.activityChevron {
-  width: 8px;
-  height: 12px;
-}
-
-.floatingAction:global(.ant-btn) {
+.fab {
   position: fixed;
-  right: var(--space-10);
-  bottom: var(--space-10);
+  right: 40px;
+  bottom: 40px;
   z-index: 15;
+  display: grid;
   width: 64px;
   height: 64px;
-  border: 0;
-  background: var(--color-primary);
+  place-items: center;
+  border-radius: 9999px;
+  background: #1a73e8;
+  color: #ffffff;
   box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
-.floatingAction svg {
-  width: 18px;
-  height: 18px;
+.bellButton:hover,
+.clinicPill:hover,
+.quickAction:hover,
+.activityRow:hover,
+.fab:hover {
+  transform: translateY(-1px);
 }
 
-@media (max-width: 768px) {
+.bellButton:focus-visible,
+.clinicPill:focus-visible,
+.alertButton:focus-visible,
+.quickAction:focus-visible,
+.activityHeader button:focus-visible,
+.activityRow:focus-visible,
+.fab:focus-visible {
+  outline: 3px solid rgb(26 115 232 / 0.28);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1180px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
   .page {
-    gap: 28px;
+    gap: 32px;
+  }
+
+  .header,
+  .alertBanner,
+  .lowerGrid {
+    align-items: stretch;
+    grid-template-columns: 1fr;
   }
 
   .header,
   .alertBanner {
-    align-items: flex-start;
     flex-direction: column;
   }
 
   .headerActions {
-    width: 100%;
     justify-content: space-between;
   }
 
-  .contentGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .floatingAction:global(.ant-btn) {
-    right: var(--space-6);
-    bottom: var(--space-6);
+  .alertButton {
+    width: max-content;
   }
 }
 
-@media (max-width: 480px) {
-  .title:global(.ant-typography) {
+@media (max-width: 640px) {
+  .page {
+    padding-bottom: 96px;
+  }
+
+  .header h1 {
     font-size: 26px;
     line-height: 32px;
   }
 
+  .headerActions {
+    flex-wrap: wrap;
+  }
+
+  .clinicPill {
+    flex: 1 1 210px;
+    justify-content: space-between;
+  }
+
+  .alertBanner h2 {
+    font-size: 18px;
+    line-height: 24px;
+  }
+
+  .alertCopy {
+    align-items: flex-start;
+  }
+
+  .statsGrid,
   .quickGrid {
     grid-template-columns: 1fr;
   }
 
   .activityRow {
     align-items: flex-start;
+  }
+
+  .activityText span,
+  .activityText small {
+    white-space: normal;
+  }
+
+  .fab {
+    right: 24px;
+    bottom: 24px;
   }
 }

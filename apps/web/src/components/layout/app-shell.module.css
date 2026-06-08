@@ -19,6 +19,10 @@
 }
 
 @media (max-width: 991px) {
+  .shell {
+    flex-direction: column;
+  }
+
   .mainLayout,
   .collapsed .mainLayout {
     margin-left: 0;
