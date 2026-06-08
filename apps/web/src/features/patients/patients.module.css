@@ -326,6 +326,547 @@
   outline-offset: 2px;
 }
 
+.modalOverlay {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 84px 20px;
+  background: rgb(0 0 0 / 0.45);
+  inset: 0;
+}
+
+.queueModal {
+  display: flex;
+  overflow: hidden;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 120px);
+  flex-direction: column;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 20px 48px rgb(15 23 42 / 0.28);
+}
+
+.modalHeader,
+.patientStrip,
+.modalFooter {
+  flex: 0 0 auto;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 24px 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modalHeader h2,
+.modalHeader p,
+.patientSummaryTitle strong,
+.patientSummaryTitle span,
+.modalSection h3,
+.fieldLabel,
+.checklistGroup > span,
+.modalFooter p {
+  margin: 0;
+}
+
+.modalHeader h2 {
+  color: #191c20;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.modalHeader p {
+  margin-top: 6px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.modalClose,
+.reasonCard,
+.cancelButton,
+.enterQueueButton {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.modalClose {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: transparent;
+  color: #667085;
+}
+
+.patientStrip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.patientAvatar {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  background: #dbe7ff;
+  color: #005bbf;
+  font-size: 20px;
+  font-weight: 800;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.16);
+}
+
+.patientSummaryText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.patientSummaryTitle,
+.patientBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.patientSummaryTitle strong {
+  color: #191c20;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.patientSummaryTitle span {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #edf1f7;
+  color: #667085;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.patientBadges span,
+.patientBadges b {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.patientBadges span {
+  border: 1px solid #d0d7e2;
+  background: #ffffff;
+  color: #374151;
+  font-weight: 500;
+}
+
+.patientBadges b {
+  background: #fde8e8;
+  color: #c81e1e;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.modalBody {
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.modalSection + .modalSection {
+  margin-top: 28px;
+}
+
+.modalSection h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #191c20;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 24px;
+}
+
+.modalSection h3 span {
+  display: inline-block;
+  width: 4px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #006be5;
+}
+
+.modalSection h3 + .fieldLabel,
+.modalSection h3 + .vitalGrid,
+.modalSection h3 + .confirmationGrid,
+.modalSection h3 + .assessmentBox {
+  margin-top: 22px;
+}
+
+.fieldLabel,
+.checklistGroup > span {
+  display: block;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.reasonGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.reasonCard {
+  position: relative;
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #d8e0ec;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
+.reasonActive {
+  border: 2px solid #005bbf;
+  background: #f5f8ff;
+  color: #005bbf;
+}
+
+.reasonDanger {
+  color: #c81e1e;
+}
+
+.reasonCheck {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.twoColumnFields,
+.confirmationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.fieldGroup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldGroup input,
+.fieldGroup select,
+.bpFields input,
+.tempFields input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid #d8e0ec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #191c20;
+  font: inherit;
+  outline: none;
+  padding: 0 13px;
+}
+
+.fieldGroup input::placeholder,
+.bpFields input::placeholder {
+  color: #667085;
+}
+
+.fieldGroup select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #667085 50%), linear-gradient(135deg, #667085 50%, transparent 50%);
+  background-position: calc(100% - 18px) 18px, calc(100% - 12px) 18px;
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+}
+
+.vitalGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 24px;
+  row-gap: 22px;
+}
+
+.bpFields,
+.tempFields {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+}
+
+.bpFields {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.bpFields input,
+.tempFields input,
+.fieldGroup > input {
+  text-align: center;
+}
+
+.bpFields span {
+  color: #667085;
+  font-size: 18px;
+}
+
+.tempFields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fieldGroup small {
+  color: #667085;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 15px;
+}
+
+.goodHelper {
+  color: #16a34a !important;
+  font-style: normal !important;
+  font-weight: 700;
+}
+
+.strongHelper {
+  color: #005bbf !important;
+  font-style: normal !important;
+  font-weight: 800;
+}
+
+.checklistGroup {
+  min-width: 0;
+}
+
+.checklistItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.checkItem {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #191c20;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.checkItem input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: #16a34a;
+}
+
+.riskItem {
+  border: 1px solid #f2b8b5;
+  background: #fff7f7;
+  color: #c81e1e;
+  font-weight: 800;
+}
+
+.riskItem input {
+  accent-color: #c81e1e;
+}
+
+.medicationItem {
+  border: 1px solid #b7e4c7;
+  background: #f3fbf6;
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.assessmentBox {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 192px;
+  gap: 24px;
+  padding: 20px;
+  border: 1px solid #d8e0ec;
+  border-radius: 14px;
+}
+
+.assessmentMain {
+  min-width: 0;
+}
+
+.riskNote {
+  margin: 16px 0 0;
+  padding: 18px 20px;
+  border-left: 4px solid #dc2626;
+  border-radius: 0 8px 8px 0;
+  background: #fff7f7;
+  color: #191c20;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.riskNote strong,
+.riskNote u {
+  color: #c81e1e;
+}
+
+.priorityCard {
+  display: flex;
+  min-height: 120px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px dashed #b8c7e6;
+  border-radius: 12px;
+  background: #f8faff;
+  text-align: center;
+}
+
+.priorityCard span {
+  color: #c5cede;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+.priorityCard strong {
+  padding: 9px 19px;
+  border-radius: 8px;
+  background: #c81e1e;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 18px;
+  text-transform: uppercase;
+}
+
+.priorityCard small {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #667085;
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.modalFooter p {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: #c5cede;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.modalFooterActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.cancelButton,
+.enterQueueButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.cancelButton {
+  min-width: 94px;
+  border: 1px solid #d8e0ec;
+  background: #ffffff;
+  color: #374151;
+}
+
+.enterQueueButton {
+  gap: 8px;
+  min-width: 171px;
+  background: #005bbf;
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgb(0 91 191 / 0.24);
+}
+
+.modalClose:hover,
+.reasonCard:hover,
+.cancelButton:hover,
+.enterQueueButton:hover {
+  transform: translateY(-1px);
+}
+
+.modalClose:focus-visible,
+.reasonCard:focus-visible,
+.cancelButton:focus-visible,
+.enterQueueButton:focus-visible,
+.fieldGroup input:focus,
+.fieldGroup select:focus,
+.bpFields input:focus,
+.tempFields input:focus,
+.checkItem:focus-within {
+  outline: 3px solid rgb(26 115 232 / 0.2);
+  outline-offset: 2px;
+}
+
 @media (max-width: 980px) {
   .headerCard {
     align-items: flex-start;
@@ -338,6 +879,23 @@
 
   .filterButton {
     width: max-content;
+  }
+
+  .queueModal {
+    max-height: calc(100vh - 56px);
+  }
+
+  .reasonGrid,
+  .vitalGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .assessmentBox {
+    grid-template-columns: 1fr;
+  }
+
+  .priorityCard {
+    min-height: 104px;
   }
 }
 
@@ -419,5 +977,85 @@
   .paginationControls {
     overflow-x: auto;
     max-width: 100%;
+  }
+
+  .modalOverlay {
+    padding: 16px;
+  }
+
+  .queueModal {
+    max-height: calc(100vh - 32px);
+    border-radius: 14px;
+  }
+
+  .modalHeader,
+  .patientStrip,
+  .modalBody,
+  .modalFooter {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .modalHeader {
+    gap: 12px;
+  }
+
+  .modalHeader h2 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .patientStrip {
+    align-items: flex-start;
+  }
+
+  .patientAvatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .reasonGrid,
+  .twoColumnFields,
+  .vitalGrid,
+  .confirmationGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .reasonCard {
+    min-height: 62px;
+  }
+
+  .assessmentBox {
+    padding: 16px;
+  }
+
+  .modalFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modalFooterActions {
+    width: 100%;
+  }
+
+  .cancelButton,
+  .enterQueueButton {
+    flex: 1;
+  }
+}
+
+@media (max-width: 440px) {
+  .patientBadges span,
+  .patientBadges b {
+    white-space: normal;
+  }
+
+  .modalFooterActions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .enterQueueButton {
+    width: 100%;
   }
 }
