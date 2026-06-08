@@ -44,6 +44,58 @@ describe('MaternaLink API', () => {
     await request(app.getHttpServer()).get('/api/auth/me').expect(401);
   });
 
+  it('lets bidan create patient, queue patient, call patient, and save examination', async () => {
+    const nik = `340401520398${Date.now().toString().slice(-4)}`;
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+    const cookie = login.headers['set-cookie'];
+
+    const created = await request(app.getHttpServer())
+      .post('/api/patients')
+      .set('Cookie', cookie)
+      .send({
+        fullName: 'Ny. Test Flow',
+        nik,
+        phone: '081200009999',
+        address: 'Umbulharjo',
+        gestationalAge: 28,
+        ancVisit: 'K3',
+        riskLevel: 'MEDIUM',
+      })
+      .expect(201);
+
+    const queued = await request(app.getHttpServer())
+      .post('/api/queue')
+      .set('Cookie', cookie)
+      .send({ patientId: created.body.patient.id, pregnancyId: created.body.pregnancy.id })
+      .expect(201);
+
+    await request(app.getHttpServer()).patch(`/api/queue/${queued.body.id}/status`).set('Cookie', cookie).send({ status: 'EXAMINING' }).expect(200);
+
+    const exam = await request(app.getHttpServer())
+      .post('/api/examinations')
+      .set('Cookie', cookie)
+      .send({
+        queueId: queued.body.id,
+        patientId: created.body.patient.id,
+        pregnancyId: created.body.pregnancy.id,
+        complaint: 'Pusing dan bengkak kaki',
+        gestationalAge: 28,
+        ancVisit: 'K3',
+        diagnosis: [{ kondisiId: 'K03', jumlahKasus: 1 }],
+        symptoms: [{ gejalaId: 'G05', jumlah: 1 }],
+        medication: [{ obatId: 'OBT-008', quantity: 10 }],
+      })
+      .expect(201);
+
+    expect(exam.body).toEqual(expect.objectContaining({ queueId: queued.body.id, source: 'MANUAL' }));
+
+    const queue = await request(app.getHttpServer()).get('/api/queue/today').set('Cookie', cookie).expect(200);
+    expect(queue.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: queued.body.id, status: 'COMPLETED' })]));
+  });
+
   it('lists medicine master data', async () => {
     const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));
