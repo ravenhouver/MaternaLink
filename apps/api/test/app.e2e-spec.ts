@@ -3,6 +3,9 @@ import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import request = require('supertest');
 import { AppModule } from '../src/app.module';
+import { loadRuntimeEnv } from '../src/runtime-env';
+
+loadRuntimeEnv();
 
 describe('MaternaLink API', () => {
   let app: Awaited<ReturnType<import('@nestjs/common').INestApplication['init']>>;

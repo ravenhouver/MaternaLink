@@ -1,8 +1,14 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { loadRuntimeEnv } from '../runtime-env';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  constructor() {
+    loadRuntimeEnv();
+    super();
+  }
+
   async onModuleInit() {
     await this.$connect();
   }
