@@ -28,7 +28,18 @@ Default local URLs:
 | Web dashboard | `http://localhost:3000` |
 | API base | `http://localhost:3001/api` |
 | Swagger docs | `http://localhost:3001/api/docs` |
+| FastAPI AI stub | `http://localhost:8000/health` |
 | PostgreSQL | `localhost:55432` |
+
+## Demo Login
+
+Seeded users all use password `password123`.
+
+| Username | Role | Landing route |
+|---|---|---|
+| `bidan` | `BIDAN_PUSKESMAS` | `/queue` |
+| `ifk` | `IFK_ADMIN` | `/ifk/recommendations` |
+| `admin` | `SUPER_ADMIN` | `/queue` |
 
 ## Features
 
@@ -80,9 +91,10 @@ Compose starts:
 
 1. PostgreSQL on host port `55432`.
 2. API on host port `3001`.
-3. Web dashboard on host port `3000`.
-4. Prisma migrations through API entrypoint.
-5. Demo seed data when `RUN_SEED=true`.
+3. FastAPI AI stub on host port `8000`.
+4. Web dashboard on host port `3000`.
+5. Prisma migrations through API entrypoint.
+6. Demo seed data when `RUN_SEED=true`.
 
 Stop stack:
 
@@ -156,6 +168,10 @@ File: `apps/api/.env`
 | `DATABASE_URL` | Yes | `postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public` | Prisma PostgreSQL connection string. |
 | `PORT` | No | `3001` | NestJS HTTP port. |
 | `RUN_SEED` | No | `true` | Docker entrypoint runs seed data when set to `true`. |
+| `WEB_ORIGIN` | No | `http://localhost:3000` | CORS origin allowed to send credentialed auth requests. |
+| `AI_MODE` | No | `fallback` | `fallback` returns deterministic local readiness; `remote` calls FastAPI. |
+| `AI_SERVICE_BASE_URL` | No | `http://localhost:8000` / compose `http://ai-service:8000` | FastAPI service base URL. |
+| `AI_SERVICE_TIMEOUT_MS` | No | `30000` | Timeout for remote AI health calls. |
 
 ### Web
 
@@ -188,18 +204,45 @@ Do not commit real production credentials or secrets.
 
 | Route | Purpose |
 |---|---|
-| `/` | Main dashboard overview. |
-| `/master` | Patient/master data view. |
-| `/master/add-patient` | Add patient flow. |
-| `/forecast` | Prediction calendar. |
-| `/lplpo` | Medicine needs/LPLPO view. |
-| `/medicine-sender` | Medicine sender dashboard. |
-| `/medicine-sender/clinics` | Clinic delivery context. |
-| `/medicine-sender/recommendations` | Recommendation view. |
-| `/medicine-sender/decision-history` | Decision history view. |
-| `/medicine-sender/environment` | Environment/risk context view. |
-| `/inputs` | Input workflow route. |
-| `/distribution` | Distribution workflow route. |
+| `/login` | Username/password login. |
+| `/dashboard` | Main dashboard overview. |
+| `/patients` | Patient list. |
+| `/patients/new` | Add patient method selection. |
+| `/patients/new/manual` | Manual patient registration. |
+| `/patients/new/kia-upload` | KIA upload extraction flow. |
+| `/queue` | Patient queue. |
+| `/queue/examination` | Patient examination form. |
+| `/forecast-calendar` | Prediction calendar and demo workflow runner. |
+| `/medicine-needs` | Medicine needs/LPLPO view. |
+| `/deliveries` | Distribution workflow route. |
+| `/ifk` | IFK dashboard. |
+| `/ifk/recommendations` | IFK recommendation review with drag/drop reorder. |
+| `/ifk/clinics` | Clinic delivery context. |
+| `/ifk/environment` | Environment/risk context view. |
+| `/ifk/decision-history` | Decision history view. |
+
+Old routes such as `/master`, `/inputs`, `/forecast`, `/lplpo`, `/distribution`, and `/medicine-sender/*` redirect to the matching new route names.
+
+## FastAPI AI Stub
+
+FastAPI is scaffolded in `apps/ai-service` for later AI model integration. Current endpoints return deterministic stub responses:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Service status. |
+| `POST` | `/layer0/extract-symptoms` | Stub symptom extraction. |
+| `POST` | `/layer1/forecast-demand` | Stub demand forecast. |
+| `POST` | `/layer2/allocate` | Stub allocation. |
+| `POST` | `/layer2/explain` | Stub explanation. |
+
+Local smoke:
+
+```bash
+cd apps/ai-service
+python -m pip install -r requirements.txt
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+curl http://127.0.0.1:8000/health
+```
 
 ## API Modules
 
@@ -425,15 +468,17 @@ classDiagram
 
 Recommended demo order:
 
-1. Open web dashboard.
-2. Open Swagger UI.
-3. Inspect puskesmas and medicine master data.
-4. Submit puskesmas monthly context.
-5. Run forecast.
-6. Generate LPLPO.
-7. Create an allocation plan.
-8. Simulate distribution risk.
-9. Inspect generated alerts.
+1. Login as `bidan/password123`.
+2. Open `/patients/new/manual` or `/patients/new/kia-upload`.
+3. Register patient and confirm patient enters `/queue`.
+4. Call patient, open `/queue/examination`, and save examination.
+5. Open `/forecast-calendar` and run workflow.
+6. Open `/medicine-needs` and verify LPLPO rows.
+7. Logout or open a fresh session, then login as `ifk/password123`.
+8. Open `/ifk/recommendations`.
+9. Drag a recommendation row or use move buttons; order persists through the API.
+10. Edit quantity with reason, then approve or reject.
+11. Open `/ifk/decision-history` to inspect final decisions.
 
 ## Testing
 
