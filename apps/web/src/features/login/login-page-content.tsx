@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useState, type FormEvent } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
+import { login } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './login-page.module.css';
 
 const stats = [
@@ -11,7 +14,27 @@ const stats = [
 ];
 
 export function LoginPageContent() {
+  const router = useRouter();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const user = await login(username.trim(), password);
+      router.replace(user.role === 'IFK_ADMIN' ? routes.ifkRecommendations : routes.queue);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Login gagal');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <main className={styles.page}>
@@ -58,12 +81,12 @@ export function LoginPageContent() {
             <p>Login to your account</p>
           </div>
 
-          <form className={styles.card}>
+          <form className={styles.card} onSubmit={handleSubmit}>
             <label className={styles.field}>
-              <span>Email</span>
+              <span>Username</span>
               <span className={styles.inputWrap}>
-                <AppIcon name="mail" width={17} height={17} />
-                <input type="email" name="email" placeholder="nama@puskesmas.go.id" autoComplete="email" />
+                <AppIcon name="user" width={17} height={17} />
+                <input type="text" name="username" placeholder="bidan" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required />
               </span>
             </label>
 
@@ -71,7 +94,7 @@ export function LoginPageContent() {
               <span>Password</span>
               <span className={styles.inputWrap}>
                 <AppIcon name="lock" width={16} height={16} />
-                <input type={showPassword ? 'text' : 'password'} name="password" placeholder="Masukkan password" autoComplete="current-password" />
+                <input type={showPassword ? 'text' : 'password'} name="password" placeholder="Masukkan password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
                 <button
                   type="button"
                   className={styles.visibilityButton}
@@ -92,7 +115,9 @@ export function LoginPageContent() {
               <a href="#forgot-password">Forgot Password</a>
             </div>
 
-            <button type="submit" className={styles.submitButton}>Log In</button>
+            {error ? <p className={styles.errorMessage}>{error}</p> : null}
+
+            <button type="submit" className={styles.submitButton} disabled={isSubmitting}>{isSubmitting ? 'Memproses...' : 'Log In'}</button>
           </form>
 
           <footer className={styles.secondaryFooter}>

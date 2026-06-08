@@ -1,0 +1,18 @@
+export const routes = {
+  login: '/login',
+  dashboard: '/dashboard',
+  patients: '/patients',
+  newPatient: '/patients/new',
+  manualPatient: '/patients/new/manual',
+  kiaUpload: '/patients/new/kia-upload',
+  queue: '/queue',
+  examination: '/queue/examination',
+  forecastCalendar: '/forecast-calendar',
+  medicineNeeds: '/medicine-needs',
+  deliveries: '/deliveries',
+  ifk: '/ifk',
+  ifkRecommendations: '/ifk/recommendations',
+  ifkClinics: '/ifk/clinics',
+  ifkEnvironment: '/ifk/environment',
+  ifkDecisionHistory: '/ifk/decision-history',
+} as const;

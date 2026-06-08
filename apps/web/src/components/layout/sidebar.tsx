@@ -5,44 +5,61 @@ import Typography from 'antd/es/typography';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
+import type { CurrentUser, UserRole } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './sidebar.module.css';
 
 const { Sider } = Layout;
 
 const navItems = [
-  { key: '/', href: '/', icon: 'home', label: 'Dashboard' },
-  { key: '/inputs', href: '/inputs', icon: 'userPlus', label: 'Patient Queue' },
-  { key: '/master', href: '/master', icon: 'users', label: 'Patient List' },
-  { key: '/forecast', href: '/forecast', icon: 'calendar', label: 'Prediction Calendar' },
-  { key: '/lplpo', href: '/lplpo', icon: 'plus', label: 'Medicine Needs' },
-  { key: '/distribution', href: '/distribution', icon: 'package', label: 'Delivering' },
-] satisfies Array<{ key: string; href: string; icon: AppIconName; label: string }>;
+  { key: routes.dashboard, href: routes.dashboard, icon: 'home', label: 'Dashboard', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
+  { key: routes.queue, href: routes.queue, icon: 'userPlus', label: 'Patient Queue', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
+  { key: routes.patients, href: routes.patients, icon: 'users', label: 'Patient List', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
+  { key: routes.forecastCalendar, href: routes.forecastCalendar, icon: 'calendar', label: 'Prediction Calendar', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
+  { key: routes.medicineNeeds, href: routes.medicineNeeds, icon: 'plus', label: 'Medicine Needs', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
+  { key: routes.ifk, href: routes.ifk, icon: 'home', label: 'IFK Dashboard', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
+  { key: routes.ifkRecommendations, href: routes.ifkRecommendations, icon: 'package', label: 'Recommendations', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
+  { key: routes.ifkClinics, href: routes.ifkClinics, icon: 'users', label: 'Clinics', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
+  { key: routes.ifkEnvironment, href: routes.ifkEnvironment, icon: 'calendar', label: 'Environment', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
+  { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'settings', label: 'Decision History', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
+  { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
+] satisfies Array<{ key: string; href: string; icon: AppIconName; label: string; roles: UserRole[] }>;
+
+function hasRole(roles: UserRole[], role: UserRole) {
+  return roles.some((allowedRole) => allowedRole === role);
+}
 
 type SidebarProps = {
   collapsed: boolean;
+  user: CurrentUser;
   onToggle: () => void;
 };
 
 function resolveSelectedKey(pathname: string) {
-  if (pathname.startsWith('/master')) return '/master';
-  if (pathname.startsWith('/forecast')) return '/forecast';
-  if (pathname.startsWith('/lplpo')) return '/lplpo';
-  if (pathname.startsWith('/distribution')) return '/distribution';
-  if (pathname.startsWith('/inputs')) return '/inputs';
-  return '/';
+  if (pathname.startsWith(routes.patients)) return routes.patients;
+  if (pathname.startsWith(routes.forecastCalendar)) return routes.forecastCalendar;
+  if (pathname.startsWith(routes.medicineNeeds)) return routes.medicineNeeds;
+  if (pathname.startsWith(routes.deliveries)) return routes.deliveries;
+  if (pathname.startsWith(routes.queue)) return routes.queue;
+  if (pathname.startsWith(routes.ifkDecisionHistory)) return routes.ifkDecisionHistory;
+  if (pathname.startsWith(routes.ifkEnvironment)) return routes.ifkEnvironment;
+  if (pathname.startsWith(routes.ifkClinics)) return routes.ifkClinics;
+  if (pathname.startsWith(routes.ifkRecommendations)) return routes.ifkRecommendations;
+  if (pathname.startsWith(routes.ifk)) return routes.ifk;
+  return routes.dashboard;
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
   const pathname = usePathname();
-  const hasTopbar = pathname !== '/';
-  const isForecast = pathname === '/forecast';
-  const isMedicine = pathname === '/lplpo';
+  const hasTopbar = pathname !== routes.dashboard;
   const selectedKey = resolveSelectedKey(pathname);
-  const profile = isMedicine
-    ? { name: 'Bidan Sarah', role: 'Puskesmas Melati', photo: '/figma-medicine/bidan-sarah.png' }
-    : isForecast
-    ? { name: 'Siti Aminah', role: 'Bidan Senior', photo: '/figma-calendar/bidan-profil.png' }
-    : { name: 'Dr. Siti Aminah', role: 'Bidan Utama', photo: '/figma-patients/doctor-siti.png' };
+  const visibleItems = navItems.filter((item) => hasRole(item.roles, user.role));
+  const profile = {
+    name: user.username,
+    role: user.role === 'IFK_ADMIN' ? 'Admin IFK' : user.role === 'SUPER_ADMIN' ? 'Super Admin' : user.puskesmasId ?? 'Bidan Puskesmas',
+    photo: user.role === 'IFK_ADMIN' ? '/figma-medicine/bidan-sarah.png' : '/figma-patients/doctor-siti.png',
+  };
+  const brandHref = user.role === 'IFK_ADMIN' ? routes.ifkRecommendations : routes.dashboard;
 
   return (
     <Sider
@@ -68,7 +85,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </button>
           ) : (
             <>
-              <Link href="/" className={styles.brandBlock} aria-label="MaternaLink beranda">
+              <Link href={brandHref} className={styles.brandBlock} aria-label="MaternaLink beranda">
                 <span className={styles.brandIcon}>
                   <AppIcon name="shield" width={20} height={20} />
                 </span>
@@ -85,7 +102,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         <nav className={styles.nav} aria-label="Navigasi utama">
-          {navItems.map((item) => {
+          {visibleItems.map((item) => {
             const isActive = item.key === selectedKey;
 
             return (
