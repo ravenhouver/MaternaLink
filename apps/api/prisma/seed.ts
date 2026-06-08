@@ -1,6 +1,12 @@
 import { PrismaClient } from '@prisma/client';
+import { randomBytes, scryptSync } from 'crypto';
 
 const prisma = new PrismaClient();
+
+function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
+  const hash = scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
 
 async function main() {
   const puskesmasRows = [
@@ -43,6 +49,29 @@ async function main() {
       where: { id: row.id },
       update: row,
       create: row,
+    });
+  }
+
+  const demoUsers = [
+    { username: 'bidan', displayName: 'Bidan Sari', role: 'BIDAN_PUSKESMAS' as const, puskesmasId: 'PKM-001' },
+    { username: 'ifk', displayName: 'Admin IFK Sleman', role: 'IFK_ADMIN' as const, puskesmasId: null },
+    { username: 'admin', displayName: 'Super Admin MaternaLink', role: 'SUPER_ADMIN' as const, puskesmasId: null },
+  ];
+
+  for (const user of demoUsers) {
+    await prisma.user.upsert({
+      where: { username: user.username },
+      update: {
+        displayName: user.displayName,
+        role: user.role,
+        puskesmasId: user.puskesmasId,
+        active: true,
+      },
+      create: {
+        ...user,
+        active: true,
+        passwordHash: hashPassword('password123', `maternalink-${user.username}`),
+      },
     });
   }
 
@@ -206,6 +235,185 @@ async function main() {
       stokAwal: 15,
       konsumsiPeriode: 12,
       stokSaatIni: 3,
+    },
+  });
+
+  const patient = await prisma.patient.upsert({
+    where: { nik: '3404015203980001' },
+    update: {
+      fullName: 'Ny. Anisa Rahmawati',
+      puskesmasId: 'PKM-001',
+      phone: '081234567890',
+      address: 'Umbulharjo, Kota Yogyakarta',
+      bpjsNumber: '0001234567890',
+      emergencyName: 'Budi Rahmawan',
+      emergencyPhone: '081299999999',
+      bloodType: 'O',
+      allergy: 'Tidak ada',
+      chronicHistory: 'Hipertensi',
+    },
+    create: {
+      nik: '3404015203980001',
+      fullName: 'Ny. Anisa Rahmawati',
+      puskesmasId: 'PKM-001',
+      dateOfBirth: new Date('1998-03-15'),
+      phone: '081234567890',
+      address: 'Umbulharjo, Kota Yogyakarta',
+      bpjsNumber: '0001234567890',
+      emergencyName: 'Budi Rahmawan',
+      emergencyPhone: '081299999999',
+      bloodType: 'O',
+      allergy: 'Tidak ada',
+      chronicHistory: 'Hipertensi',
+    },
+  });
+
+  const pregnancy = await prisma.pregnancy.upsert({
+    where: { id: 'PREG-DEMO-001' },
+    update: {
+      patientId: patient.id,
+      puskesmasId: 'PKM-001',
+      gestationalAge: 36,
+      ancVisit: 'K5 - Trimester 3',
+      riskLevel: 'HIGH',
+      active: true,
+    },
+    create: {
+      id: 'PREG-DEMO-001',
+      patientId: patient.id,
+      puskesmasId: 'PKM-001',
+      lmp: new Date('2025-04-20'),
+      edd: new Date('2026-01-25'),
+      gestationalAge: 36,
+      gravida: 2,
+      para: 1,
+      abortus: 0,
+      ancVisit: 'K5 - Trimester 3',
+      pregnancyType: 'Single',
+      riskLevel: 'HIGH',
+      active: true,
+    },
+  });
+
+  await prisma.patientQueue.upsert({
+    where: {
+      puskesmasId_queueNo_queuedAt: {
+        puskesmasId: 'PKM-001',
+        queueNo: 'A-001',
+        queuedAt: new Date('2026-06-08T08:00:00.000Z'),
+      },
+    },
+    update: {
+      patientId: patient.id,
+      pregnancyId: pregnancy.id,
+      status: 'WAITING',
+      assignedDoctor: 'dr. Ratna Wulandari',
+      calledAt: null,
+      completedAt: null,
+    },
+    create: {
+      patientId: patient.id,
+      pregnancyId: pregnancy.id,
+      puskesmasId: 'PKM-001',
+      queueNo: 'A-001',
+      assignedDoctor: 'dr. Ratna Wulandari',
+      status: 'WAITING',
+      queuedAt: new Date('2026-06-08T08:00:00.000Z'),
+    },
+  });
+
+  await prisma.stokPuskesmas.upsert({
+    where: {
+      puskesmasId_obatId_periode: {
+        puskesmasId: 'PKM-001',
+        obatId: 'OBT-010',
+        periode: new Date('2026-06-01'),
+      },
+    },
+    update: { stokAwal: 20, konsumsiPeriode: 18, stokSaatIni: 2 },
+    create: {
+      puskesmasId: 'PKM-001',
+      obatId: 'OBT-010',
+      periode: new Date('2026-06-01'),
+      stokAwal: 20,
+      konsumsiPeriode: 18,
+      stokSaatIni: 2,
+    },
+  });
+
+  await prisma.konteksPeriode.upsert({
+    where: { puskesmasId_periode: { puskesmasId: 'PKM-001', periode: new Date('2026-06-01') } },
+    update: {
+      season: 'PANCAROBA',
+      accessScore: 2,
+      rainyAccess: 'TERBATAS',
+      routeDisrupted: false,
+      jumlahBumilT1: 18,
+      jumlahBumilT2: 24,
+      jumlahBumilT3: 20,
+      statusKlb: false,
+      riwayatStockout6Bln: { 'OBT-010': 1 },
+    },
+    create: {
+      puskesmasId: 'PKM-001',
+      periode: new Date('2026-06-01'),
+      season: 'PANCAROBA',
+      accessScore: 2,
+      rainyAccess: 'TERBATAS',
+      routeDisrupted: false,
+      jumlahBumilT1: 18,
+      jumlahBumilT2: 24,
+      jumlahBumilT3: 20,
+      statusKlb: false,
+      riwayatStockout6Bln: { 'OBT-010': 1 },
+    },
+  });
+
+  const recommendation = await prisma.distributionRecommendation.upsert({
+    where: { id: 'REC-DEMO-001' },
+    update: {
+      puskesmasId: 'PKM-001',
+      periode: new Date('2026-06-01'),
+      status: 'PENDING',
+      urgency: 'CRITICAL',
+      priorityRank: 1,
+      source: 'SEEDED_DETERMINISTIC',
+      justification: 'MgSO4 stock is critical and route risk requires immediate IFK review.',
+      routeSummary: { estimateMinutes: 45, courier: 'Sdr. Bambang', route: 'IFK Sleman - PKM-001' },
+    },
+    create: {
+      id: 'REC-DEMO-001',
+      puskesmasId: 'PKM-001',
+      periode: new Date('2026-06-01'),
+      status: 'PENDING',
+      urgency: 'CRITICAL',
+      priorityRank: 1,
+      source: 'SEEDED_DETERMINISTIC',
+      justification: 'MgSO4 stock is critical and route risk requires immediate IFK review.',
+      routeSummary: { estimateMinutes: 45, courier: 'Sdr. Bambang', route: 'IFK Sleman - PKM-001' },
+    },
+  });
+
+  await prisma.distributionRecommendationItem.upsert({
+    where: { id: 'RECITEM-DEMO-001' },
+    update: { aiQuantity: 20, finalQuantity: 20, overrideQuantity: null, overrideReason: null },
+    create: {
+      id: 'RECITEM-DEMO-001',
+      recommendationId: recommendation.id,
+      obatId: 'OBT-010',
+      aiQuantity: 20,
+      finalQuantity: 20,
+    },
+  });
+
+  await prisma.shipmentTrackingEvent.upsert({
+    where: { id: 'TRACK-DEMO-001' },
+    update: { recommendationId: recommendation.id, status: 'REQUESTED', note: 'Recommendation created from seeded deterministic scenario.' },
+    create: {
+      id: 'TRACK-DEMO-001',
+      recommendationId: recommendation.id,
+      status: 'REQUESTED',
+      note: 'Recommendation created from seeded deterministic scenario.',
     },
   });
 }
