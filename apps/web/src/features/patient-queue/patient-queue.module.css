@@ -147,6 +147,11 @@
   box-shadow: none;
 }
 
+.filterWrap {
+  position: relative;
+  width: max-content;
+}
+
 .searchBox {
   display: flex;
   height: 44px;
@@ -186,6 +191,131 @@
   font-weight: 500;
   letter-spacing: 0.15px;
   line-height: 24px;
+}
+
+.filterPanel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  width: 300px;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 16px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.filterPanel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filterPanel legend,
+.doctorFilter > span {
+  margin: 0 0 4px;
+  color: #697586;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.filterPanel label:not(.doctorFilter) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  color: #191c20;
+  font-size: 14px;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+}
+
+.filterPanel input[type='radio'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #005bbf;
+}
+
+.doctorFilter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doctorFilter select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  appearance: none;
+  background-color: #f2f3f9;
+  background-image: linear-gradient(45deg, transparent 50%, #697586 50%), linear-gradient(135deg, #697586 50%, transparent 50%);
+  background-position: calc(100% - 19px) 16px, calc(100% - 13px) 16px;
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  color: #191c20;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+  outline: none;
+  padding: 0 36px 0 13px;
+}
+
+.filterFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.resetButton,
+.applyButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  font-family: Roboto, Arial, sans-serif;
+  cursor: pointer;
+}
+
+.resetButton {
+  background: transparent;
+  color: #697586;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+}
+
+.applyButton {
+  min-width: 69px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid #004eeb;
+  border-radius: 8px;
+  background: #004eeb;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.15px;
+  line-height: 24px;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
 }
 
 .queueCard {
@@ -407,6 +537,8 @@
 
 .primaryButton:hover,
 .filterButton:hover,
+.resetButton:hover,
+.applyButton:hover,
 .callButton:hover,
 .completeButton:hover,
 .secondaryButton:hover,
@@ -416,6 +548,10 @@
 
 .primaryButton:focus-visible,
 .filterButton:focus-visible,
+.resetButton:focus-visible,
+.applyButton:focus-visible,
+.doctorFilter select:focus,
+.filterPanel input[type='radio']:focus-visible,
 .callButton:focus-visible,
 .completeButton:focus-visible,
 .secondaryButton:focus-visible,
@@ -440,6 +576,10 @@
   }
 
   .filterButton {
+    width: max-content;
+  }
+
+  .filterWrap {
     width: max-content;
   }
 }
@@ -520,5 +660,16 @@
   .paginationFooter {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .filterPanel {
+    position: fixed;
+    top: auto;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    width: auto;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
   }
 }

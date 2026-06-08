@@ -830,3 +830,295 @@
     flex-wrap: wrap;
   }
 }
+
+.page {
+  align-items: center;
+  min-height: calc(100vh - 56px);
+  gap: 32px;
+  padding-top: 32px;
+  padding-bottom: 48px;
+  color: #191c20;
+}
+
+.methodHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+.methodHeader h1,
+.methodHeader p,
+.methodCopy h2,
+.methodCopy p,
+.securityTips h2,
+.securityTips p {
+  margin: 0;
+}
+
+.methodHeader h1 {
+  color: #191c20;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 42px;
+}
+
+.methodHeader p {
+  color: #414754;
+  font-size: 15px;
+  line-height: 22.5px;
+}
+
+.methodGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 320px);
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  padding: 16px 0 18px;
+}
+
+.methodCard {
+  display: flex;
+  overflow: hidden;
+  min-height: 392px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 32px;
+  color: #191c20;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.featuredMethod {
+  position: relative;
+  border-color: #005bbf;
+  background: #005bbf;
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.featuredMethod::after {
+  position: absolute;
+  top: -32px;
+  right: -32px;
+  width: 128px;
+  height: 128px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.1);
+  filter: blur(20px);
+  content: '';
+}
+
+.methodTopline {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+}
+
+.methodIcon {
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #eceef3;
+  color: #005bbf;
+}
+
+.featuredMethod .methodIcon {
+  background: rgb(255 255 255 / 0.2);
+  color: #ffffff;
+  backdrop-filter: blur(2px);
+}
+
+.popularPill {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #34a853;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+.methodCopy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.methodCopy h2 {
+  color: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 28px;
+}
+
+.methodSubtitle {
+  padding-bottom: 12px;
+  color: #475569;
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.featuredMethod .methodSubtitle,
+.featuredMethod .methodCopy p {
+  color: rgb(255 255 255 / 0.86);
+}
+
+.methodCopy p:not(.methodSubtitle) {
+  color: #414754;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.methodAction {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px solid #005bbf;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #005bbf;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 24px;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.featuredMethod .methodAction {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #005bbf;
+}
+
+.methodCard:not(.featuredMethod):hover,
+.methodCard:not(.featuredMethod):focus-within {
+  border-color: #005bbf;
+  background: #005bbf;
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  transform: translateY(-2px);
+}
+
+.methodCard:not(.featuredMethod):hover .methodIcon,
+.methodCard:not(.featuredMethod):focus-within .methodIcon {
+  background: rgb(255 255 255 / 0.2);
+  color: #ffffff;
+}
+
+.methodCard:not(.featuredMethod):hover .methodSubtitle,
+.methodCard:not(.featuredMethod):hover .methodCopy p,
+.methodCard:not(.featuredMethod):focus-within .methodSubtitle,
+.methodCard:not(.featuredMethod):focus-within .methodCopy p {
+  color: rgb(255 255 255 / 0.86);
+}
+
+.methodCard:not(.featuredMethod):hover .methodAction,
+.methodCard:not(.featuredMethod):focus-within .methodAction {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #005bbf;
+}
+
+.featuredMethod .methodCopy p:not(.methodSubtitle),
+.methodCard:not(.featuredMethod):hover .methodCopy p:not(.methodSubtitle),
+.methodCard:not(.featuredMethod):focus-within .methodCopy p:not(.methodSubtitle) {
+  color: rgb(255 255 255 / 0.9);
+}
+
+.methodCard:not(.featuredMethod):hover .methodCopy h2,
+.methodCard:not(.featuredMethod):focus-within .methodCopy h2 {
+  color: #ffffff;
+}
+
+.securityTips {
+  display: flex;
+  width: min(672px, 100%);
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #c1c6d6;
+  border-radius: 12px;
+  background: #f2f3f9;
+  color: #005bbf;
+}
+
+.securityTips div {
+  min-width: 0;
+}
+
+.securityTips h2 {
+  color: #191c20;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.securityTips p {
+  color: #414754;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+@media (max-width: 820px) {
+  .methodGrid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 420px;
+  }
+
+  .methodCard {
+    min-height: 340px;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    gap: 24px;
+    padding-top: 24px;
+  }
+
+  .methodHeader h1 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .methodHeader p {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .methodCard,
+  .securityTips {
+    padding: 22px;
+  }
+
+  .securityTips {
+    align-items: flex-start;
+  }
+}

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import styles from './patient-queue.module.css';
@@ -38,6 +40,8 @@ const patients: QueuePatient[] = [
 ];
 
 export function PatientQueueContent() {
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
   return (
     <PageContainer size="wide" className={styles.page}>
       <section className={styles.headerCard}>
@@ -45,10 +49,10 @@ export function PatientQueueContent() {
           <h1>Patient Queue</h1>
           <p>{"Manage today's consultation queue - register new patients and monitor examination turns."}</p>
         </div>
-        <button type="button" className={styles.primaryButton}>
+        <Link href="/master/add-patient" className={styles.primaryButton}>
           <AppIcon name="plus" width={20} height={20} />
           Add New Patient
-        </button>
+        </Link>
       </section>
 
       <section className={styles.summaryGrid} aria-label="Queue summary">
@@ -70,11 +74,14 @@ export function PatientQueueContent() {
           <AppIcon name="search" width={18} height={18} />
           <input type="search" placeholder="Search patient..." />
         </label>
-        <button type="button" className={styles.filterButton}>
-          <AppIcon name="filter" width={18} height={18} />
-          Filter
-          <AppIcon name="chevronDown" width={16} height={16} />
-        </button>
+        <div className={styles.filterWrap}>
+          <button type="button" className={styles.filterButton} aria-expanded={isFilterOpen} aria-haspopup="dialog" onClick={() => setIsFilterOpen((open) => !open)}>
+            <AppIcon name="filter" width={18} height={18} />
+            Filter
+            <AppIcon name="chevronDown" width={16} height={16} />
+          </button>
+          {isFilterOpen ? <QueueFilterDialog onClose={() => setIsFilterOpen(false)} /> : null}
+        </div>
       </section>
 
       <section className={styles.queueCard} aria-label="Patient queue table">
@@ -135,6 +142,40 @@ export function PatientQueueContent() {
         </footer>
       </section>
     </PageContainer>
+  );
+}
+
+function QueueFilterDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <div className={styles.filterPanel} role="dialog" aria-label="Patient queue filters">
+      <fieldset>
+        <legend>Due Date Period</legend>
+        <label><input defaultChecked name="due-date-period" type="radio" /> <span>All</span></label>
+        <label><input name="due-date-period" type="radio" /> <span>Due This Month</span></label>
+        <label><input name="due-date-period" type="radio" /> <span>Due Next Month</span></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Risk Status</legend>
+        <label><input defaultChecked name="risk-status" type="radio" /> <span>All</span></label>
+        <label><input name="risk-status" type="radio" /> <span>High Risk</span></label>
+        <label><input name="risk-status" type="radio" /> <span>Normal</span></label>
+      </fieldset>
+
+      <label className={styles.doctorFilter}>
+        <span>Assigned Doctor</span>
+        <select defaultValue="all">
+          <option value="all">All Doctors</option>
+          <option value="ratna">dr. Ratna Wulandari</option>
+          <option value="ahmad">dr. Ahmad Fauzi</option>
+        </select>
+      </label>
+
+      <footer className={styles.filterFooter}>
+        <button type="button" className={styles.resetButton}>Reset</button>
+        <button type="button" className={styles.applyButton} onClick={onClose}>Apply</button>
+      </footer>
+    </div>
   );
 }
 
