@@ -26,6 +26,24 @@ describe('MaternaLink API', () => {
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'PKM-001' })]));
   });
 
+  it('logs in with username and password and returns current user', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+
+    const cookie = login.headers['set-cookie'];
+    expect(cookie?.[0]).toContain('maternalink_session=');
+
+    const me = await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', cookie).expect(200);
+    expect(me.body).toEqual(expect.objectContaining({ username: 'bidan', role: 'BIDAN_PUSKESMAS', puskesmasId: 'PKM-001' }));
+  });
+
+  it('rejects invalid login and missing session', async () => {
+    await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'wrong123' }).expect(401);
+    await request(app.getHttpServer()).get('/api/auth/me').expect(401);
+  });
+
   it('lists medicine master data', async () => {
     const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));
