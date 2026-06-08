@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { ManualPatientRegistration } from './components/manual-patient-registration';
@@ -54,11 +55,17 @@ export function AddPatientMethodContent() {
               <p>{method.description}</p>
             </div>
 
-            <button type="button" className={styles.methodAction} onClick={method.key === 'manual' ? () => setMode('manual') : undefined}>
-              {method.featured ? <AppIcon name="camera" width={20} height={20} /> : null}
-              {method.action}
-              {!method.featured ? <AppIcon name="arrowRight" width={14} height={14} /> : null}
-            </button>
+            {method.featured ? (
+              <Link href="/master/add-patient/upload" className={styles.methodAction}>
+                <AppIcon name="camera" width={20} height={20} />
+                {method.action}
+              </Link>
+            ) : (
+              <button type="button" className={styles.methodAction} onClick={() => setMode('manual')}>
+                {method.action}
+                <AppIcon name="arrowRight" width={14} height={14} />
+              </button>
+            )}
           </article>
         ))}
       </section>

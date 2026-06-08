@@ -1122,3 +1122,282 @@
     align-items: flex-start;
   }
 }
+
+.uploadPage {
+  display: flex;
+  min-height: calc(100vh - 56px);
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  color: #191c20;
+}
+
+.uploadHeader {
+  width: 100%;
+  max-width: 960px;
+  padding-top: 16px;
+}
+
+.uploadHeader h1,
+.uploadHeader p,
+.stepperHint,
+.photoHint p,
+.uploadStep p {
+  margin: 0;
+}
+
+.uploadHeader h1 {
+  color: #191c20;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 36px;
+}
+
+.uploadHeader p {
+  max-width: 760px;
+  margin-top: 8px;
+  color: #414754;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.uploadStepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(832px, 100%);
+  padding-top: 22px;
+}
+
+.uploadStep {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  color: #64748b;
+  text-align: center;
+}
+
+.uploadStep:not(:last-child)::after {
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 18px);
+  width: calc(100% - 36px);
+  height: 1px;
+  background: #b8c0d4;
+  content: '';
+}
+
+.uploadStep span {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid #d9e0ef;
+  border-radius: 9999px;
+  background: #eef2f8;
+  color: transparent;
+}
+
+.activeUploadStep span {
+  border-color: #7db8ff;
+  background: #005bbf;
+  box-shadow: inset 0 0 0 8px #d8e8ff;
+}
+
+.uploadStep p {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.activeUploadStep p {
+  color: #005bbf;
+}
+
+.stepperHint {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+}
+
+.uploadCard {
+  display: flex;
+  width: min(560px, 100%);
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px;
+  border: 1px solid #b8c0d4;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.dropZone {
+  display: flex;
+  min-height: 252px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  border: 2px solid #8cc2ff;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #191c20;
+  cursor: pointer;
+  text-align: center;
+}
+
+.dropZone input,
+.galleryButton input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dropIcon {
+  display: inline-flex;
+  width: 80px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #d8e8ff;
+  color: #1a73e8;
+}
+
+.dropZone strong {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.dropZone small {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.uploadActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.takePhotoButton,
+.galleryButton {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  cursor: pointer;
+}
+
+.takePhotoButton {
+  border: 1px solid #1a73e8;
+  background: #1a73e8;
+  color: #ffffff;
+  box-shadow: 0 8px 12px rgb(26 115 232 / 0.18);
+}
+
+.galleryButton {
+  position: relative;
+  border: 2px solid #1a73e8;
+  background: #ffffff;
+  color: #005bbf;
+}
+
+.photoHint {
+  display: flex;
+  width: min(560px, 100%);
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid #cce0ff;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #b88a00;
+}
+
+.photoHint p {
+  color: #24476f;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.dropZone:hover,
+.takePhotoButton:hover,
+.galleryButton:hover {
+  transform: translateY(-1px);
+}
+
+.dropZone:focus-within,
+.takePhotoButton:focus-visible,
+.galleryButton:focus-within {
+  outline: 3px solid rgb(26 115 232 / 0.22);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .uploadHeader {
+    text-align: center;
+  }
+
+  .uploadHeader h1 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+
+  .uploadHeader p {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .uploadStepper {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: min(420px, 100%);
+    padding-top: 8px;
+  }
+
+  .uploadStep {
+    align-items: center;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .uploadStep:not(:last-child)::after {
+    top: 34px;
+    bottom: -14px;
+    left: 16px;
+    width: 1px;
+    height: auto;
+  }
+
+  .uploadCard {
+    padding: 20px;
+  }
+
+  .dropZone {
+    min-height: 220px;
+    padding: 18px;
+  }
+
+  .photoHint {
+    align-items: flex-start;
+  }
+}
