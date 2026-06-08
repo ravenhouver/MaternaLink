@@ -10,6 +10,9 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DATABASE_URL: postgresql://maternalink:maternalink@postgres:5432/maternalink?schema=public
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+      AI_MODE: fallback
+      AI_SERVICE_TIMEOUT_MS: 30000
       RUN_SEED: "true"
     ports:
       - "3001:3001"
@@ -22,6 +25,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      ai-service:
+        condition: service_started
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ./apps/ai-service
+    ports:
+      - "8000:8000"
     restart: unless-stopped
 
   web:

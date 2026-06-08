@@ -13,3 +13,5 @@ Problem Research .pdf
 Rancangan.pdf
 docs/
 output/
+__pycache__/
+*.pyc

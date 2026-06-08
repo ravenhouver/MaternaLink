@@ -44,6 +44,11 @@ describe('MaternaLink API', () => {
     await request(app.getHttpServer()).get('/api/auth/me').expect(401);
   });
 
+  it('returns fallback AI gateway health', async () => {
+    const response = await request(app.getHttpServer()).get('/api/ai/health').expect(200);
+    expect(response.body).toEqual(expect.objectContaining({ mode: 'fallback', remote: false, status: 'fallback-ready' }));
+  });
+
   it('lets bidan create patient, queue patient, call patient, and save examination', async () => {
     const nik = `340401520398${Date.now().toString().slice(-4)}`;
     const login = await request(app.getHttpServer())

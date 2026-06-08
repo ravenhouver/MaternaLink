@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AiModule } from './modules/ai/ai.module';
 import { DistributionModule } from './modules/distribution/distribution.module';
 import { ExaminationsModule } from './modules/examinations/examinations.module';
 import { ForecastModule } from './modules/forecast/forecast.module';
@@ -11,6 +12,6 @@ import { QueueModule } from './modules/queue/queue.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, MasterModule, PatientsModule, QueueModule, ExaminationsModule, InputsModule, ForecastModule, LplpoModule, DistributionModule],
+  imports: [PrismaModule, AuthModule, AiModule, MasterModule, PatientsModule, QueueModule, ExaminationsModule, InputsModule, ForecastModule, LplpoModule, DistributionModule],
 })
 export class AppModule {}
