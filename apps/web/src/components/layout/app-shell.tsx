@@ -18,6 +18,7 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const isLogin = pathname === '/login';
   const isMedicineSender = pathname.startsWith('/medicine-sender');
   const hasTopbar = pathname !== '/';
 
@@ -37,7 +38,7 @@ export function AppShell({ children }: AppShellProps) {
     },
   };
 
-  if (isMedicineSender) {
+  if (isLogin || isMedicineSender) {
     return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
   }
 
@@ -53,3 +54,4 @@ export function AppShell({ children }: AppShellProps) {
     </ConfigProvider>
   );
 }
+

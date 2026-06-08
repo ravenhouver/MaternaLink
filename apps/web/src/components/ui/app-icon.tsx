@@ -27,6 +27,8 @@ const iconNames = {
   heart: 'lucide:heart-pulse',
   home: 'lucide:house',
   info: 'lucide:info',
+  lock: 'lucide:lock',
+  mail: 'lucide:mail',
   logOut: 'lucide:log-out',
   mic: 'lucide:mic',
   package: 'lucide:package',
@@ -54,3 +56,4 @@ type AppIconProps = Omit<IconProps, 'icon'> & {
 export function AppIcon({ name, 'aria-hidden': ariaHidden = true, ...props }: AppIconProps) {
   return <Icon aria-hidden={ariaHidden} icon={iconNames[name]} {...props} />;
 }
+
