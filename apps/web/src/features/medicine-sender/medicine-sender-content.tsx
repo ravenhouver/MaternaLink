@@ -26,8 +26,11 @@ export function MedicineSenderContent() {
     <div className={styles.senderShell}>
       <aside className={styles.roleSidebar} aria-label="Medicine sender navigation">
         <div className={styles.roleBrand}>
-          <Typography.Title level={2}>Eastern Sector</Typography.Title>
-          <Typography.Text>Command Intelligence</Typography.Text>
+          <span className={styles.brandIcon}><AppIcon name="briefcase" width={20} height={20} /></span>
+          <div>
+            <Typography.Title level={2}>IFK</Typography.Title>
+            <Typography.Text>District Monitoring</Typography.Text>
+          </div>
         </div>
 
         <nav className={styles.roleNav}>
@@ -36,20 +39,16 @@ export function MedicineSenderContent() {
             Dashboard
           </a>
           <a href="/medicine-sender/recommendations">
-            <AppIcon name="send" width={18} height={18} />
-            Rekomendasi Pengiriman
-          </a>
-          <a href="/medicine-sender/environment">
-            <AppIcon name="activity" width={18} height={18} />
-            Pemantauan Lingkungan
+            <AppIcon name="userPlus" width={18} height={18} />
+            Distribution
           </a>
           <a href="/medicine-sender/clinics">
-            <AppIcon name="package" width={18} height={18} />
-            Semua Klinik
+            <AppIcon name="users" width={18} height={18} />
+            Clinic List
           </a>
-          <a href="/medicine-sender/decision-history">
-            <AppIcon name="clipboard" width={18} height={18} />
-            Riwayat Keputusan
+          <a href="/medicine-sender/environment">
+            <AppIcon name="calendar" width={18} height={18} />
+            Environment Monitoring
           </a>
         </nav>
 
@@ -65,27 +64,30 @@ export function MedicineSenderContent() {
 
       <div className={styles.roleWorkspace}>
         <header className={styles.roleTopbar}>
-          <Typography.Text>Sovereign Command</Typography.Text>
-          <div>
-            <button type="button" aria-label="Notifikasi"><AppIcon name="bell" width={20} height={20} /></button>
-            <button type="button" aria-label="Akun"><AppIcon name="user" width={20} height={20} /></button>
+          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <AppIcon name="chevronRight" width={14} height={14} />
+            <a href="/medicine-sender/clinics">Clinic List</a>
+            <AppIcon name="chevronRight" width={14} height={14} />
+            <span>Medicine Sender</span>
+          </nav>
+          <div className={styles.topbarActions}>
+            <button type="button" aria-label="Notifikasi" className={styles.notificationButton}>
+              <AppIcon name="bell" width={20} height={20} />
+              <span />
+            </button>
+            <button type="button" aria-label="Pengaturan"><AppIcon name="settings" width={20} height={20} /></button>
+            <div className={styles.topbarProfile}>
+              <div>
+                <strong>Pharmacy Management</strong>
+                <small>Administrator</small>
+              </div>
+              <img src="/figma-dashboard/profil-bidan.png" alt="Pharmacy administrator" />
+            </div>
           </div>
         </header>
 
         <main id="sender-dashboard" className={styles.page}>
-          <section className={styles.hero} aria-labelledby="sender-title">
-            <div>
-              <Typography.Text className={styles.eyebrow}>Yogyakarta sector</Typography.Text>
-              <Typography.Title id="sender-title" level={1}>Medicine Sender Command Center</Typography.Title>
-              <Typography.Paragraph>
-                Pantau prioritas pengiriman obat, risiko cuaca, dan approval distribusi dari satu layar kerja.
-              </Typography.Paragraph>
-            </div>
-            <Button type="primary" className={styles.primaryAction} icon={<AppIcon name="send" width={18} height={18} />} href="/medicine-sender/recommendations">
-              Review Antrian
-            </Button>
-          </section>
-
           <section className={styles.kpiGrid} aria-label="Ringkasan status klinik">
             {dashboardKpis.map((item) => (
               <article className={[styles.kpiCard, styles[item.tone]].join(' ')} key={item.label}>
@@ -93,8 +95,13 @@ export function MedicineSenderContent() {
                 <div className={styles.kpiValueRow}>
                   <strong>{item.value}</strong>
                   <span>{item.delta}</span>
+                  {item.icon ? <AppIcon name={item.icon} width={24} height={24} /> : null}
                 </div>
-                <div className={styles.progressTrack} aria-hidden="true"><span style={{ width: `${item.progress}%` }} /></div>
+                {item.tone === 'primary' ? (
+                  <Button className={styles.reviewQueueButton} href="/medicine-sender/recommendations">Review queue</Button>
+                ) : (
+                  <div className={styles.progressTrack} aria-hidden="true"><span style={{ width: `${item.progress}%` }} /></div>
+                )}
               </article>
             ))}
           </section>
@@ -102,7 +109,7 @@ export function MedicineSenderContent() {
           <section className={styles.mainGrid}>
             <article className={styles.panel}>
               <div className={styles.panelHeader}>
-                <Typography.Title id="sender-map-title" level={2}>Peta Distribusi Jogja</Typography.Title>
+                <Typography.Title id="sender-map-title" level={2}>Yogyakarta sector geospatial</Typography.Title>
                 <div className={styles.segmented} aria-label="Mode peta">
                   <button type="button" className={mapMode === 'map' ? styles.activeSegment : ''} onClick={() => setMapMode('map')}>Map</button>
                   <button type="button" className={mapMode === 'satellite' ? styles.activeSegment : ''} onClick={() => setMapMode('satellite')}>Satellite</button>
@@ -111,36 +118,35 @@ export function MedicineSenderContent() {
               <div className={styles.mapShell}>
                 <SenderMap points={dashboardMapPoints} mode={mapMode} center={[-7.7906, 110.377]} zoom={12} />
                 <aside className={styles.mapOverlay} aria-label="Cuaca dan rute">
-                  <Typography.Text>Weather overlay</Typography.Text>
+                  <div className={styles.overlayHeader}>
+                    <Typography.Text>Weather overlay</Typography.Text>
+                    <span />
+                  </div>
                   <div>
-                    <span><AppIcon name="activity" width={18} height={18} /> 85% hujan</span>
-                    <span><AppIcon name="send" width={18} height={18} /> 22 km rute</span>
+                    <span><AppIcon name="cloudRain" width={18} height={18} /> 85% Prec.</span>
+                    <span><AppIcon name="zap" width={18} height={18} /> 22 Knots</span>
                   </div>
                 </aside>
+                <strong className={styles.mapCaption}>District Sallo Map</strong>
               </div>
             </article>
 
             <article className={styles.panel}>
               <div className={styles.panelHeader}>
-                <Typography.Title id="urgent-actions-title" level={2}>Tindakan Segera Diperlukan</Typography.Title>
+                <Typography.Title id="urgent-actions-title" level={2}>Urgent actions required</Typography.Title>
               </div>
               <div className={styles.actionList}>
                 {dashboardActions.map((clinic) => (
                   <section className={styles.actionItem} key={clinic.id}>
                     <div className={styles.actionTopline}>
                       <span className={[styles.riskBadge, styles[clinic.status]].join(' ')}>{clinic.statusLabel}</span>
-                      <Typography.Text>Updated: {clinic.updatedAt}</Typography.Text>
+                      <Typography.Text>Last updated: {clinic.updatedAt}</Typography.Text>
                     </div>
                     <Typography.Title level={3}>{clinic.name}</Typography.Title>
                     <div className={styles.actionFacts}>
-                      <span><AppIcon name="alert" width={18} height={18} /><small>Weather risk</small>{clinic.weather}</span>
+                      <span><AppIcon name={clinic.status === 'warning' ? 'cloudRain' : 'alert'} width={18} height={18} /><small>Weather risk</small>{clinic.weather}</span>
                       <span><AppIcon name="package" width={18} height={18} /><small>Supply shortage</small>{clinic.supply}</span>
                     </div>
-                    {clinic.status === 'critical' ? (
-                      <Button type="primary" className={styles.dispatchButton} icon={<AppIcon name="send" width={16} height={16} />} href="/medicine-sender/recommendations">
-                        Execute Dispatch
-                      </Button>
-                    ) : null}
                   </section>
                 ))}
               </div>
@@ -150,7 +156,7 @@ export function MedicineSenderContent() {
           <section className={styles.logPanel} aria-labelledby="approval-log-title">
             <div className={styles.panelHeader}>
               <Typography.Title id="approval-log-title" level={2}>Recent Approval Activity</Typography.Title>
-              <Typography.Text>Sync frequency: 80s</Typography.Text>
+              <Typography.Text>Sync frequency: 30s</Typography.Text>
             </div>
             <div className={styles.tableWrap}>
               <table className={styles.logTable}>

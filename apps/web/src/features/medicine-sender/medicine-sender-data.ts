@@ -32,6 +32,7 @@ export type DashboardKpi = {
   delta: string;
   tone: 'critical' | 'warning' | 'safe' | 'primary';
   progress: number;
+  icon?: 'clipboardCheck';
 };
 
 export type DashboardAction = {
@@ -107,10 +108,10 @@ export const approvalMetrics: ApprovalMetric[] = [
 ];
 
 export const dashboardKpis: DashboardKpi[] = [
-  { label: 'Klinik kritis', value: '12', delta: '+3 jam', tone: 'critical', progress: 76 },
-  { label: 'Klinik waspada', value: '08', delta: '-2 jam', tone: 'warning', progress: 42 },
-  { label: 'Klinik aman', value: '142', delta: 'stabil', tone: 'safe', progress: 88 },
-  { label: 'Menunggu approval', value: '05', delta: 'review', tone: 'primary', progress: 54 },
+  { label: 'Critical clinics', value: '12', delta: '+3 hrs', tone: 'critical', progress: 45 },
+  { label: 'Warning clinics', value: '08', delta: '-2 hrs', tone: 'warning', progress: 30 },
+  { label: 'Safe clinics', value: '142', delta: 'stable', tone: 'safe', progress: 85 },
+  { label: 'Pending approval', value: '05', delta: 'review queue', tone: 'primary', progress: 54, icon: 'clipboardCheck' },
 ];
 
 export const dashboardActions: DashboardAction[] = [
@@ -119,9 +120,9 @@ export const dashboardActions: DashboardAction[] = [
     name: 'Puskesmas Jetis',
     status: 'critical',
     statusLabel: 'Critical risk',
-    updatedAt: '2 menit lalu',
-    weather: 'Hujan lebat 90%',
-    supply: 'Oksitosin < 12 vial',
+    updatedAt: '2m ago',
+    weather: 'Flood (90%)',
+    supply: 'Oksitosin < 12 vials',
     pointStatus: 'critical',
     position: [-7.7765, 110.3689],
   },
@@ -130,9 +131,9 @@ export const dashboardActions: DashboardAction[] = [
     name: 'Klinik Umbulharjo',
     status: 'warning',
     statusLabel: 'Weather watch',
-    updatedAt: '14 menit lalu',
-    weather: 'Potensi genangan',
-    supply: 'Tablet FE 7 hari stok',
+    updatedAt: '14m ago',
+    weather: 'High water risk',
+    supply: 'Tablet FE stable (7-day stock)',
     pointStatus: 'anticipatory',
     position: [-7.8122, 110.3892],
   },
@@ -141,9 +142,9 @@ export const dashboardActions: DashboardAction[] = [
     name: 'RS Pratama Sleman',
     status: 'critical',
     statusLabel: 'Depletion alert',
-    updatedAt: '45 menit lalu',
-    weather: 'Akses normal',
-    supply: 'Insulin kritis',
+    updatedAt: '45m ago',
+    weather: 'Clear access',
+    supply: 'Insulin critically low',
     pointStatus: 'critical',
     position: [-7.7162, 110.3554],
   },
