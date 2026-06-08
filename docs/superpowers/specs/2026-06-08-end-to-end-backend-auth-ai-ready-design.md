@@ -18,13 +18,13 @@ The first flow is:
 7. IFK admin reviews distribution recommendations.
 8. IFK admin edits quantities with reason, approves or rejects, and tracks shipment events.
 
-This phase must make data dynamic from the database and remove silent no-op buttons from the core flow. Real AI through FastAPI is prepared as an integration contract, but the shipped v1 uses deterministic fallback data and seeded demo scenarios.
+This phase must make data dynamic from the database, remove silent no-op buttons from the core flow, and rename unclear frontend URLs so routes match page purpose. Real AI through FastAPI is prepared as an integration contract and local service scaffold, but the shipped v1 uses deterministic fallback data and seeded demo scenarios.
 
 ## Architecture
 
 `apps/api` remains the main backend and source of truth. It owns PostgreSQL data through Prisma, workflow state, audit state, and role checks.
 
-The future FastAPI service from `https://github.com/AzrilFahmiardi/ai-logistik-obat-bumil` is integrated later as an AI service behind a NestJS gateway. NestJS stores AI/fallback results in its own tables before the frontend reads them. The frontend does not call FastAPI directly.
+The future FastAPI service from `https://github.com/AzrilFahmiardi/ai-logistik-obat-bumil` is integrated later as an AI service behind a NestJS gateway. V1 prepares the local service setup, health check, env wiring, Docker Compose slot, and typed NestJS client, but keeps AI computation on deterministic fallback unless `AI_MODE=remote` is explicitly enabled. NestJS stores AI/fallback results in its own tables before the frontend reads them. The frontend does not call FastAPI directly.
 
 Backend modules to add or extend:
 
@@ -36,6 +36,16 @@ Backend modules to add or extend:
 - `workflow`: demo runner for forecast, LPLPO, allocation, and recommendation creation.
 - `distribution`: recommendation list, item override, approve, reject, tracking.
 - `ai`: gateway interface for future FastAPI calls with deterministic fallback.
+
+FastAPI setup to prepare in v1:
+
+- Add `apps/ai-service` or `services/ai-service` as a minimal FastAPI scaffold.
+- Include `/health`, `/layer0/extract-symptoms`, `/layer1/forecast-demand`, `/layer2/allocate`, and `/layer2/explain` route stubs.
+- Route stubs return schema-valid deterministic stub responses and mark `source=FASTAPI_STUB`.
+- Add requirements/project metadata, local run command, and Dockerfile.
+- Add Docker Compose service on port `8000`, with NestJS fallback keeping the demo functional when it is down.
+- Add a NestJS health check or startup-safe client that calls FastAPI only when `AI_MODE=remote`.
+- Do not port notebooks fully in v1; only prepare deployable skeleton and contracts.
 
 Existing modules remain useful and should be extended instead of replaced:
 
@@ -122,7 +132,7 @@ Add Prisma models with explicit relations to existing domain data.
 
 `DistributionRecommendation`:
 
-- puskesmasId, periode, urgency, status, source, justification, routeSummary, createdFromForecastRunId, createdFromAllocationPlanId.
+- puskesmasId, periode, urgency, status, source, priorityRank, justification, routeSummary, createdFromForecastRunId, createdFromAllocationPlanId.
 - Status values: `PENDING`, `APPROVED`, `REJECTED`, `DISPATCHED`, `RECEIVED`, `CANCELLED`.
 - Source values: `SEEDED_DETERMINISTIC`, `RULE_BASED_FALLBACK`, later `FASTAPI_AI`.
 
@@ -179,6 +189,7 @@ Distribution endpoints:
 
 - `GET /api/distribution/recommendations`
 - `GET /api/distribution/recommendations/:id`
+- `PATCH /api/distribution/recommendations/reorder`: persist drag-and-drop priority ranks.
 - `PATCH /api/distribution/recommendations/:id/items/:itemId`: update override quantity and reason.
 - `PATCH /api/distribution/recommendations/:id/approve`
 - `PATCH /api/distribution/recommendations/:id/reject`
@@ -191,13 +202,43 @@ Dashboard endpoints:
 
 ## Frontend Flow
 
+### Route Naming
+
+Rename unclear URLs so the browser path matches the actual page and user role. Existing old paths should redirect during transition.
+
+Recommended route names:
+
+- `/dashboard`: main bidan dashboard, replacing `/` as primary logged-in landing.
+- `/patients`: patient list, replacing `/master` for patient-facing page.
+- `/patients/new`: add-patient method selector, replacing `/master/add-patient`.
+- `/patients/new/manual`: manual registration, replacing `/master/add-patient/manual`.
+- `/patients/new/kia-upload`: KIA upload/review, replacing `/master/add-patient/upload`.
+- `/queue`: patient queue, replacing `/inputs`.
+- `/queue/examination`: examination page, replacing `/inputs/examination`.
+- `/forecast-calendar`: prediction calendar, replacing `/forecast`.
+- `/medicine-needs`: LPLPO/medicine needs, replacing `/lplpo`.
+- `/medicine-needs/:medicine`: medicine detail, replacing `/lplpo/:medicine`.
+- `/deliveries`: delivery/distribution workflow, replacing `/distribution`.
+- `/ifk`: IFK logistics dashboard, replacing `/medicine-sender`.
+- `/ifk/recommendations`: distribution recommendations, replacing `/medicine-sender/recommendations`.
+- `/ifk/clinics`: clinic list/context, replacing `/medicine-sender/clinics`.
+- `/ifk/environment`: environment monitoring, replacing `/medicine-sender/environment`.
+- `/ifk/decision-history`: decision history, replacing `/medicine-sender/decision-history`.
+
+Redirect rules:
+
+- Keep old URLs as temporary redirects so current bookmarks and existing links do not break during migration.
+- Sidebar, cards, buttons, breadcrumbs, and post-login redirects must use the new URLs after migration.
+
+### Core Flow Pages
+
 `/login`:
 
 - Uses username and password.
 - On success redirects based on role:
-  - Bidan to `/inputs` or `/`.
-  - IFK admin to `/medicine-sender/recommendations`.
-  - Super admin to `/`.
+  - Bidan to `/queue` or `/dashboard`.
+  - IFK admin to `/ifk/recommendations`.
+  - Super admin to `/dashboard`.
 
 App shell:
 
@@ -205,44 +246,44 @@ App shell:
 - Redirects unauthenticated users to `/login`.
 - Shows role-specific navigation.
 
-`/master/add-patient/manual`:
+`/patients/new/manual`:
 
 - Converts fields to controlled form state.
 - Submit calls `POST /api/patients`.
-- On success, calls `POST /api/queue` and redirects to `/inputs`.
+- On success, calls `POST /api/queue` and redirects to `/queue`.
 
-`/master/add-patient/upload`:
+`/patients/new/kia-upload`:
 
 - Keeps upload extraction simulated in v1.
 - Review state submits through the same patient create endpoint.
 
-`/inputs`:
+`/queue`:
 
 - Reads from `GET /api/queue/today`.
 - Search and filters operate on fetched data.
-- `Call` transitions row to `EXAMINING` and opens `/inputs/examination?queueId=...`.
+- `Call` transitions row to `EXAMINING` and opens `/queue/examination?queueId=...`.
 - `Complete` transitions row to `COMPLETED`.
 
-`/inputs/examination`:
+`/queue/examination`:
 
 - Reads queue and patient context from `queueId`.
 - Manual fields are editable.
 - Voice flow uses fallback transcript in v1.
 - Save calls `POST /api/examinations` and completes the queue row.
 
-`/forecast`:
+`/forecast-calendar`:
 
 - Displays latest forecast runs from API.
 - Run/prepare action calls workflow or forecast endpoint.
 - Shows confidence, source, and missing-input errors.
 
-`/lplpo`:
+`/medicine-needs`:
 
 - Reads `GET /api/lplpo`.
 - Stock edit and shipment request persist through API.
 - Upload document remains simulated preview, then confirm upserts stock rows.
 
-`/medicine-sender/recommendations`:
+`/ifk/recommendations`:
 
 - Reads recommendations from API.
 - Filters query real status, urgency, and puskesmas data.
@@ -250,16 +291,49 @@ App shell:
 - Approve/reject update backend state and create tracking/audit entries.
 - Track modal reads timeline from API.
 
-`/medicine-sender/decision-history`:
+`/ifk/decision-history`:
 
 - Reads approved, rejected, dispatched, received, and cancelled recommendations.
 - Shows final quantity, override reason, status timestamps, actor, and source.
+
+### User Interaction Fixes
+
+Every visible control in the core flow must either perform a real action, change local UI state, call an API, navigate, or show an explicit disabled/coming-next state. No visible core-flow button should silently do nothing.
+
+Priority interaction fixes:
+
+- Queue search filters patient rows by name, NIK, risk, doctor, and status.
+- Queue filter modal reset/apply changes visible rows and URL query state.
+- Queue pagination works on fetched data.
+- `Call`, `Complete`, and `View Details` call API or navigate to detail views.
+- Registration next/back preserves form state and validates required fields before submit.
+- Examination fields are real inputs/selects/textareas, not static spans.
+- Examination save validates required fields and shows save/loading/error/success states.
+- Forecast calendar prev/next changes the visible month and selected period.
+- Forecast run/prepare button calls API and updates latest run state.
+- Medicine stock edit saves quantity changes.
+- Shipment request submit creates or updates backend request/recommendation state.
+- KIA upload and medicine document upload keep simulated extraction in v1 but have real file selection, preview, reset, confirm, and persisted result.
+- Distribution recommendation filter applies real status/urgency/district/date filters.
+- Approve/reject modals update backend and refresh table state.
+- Edit recommendation quantity requires reason and persists override.
+- Track modal reads backend tracking events and can append report issue events.
+- Notification, settings, and help buttons not implemented in v1 show a non-blocking notice or route to a real holding page.
+
+Drag and drop:
+
+- `/ifk/recommendations` recommendation rows support drag-and-drop priority reorder.
+- Reorder updates local order immediately and persists via `PATCH /api/distribution/recommendations/reorder`.
+- Backend stores `priorityRank` on `DistributionRecommendation`.
+- Reorder recalculates route summary in deterministic fallback mode.
+- If persistence fails, UI rolls back to previous order and shows an error.
+- Keyboard-accessible reorder fallback is required through up/down buttons or menu actions.
 
 Buttons not included in this phase must not fail silently. They should be disabled with a clear label or show a small non-blocking notice that the feature is in the next phase.
 
 ## AI Gateway
 
-The AI gateway prepares for the future FastAPI service without making it required for v1.
+The AI gateway prepares for the future FastAPI service without making remote AI required for v1.
 
 Environment variables:
 
@@ -273,6 +347,14 @@ Future FastAPI contract:
 - `POST /layer1/forecast-demand`
 - `POST /layer2/allocate`
 - `POST /layer2/explain`
+
+FastAPI scaffold behavior:
+
+- `/health` returns service name, version, and status.
+- Layer route stubs validate request/response shapes and return deterministic stub payloads.
+- Stub route responses include `source=FASTAPI_STUB` and `modelVersion=stub-v1`.
+- NestJS integration tests can run with FastAPI down because fallback remains default.
+- Optional smoke test can start FastAPI and verify NestJS remote mode reaches `/health`.
 
 Rules:
 
@@ -331,6 +413,10 @@ API e2e tests:
 - IFK admin can approve and reject recommendations.
 - Demo workflow creates forecast, LPLPO, recommendation, and tracking output.
 - Seed can run twice without duplicate core demo rows.
+- Recommendation reorder persists `priorityRank` and returns recalculated route summary.
+- Old route redirects resolve to new frontend URLs where applicable.
+- FastAPI `/health` works when the AI service is started.
+- NestJS AI gateway falls back cleanly when FastAPI is unavailable.
 
 Frontend verification:
 
@@ -345,6 +431,7 @@ Frontend verification:
   - run workflow or open forecast/LPLPO
   - logout/login as `ifk`
   - approve/reject recommendation
+  - drag recommendation rows and verify saved order survives refresh
   - tracking state updates
 
 ## Out of Scope for V1
@@ -353,7 +440,7 @@ Frontend verification:
 - Password reset, email verification, and user management UI.
 - Real KIA OCR extraction.
 - Real voice upload, STT, and model extraction.
-- Full FastAPI implementation.
+- Full FastAPI model/notebook port.
 - Offline synchronization.
 - Full medical decision validation.
 - Complete dynamic migration of every secondary page.
@@ -365,8 +452,9 @@ Frontend verification:
 3. Connect manual registration, queue, and examination frontend pages.
 4. Extend seed for stock/context/LPLPO/distribution demo state.
 5. Add distribution recommendation schema, APIs, and IFK frontend actions.
-6. Add AI gateway fallback and workflow demo runner.
-7. Replace static dashboard/forecast/LPLPO core flow reads with API data.
-8. Add e2e tests and browser smoke verification.
-9. Expand the same pattern to remaining hardcoded pages after the core flow passes.
-
+6. Add FastAPI scaffold, AI gateway fallback, remote-mode health wiring, and workflow demo runner.
+7. Rename frontend routes and add old-route redirects.
+8. Replace static dashboard/forecast/LPLPO core flow reads with API data.
+9. Fix core user interactions, including filters, pagination, upload previews, no-op buttons, and recommendation drag-and-drop reorder.
+10. Add e2e tests and browser smoke verification.
+11. Expand the same pattern to remaining hardcoded pages after the core flow passes.
