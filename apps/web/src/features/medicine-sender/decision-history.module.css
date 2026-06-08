@@ -820,3 +820,180 @@
     padding-inline: 0;
   }
 }
+
+.dhShell {
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  min-height: 100vh;
+  background: #f8f9fa;
+  color: #202124;
+  font-family: var(--font-heading);
+}
+
+.dhSidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  height: 100vh;
+  flex-direction: column;
+  border-right: 1px solid #f1f5f9;
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.dhBrand,
+.dhNav a,
+.dhTopbar,
+.dhCrumbs,
+.dhTopActions,
+.dhHeader,
+.dhHeader div,
+.dhHeader button,
+.dhMetric div,
+.dhTableHeader,
+.dhTableHeader div,
+.dhTableHeader label,
+.dhTableHeader button,
+.dhPagination,
+.dhPagination div {
+  display: flex;
+  align-items: center;
+}
+
+.dhBrand { gap: 12px; padding: 0 8px 40px; }
+.dhBrand > span { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 16px; background: #1a73e8; color: #fff; }
+.dhBrand strong,
+.dhBrand small { display: block; }
+.dhBrand strong { color: #1d4ed8; font-size: 22px; line-height: 28px; }
+.dhBrand small { color: #64748b; font-size: 14px; }
+.dhNav { display: flex; flex-direction: column; gap: 4px; }
+.dhNav a { min-height: 44px; gap: 12px; border-radius: 24px; color: #697586; padding: 12px 16px; font-size: 14px; }
+.dhNavActive { background: #fff; color: #004eeb !important; font-weight: 800; box-shadow: 0 1px 1px rgb(0 0 0 / 0.05); }
+.dhWorkspace { min-width: 0; }
+.dhTopbar { position: sticky; top: 0; z-index: 10; justify-content: space-between; min-height: 64px; gap: 16px; background: #fff; padding: 0 24px; box-shadow: 0 1px 1px rgb(0 0 0 / 0.05); }
+.dhCrumbs { gap: 8px; color: #414754; font-size: 14px; white-space: nowrap; }
+.dhCrumbs strong { color: #191c20; }
+.dhTopActions { gap: 18px; }
+.dhTopActions button { position: relative; display: grid; width: 32px; height: 32px; place-items: center; border: 0; background: transparent; color: #374151; }
+.dhTopActions i { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 999px; background: #ba1a1a; }
+.dhTopActions > span { width: 1px; height: 38px; background: #e6e8ed; }
+.dhTopActions div { display: flex; flex-direction: column; text-align: right; }
+.dhTopActions strong { font-size: 14px; }
+.dhTopActions small { color: #475569; font-size: 12px; }
+.dhTopActions > b { display: grid; width: 40px; height: 40px; place-items: center; border: 2px solid #d8e2ff; border-radius: 999px; background: #e0f2fe; color: #005bbf; font-size: 12px; }
+.dhPage { width: min(100%, 1100px); margin: 0 auto; padding: 32px; }
+.dhHeader { justify-content: space-between; gap: 24px; }
+.dhHeader > div:first-child { display: block; }
+.dhHeader p { margin: 0 0 6px; color: #697586; font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+.dhHeader h1 { margin: 0; color: #202124; font-size: 30px; line-height: 36px; }
+.dhHeader div:last-child { gap: 12px; }
+.dhHeader button { gap: 8px; min-height: 44px; border: 1px solid #dadce0; border-radius: 8px; background: #fff; color: #202124; padding: 10px 17px; font-weight: 800; text-transform: uppercase; box-shadow: 0 2px 4px rgb(0 0 0 / 0.14); }
+.dhHeader button:last-child { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+.dhMetrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 32px 0; }
+.dhMetric { min-height: 148px; border: 1px solid #dadce0; border-radius: 12px; background: #fff; padding: 24px; box-shadow: 0 2px 4px rgb(0 0 0 / 0.14); }
+.dhMetric div { justify-content: space-between; }
+.dhMetric span { color: #5f6368; font-size: 12px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; }
+.dhMetric strong { display: block; margin-top: 22px; color: #202124; font-size: 48px; line-height: 52px; }
+.dhMetric p { margin: 10px 0 0; color: #5f6368; font-size: 12px; }
+.green { color: #34a853 !important; }
+.blue { color: #1a73e8 !important; }
+.dhTablePanel,
+.dhChart,
+.dhCompliance { overflow: hidden; border: 1px solid #dadce0; border-radius: 12px; background: #fff; box-shadow: 0 2px 4px rgb(0 0 0 / 0.14); }
+.dhTableHeader { justify-content: space-between; gap: 24px; background: #f8f9fa; padding: 20px 24px; }
+.dhTableHeader h2 { margin: 0; color: #202124; font-size: 14px; letter-spacing: 1.4px; text-transform: uppercase; }
+.dhTableHeader div { gap: 16px; }
+.dhTableHeader label,
+.dhTableHeader button { gap: 8px; min-height: 40px; border: 1px solid #dadce0; border-radius: 8px; background: #fff; color: #697586; padding: 9px 13px; font-size: 14px; }
+.dhScroller { overflow-x: auto; }
+.dhTable { width: 100%; min-width: 840px; border-collapse: collapse; }
+.dhTable th,
+.dhTable td { padding: 24px 28px; text-align: left; }
+.dhTable th { background: #f8f9fa; color: #5f6368; font-size: 11px; font-weight: 800; letter-spacing: 0.55px; text-transform: uppercase; }
+.dhTable td { border-top: 1px solid #dadce0; color: #414754; font-size: 13px; line-height: 18px; }
+.dhTable td span { display: block; }
+.dhTable td:first-child,
+.dhTable td:nth-child(2),
+.dhTable td:nth-child(3),
+.dhTable td:last-child { color: #202124; font-weight: 800; }
+.predictionCell { color: #34a853 !important; font-weight: 800; text-transform: uppercase; }
+.predictionCell::before { color: inherit; content: 'AI '; }
+.red { color: #d93025 !important; }
+.dhPagination { justify-content: space-between; gap: 16px; border-top: 1px solid #dadce0; padding: 16px 24px; }
+.dhPagination > span { color: #5f6368; font-size: 14px; font-weight: 700; }
+.dhPagination div { gap: 8px; }
+.dhPagination button { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid #dadce0; border-radius: 999px; background: #fff; color: #5f6368; }
+.dhPagination .current { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+.dhBottomGrid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; padding-top: 32px; }
+.dhChart { min-height: 360px; padding: 32px; }
+.dhChart > div:first-child { display: flex; justify-content: space-between; gap: 24px; }
+.dhChart h2 { margin: 0 0 8px; color: #1a73e8; font-size: 14px; letter-spacing: 1.4px; text-transform: uppercase; }
+.dhChart p { margin: 0; color: #202124; }
+.dhChart span { display: flex; gap: 16px; color: #5f6368; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.dhChart i,
+.dhChart b { display: inline-block; width: 12px; height: 12px; border-radius: 999px; background: #34a853; }
+.dhChart b { background: #d93025; }
+.dhBars { display: flex; align-items: flex-end; gap: 22px; height: 210px; padding: 34px 16px 0; }
+.dhBars div { display: flex; align-items: center; flex-direction: column; justify-content: flex-end; gap: 8px; }
+.dhBars span,
+.dhBars b { display: block; width: 60px; border-radius: 6px 6px 0 0; background: #34a853; }
+.dhBars b { border-radius: 0; background: #d93025; }
+.dhBars small { color: #5f6368; font-size: 10px; }
+.dhCompliance { min-height: 360px; background: #1a73e8; color: #fff; padding: 32px; }
+.dhCompliance > span { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 12px; background: rgb(255 255 255 / 0.16); }
+.dhCompliance h2 { margin: 32px 0 16px; color: #fff; font-size: 24px; }
+.dhCompliance p { color: #e8f0fe; line-height: 22px; }
+.dhCompliance div { margin-top: 24px; border-left: 4px solid #fff; border-radius: 12px; background: rgb(255 255 255 / 0.12); padding: 20px; }
+.dhCompliance small { display: block; color: #e8f0fe; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.dhCompliance strong { display: block; margin-top: 8px; color: #fff; font-size: 16px; }
+
+@media (max-width: 1120px) {
+  .dhShell { grid-template-columns: 232px minmax(0, 1fr); }
+  .dhMetrics { grid-template-columns: 1fr; }
+  .dhBottomGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 820px) {
+  .dhShell { display: block; }
+  .dhSidebar { position: static; height: auto; border-right: 0; border-bottom: 1px solid #e2e8f0; }
+  .dhBrand { padding-bottom: 16px; }
+  .dhNav { flex-flow: row wrap; }
+  .dhNav a { flex: 1 1 180px; }
+  .dhTopbar { align-items: flex-start; flex-direction: column; padding: 14px 20px; }
+  .dhTopActions div { display: none; }
+  .dhPage { padding: 20px; }
+  .dhHeader,
+  .dhHeader div:last-child,
+  .dhTableHeader,
+  .dhTableHeader div,
+  .dhPagination { align-items: stretch; flex-direction: column; }
+  .dhHeader button,
+  .dhTableHeader label,
+  .dhTableHeader button { justify-content: center; width: 100%; }
+}
+
+@media (max-width: 640px) {
+  .dhHeader h1 { font-size: 26px; line-height: 32px; }
+  .dhMetric strong { font-size: 38px; }
+  .dhTable { min-width: 0; }
+  .dhTable thead { display: none; }
+  .dhTable,
+  .dhTable tbody,
+  .dhTable tr,
+  .dhTable td { display: block; width: 100%; }
+  .dhTable tr { padding: 16px; }
+  .dhTable tr + tr { border-top: 1px solid #dadce0; }
+  .dhTable td { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 12px; border: 0; padding: 8px 0; }
+  .dhTable td::before { color: #94a3b8; font-size: 10px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; }
+  .dhTable td:nth-child(1)::before { content: 'Tanggal'; }
+  .dhTable td:nth-child(2)::before { content: 'Petugas'; }
+  .dhTable td:nth-child(3)::before { content: 'Klinik'; }
+  .dhTable td:nth-child(4)::before { content: 'Tindakan'; }
+  .dhTable td:nth-child(5)::before { content: 'AI'; }
+  .dhTable td:nth-child(6)::before { content: 'Decision'; }
+  .dhTable td > span { grid-column: 2; }
+  .dhChart > div:first-child { flex-direction: column; }
+  .dhBars { gap: 10px; overflow-x: auto; }
+  .dhBars span,
+  .dhBars b { width: 42px; }
+}

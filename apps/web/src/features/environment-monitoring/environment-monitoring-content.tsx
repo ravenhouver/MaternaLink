@@ -27,25 +27,28 @@ const statusLabel: Record<RouteVulnerability['status'], string> = {
 function RoleSidebar() {
   return (
     <aside className={styles.sidebar} aria-label="Medicine sender navigation">
-      <div className={styles.sectorCard}>
-        <span className={styles.sectorAvatar}>DHO</span>
-        <span>
-          <strong>Eastern Sector</strong>
-          <small>Medical Intelligence</small>
-        </span>
+      <div className={styles.roleBrand}>
+        <span className={styles.brandIcon}><AppIcon name="briefcase" width={20} height={20} /></span>
+        <div>
+          <Typography.Title level={2}>IFK</Typography.Title>
+          <Typography.Text>District Monitoring</Typography.Text>
+        </div>
       </div>
 
       <nav className={styles.nav} aria-label="Navigasi medicine sender">
         <a href="/medicine-sender"><AppIcon name="home" width={18} height={18} />Dashboard</a>
-        <a href="/medicine-sender/recommendations"><AppIcon name="send" width={18} height={18} />Rekomendasi Pengiriman</a>
-        <a className={styles.navActive} href="/medicine-sender/environment"><AppIcon name="activity" width={18} height={18} />Pemantauan Lingkungan</a>
-        <a href="/medicine-sender/clinics"><AppIcon name="package" width={18} height={18} />Semua Klinik</a>
-        <a href="/medicine-sender/decision-history"><AppIcon name="clipboard" width={18} height={18} />Riwayat Keputusan</a>
+        <a href="/medicine-sender/recommendations"><AppIcon name="userPlus" width={18} height={18} />Distribution</a>
+        <a href="/medicine-sender/clinics"><AppIcon name="users" width={18} height={18} />Clinic List</a>
+        <a className={styles.navActive} href="/medicine-sender/environment"><AppIcon name="calendar" width={18} height={18} />Environment Monitoring</a>
       </nav>
 
       <div className={styles.supportNav}>
         <a href="#settings"><AppIcon name="settings" width={20} height={20} />Settings</a>
-        <a href="#support"><AppIcon name="info" width={20} height={20} />Support</a>
+        <div className={styles.officerCard}>
+          <span><AppIcon name="user" width={18} height={18} /></span>
+          <strong>Officer 042</strong>
+          <small>District Health Officer</small>
+        </div>
       </div>
     </aside>
   );
@@ -54,11 +57,23 @@ function RoleSidebar() {
 function Topbar() {
   return (
     <header className={styles.topbar}>
-      <Typography.Text className={styles.brand}>Nusantara <span>Digital Sanctuary</span></Typography.Text>
+      <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <AppIcon name="chevronRight" width={14} height={14} />
+        <a href="/medicine-sender/clinics">Clinic List</a>
+        <AppIcon name="chevronRight" width={14} height={14} />
+        <span>Environment Monitoring</span>
+      </nav>
       <div className={styles.topbarActions}>
-        <button type="button" aria-label="Notifikasi"><AppIcon name="bell" width={20} height={20} /></button>
-        <button type="button" aria-label="Akun"><AppIcon name="user" width={20} height={20} /></button>
-        <button type="button" aria-label="Keluar"><AppIcon name="arrowRight" width={20} height={20} /></button>
+        <button type="button" aria-label="Notifikasi" className={styles.notificationButton}><AppIcon name="bell" width={20} height={20} /><span /></button>
+        <button type="button" aria-label="Pengaturan"><AppIcon name="settings" width={20} height={20} /></button>
+        <div className={styles.topbarProfile}>
+          <div>
+            <strong>Pharmacy Management</strong>
+            <small>Administrator</small>
+          </div>
+          <img src="/figma-dashboard/profil-bidan.png" alt="Pharmacy administrator" />
+        </div>
       </div>
     </header>
   );
@@ -83,6 +98,29 @@ function ForecastCard({ item }: { item: (typeof forecasts)[number] }) {
       </div>
       <div className={styles.dayLabels}><small>Day 1</small><small>Day 7</small></div>
     </article>
+  );
+}
+
+function AlertFeed() {
+  return (
+    <aside className={styles.alertFeed} aria-label="Live environmental alert feed">
+      <div className={styles.alertFeedHeader}>
+        <span>Live alert feed</span>
+        <AppIcon name="alert" width={14} height={14} />
+      </div>
+      <div className={styles.alertFeedBody}>
+        <article>
+          <strong>Flash flood warning</strong>
+          <p>Maybrat district expected 150mm rainfall in 6 hours.</p>
+          <small><i />METEO-G1 - 14:22 WIT</small>
+        </article>
+        <article>
+          <strong className={styles.primaryAlert}>Sea swell advisory</strong>
+          <p>3.5m waves predicted for Misool-Sorong crossing.</p>
+          <small><i className={styles.primaryDot} />NAV-MAR - 15:05 WIT</small>
+        </article>
+      </div>
+    </aside>
   );
 }
 
@@ -134,7 +172,7 @@ export function EnvironmentMonitoringContent() {
           <section className={styles.pageHeader} aria-labelledby="environment-title">
             <div>
               <Typography.Text className={styles.eyebrow}>Intelligence Hub / Regional Sector 04</Typography.Text>
-              <Typography.Title id="environment-title" level={1}>Pemantauan Lingkungan</Typography.Title>
+              <Typography.Title id="environment-title" level={1}>Environment Monitoring</Typography.Title>
             </div>
             <Button type="primary" className={styles.exportButton} icon={<AppIcon name="upload" width={14} height={14} />}>
               Export PDF Report
@@ -158,13 +196,19 @@ export function EnvironmentMonitoringContent() {
 
           <section className={styles.forecastSection} aria-labelledby="forecast-title">
             <div className={styles.sectionTitle}>
-              <Typography.Title id="forecast-title" level={2}>14-Day Strategic Forecast</Typography.Title>
+              <Typography.Title id="forecast-title" level={2}><AppIcon name="calendar" width={18} height={18} />14-Day Strategic Forecast</Typography.Title>
               <Typography.Text>Intelligence nodes tracking</Typography.Text>
             </div>
             <div className={styles.forecastGrid}>{forecasts.map((item) => <ForecastCard key={item.location} item={item} />)}</div>
           </section>
 
-          <RiskTable />
+          <section className={styles.routeSection} aria-labelledby="route-title">
+            <div className={styles.sectionTitle}>
+              <Typography.Title id="route-title" level={2}><AppIcon name="activity" width={18} height={18} />Supply Chain Route Vulnerability</Typography.Title>
+            </div>
+            <RiskTable />
+          </section>
+          <AlertFeed />
         </main>
       </div>
     </div>

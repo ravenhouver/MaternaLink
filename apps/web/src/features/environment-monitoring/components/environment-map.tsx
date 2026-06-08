@@ -16,15 +16,33 @@ type EnvironmentMapProps = {
   points: EnvironmentalPoint[];
 };
 
+const heatStops = [
+  { stop: 0.18, color: 'rgba(211, 228, 255, 0.28)' },
+  { stop: 0.38, color: 'rgba(26, 115, 232, 0.28)' },
+  { stop: 0.64, color: 'rgba(255, 214, 10, 0.36)' },
+  { stop: 0.82, color: 'rgba(239, 68, 68, 0.46)' },
+  { stop: 1, color: 'rgba(186, 26, 26, 0.58)' },
+];
+
+const heatWeight = {
+  low: 0.35,
+  medium: 0.55,
+  high: 0.78,
+  critical: 1,
+} satisfies Record<EnvironmentalPoint['risk'], number>;
+
 export function EnvironmentMap({ points }: EnvironmentMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return undefined;
 
+    const desktopView: L.LatLngExpression = [-2.2, 122.5];
+    const mobileView: L.LatLngExpression = [-1.25, 131.05];
+
     const map = L.map(mapRef.current, {
-      center: [-2.15, 130.95],
-      zoom: 7,
+      center: mapRef.current.clientWidth < 560 ? mobileView : desktopView,
+      zoom: 5,
       maxBounds: [[-11, 94], [7, 142]],
       scrollWheelZoom: false,
       zoomControl: true,
@@ -34,19 +52,50 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
       attribution: '&copy; Esri',
     }).addTo(map);
 
-    L.circle([-1.25, 132.15], {
-      radius: 95000,
-      stroke: false,
-      fillColor: '#ba1a1a',
-      fillOpacity: 0.22,
-    }).addTo(map);
+    const canvas = L.DomUtil.create('canvas', styles.heatmapCanvas, map.getPanes().overlayPane);
+    const context = canvas.getContext('2d');
+    const syncResponsiveView = () => {
+      if (!mapRef.current) return;
+      if (mapRef.current.clientWidth < 560) {
+        map.setView(mobileView, 6, { animate: false });
+      } else {
+        map.setView(desktopView, 5, { animate: false });
+      }
+    };
 
-    L.circle([-1.85, 130.6], {
-      radius: 130000,
-      stroke: false,
-      fillColor: '#1a73e8',
-      fillOpacity: 0.16,
-    }).addTo(map);
+    const drawHeatmap = () => {
+      const size = map.getSize();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = size.x * ratio;
+      canvas.height = size.y * ratio;
+      canvas.style.width = `${size.x}px`;
+      canvas.style.height = `${size.y}px`;
+      context?.setTransform(ratio, 0, 0, ratio, 0, 0);
+      context?.clearRect(0, 0, size.x, size.y);
+
+      points.forEach((point) => {
+        if (!context) return;
+        const pixel = map.latLngToContainerPoint(point.position);
+        const radius = point.risk === 'critical' ? 118 : point.risk === 'high' ? 100 : 82;
+        const gradient = context.createRadialGradient(pixel.x, pixel.y, 0, pixel.x, pixel.y, radius);
+        heatStops.forEach((item) => gradient.addColorStop(item.stop, item.color));
+        gradient.addColorStop(1, 'rgba(186, 26, 26, 0)');
+        context.globalAlpha = heatWeight[point.risk];
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(pixel.x, pixel.y, radius, 0, Math.PI * 2);
+        context.fill();
+      });
+      if (context) context.globalAlpha = 1;
+    };
+
+    map.on('move zoom resize', drawHeatmap);
+    const resizeObserver = new ResizeObserver(() => {
+      syncResponsiveView();
+      map.invalidateSize();
+      drawHeatmap();
+    });
+    resizeObserver.observe(mapRef.current);
 
     points.forEach((point) => {
       L.circleMarker(point.position, {
@@ -65,9 +114,16 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
         .addTo(map);
     });
 
-    setTimeout(() => map.invalidateSize(), 0);
+    setTimeout(() => {
+      syncResponsiveView();
+      map.invalidateSize();
+      drawHeatmap();
+    }, 0);
 
     return () => {
+      resizeObserver.disconnect();
+      map.off('move zoom resize', drawHeatmap);
+      canvas.remove();
       map.remove();
     };
   }, [points]);
