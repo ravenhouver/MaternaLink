@@ -178,6 +178,49 @@ describe('MaternaLink API', () => {
     expect(tracking.body).toEqual(expect.arrayContaining([expect.objectContaining({ status: 'APPROVED' })]));
   });
 
+  it('runs demo workflow and exposes bidan dashboard state', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+    const cookie = login.headers['set-cookie'];
+
+    const run = await request(app.getHttpServer()).post('/api/workflow/demo/run').set('Cookie', cookie).expect(201);
+    expect(run.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', source: 'RULE_BASED_FALLBACK', status: 'PENDING' }));
+    expect(run.body.lplpoRows.length).toBeGreaterThan(0);
+
+    const state = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', cookie).expect(200);
+    expect(state.body).toEqual(expect.objectContaining({ puskesmasId: 'PKM-001', periode: '2026-06-01' }));
+    expect(state.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001' }));
+
+    const summary = await request(app.getHttpServer()).get('/api/dashboard/summary').set('Cookie', cookie).expect(200);
+    expect(summary.body).toEqual(
+      expect.objectContaining({
+        role: 'BIDAN_PUSKESMAS',
+        queue: expect.objectContaining({ waiting: expect.any(Number), examining: expect.any(Number), completed: expect.any(Number) }),
+        patients: expect.objectContaining({ total: expect.any(Number) }),
+        medicine: expect.objectContaining({ criticalCount: expect.any(Number) }),
+      }),
+    );
+  });
+
+  it('exposes IFK dashboard recommendation metrics', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'ifk', password: 'password123' })
+      .expect(201);
+    const cookie = login.headers['set-cookie'];
+
+    const summary = await request(app.getHttpServer()).get('/api/dashboard/summary').set('Cookie', cookie).expect(200);
+    expect(summary.body).toEqual(
+      expect.objectContaining({
+        role: 'IFK_ADMIN',
+        recommendations: expect.objectContaining({ pending: expect.any(Number), approved: expect.any(Number), rejected: expect.any(Number), critical: expect.any(Number) }),
+        deliveries: expect.objectContaining({ active: expect.any(Number) }),
+      }),
+    );
+  });
+
   it('lists medicine master data', async () => {
     const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));
