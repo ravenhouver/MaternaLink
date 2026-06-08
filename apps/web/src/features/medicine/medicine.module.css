@@ -55,6 +55,7 @@
 .addButton,
 .saveButton,
 .uploadBox,
+.rowActions a,
 .rowActions button,
 .paginationControls button {
   align-items: center;
@@ -127,7 +128,7 @@
 .formGrid {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) 150px 150px 170px;
-  align-items: end;
+  align-items: flex-end;
   gap: 24px;
 }
 
@@ -256,12 +257,15 @@
   gap: 12px;
 }
 
+.rowActions a,
 .rowActions button:not(.requestButton):not(.requestCritical) {
+  display: inline-flex;
   width: 24px;
   height: 24px;
   border-radius: 9999px;
   background: transparent;
   color: #9ca3af;
+  text-decoration: none;
 }
 
 .requestButton,
@@ -340,6 +344,7 @@
 .addButton:hover,
 .saveButton:hover,
 .uploadBox:hover,
+.rowActions a:hover,
 .rowActions button:hover,
 .paginationControls button:hover {
   transform: translateY(-1px);
@@ -349,6 +354,7 @@
 .addButton:focus-visible,
 .saveButton:focus-visible,
 .uploadBox:focus-visible,
+.rowActions a:focus-visible,
 .rowActions button:focus-visible,
 .paginationControls button:focus-visible,
 .fieldGroup input:focus,
@@ -356,6 +362,641 @@
   outline: 3px solid rgb(37 99 235 / 0.22);
   outline-offset: 2px;
 }
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.editModal,
+.shipmentModal,
+.uploadModal {
+  width: min(100%, 448px);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.shipmentModal { width: min(100%, 512px); border-radius: 16px; }
+.uploadModal { width: min(100%, 576px); border-radius: 16px; }
+
+.modalHeaderLarge,
+.shipmentHeader,
+.uploadModalHeader,
+.modalFooter,
+.shipmentFooter,
+.uploadFooter,
+.shipmentTitleWrap,
+.stockInputRow,
+.quantityInputRow,
+.labelRow,
+.validationText,
+.uploadSuccessCard,
+.stepHeader {
+  display: flex;
+}
+
+.modalHeaderLarge,
+.shipmentHeader,
+.uploadModalHeader {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.modalHeaderLarge {
+  padding: 32px 32px 16px;
+}
+
+.shipmentHeader {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f9fafb;
+}
+
+.uploadModalHeader {
+  padding: 16px 24px 17px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.modalHeaderLarge h2,
+.shipmentHeader h2,
+.uploadModalHeader h2,
+.uploadStep h3,
+.shipmentHeader p {
+  margin: 0;
+}
+
+.modalHeaderLarge h2 {
+  color: #1e293b;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 32px;
+}
+
+.shipmentHeader h2,
+.uploadModalHeader h2 {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 28px;
+}
+
+.shipmentHeader p {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.modalClose {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.editModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px 32px 48px;
+}
+
+.editModalBody strong {
+  display: block;
+  color: #1e293b;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.modalEyebrow {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.stockField,
+.quantityField,
+.notesField,
+.uploadStep {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stockField > span:first-child {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.stockInputRow,
+.quantityInputRow {
+  align-items: center;
+  gap: 16px;
+}
+
+.stockInputRow input,
+.quantityInputRow input {
+  width: 100%;
+  height: 56px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #334155;
+  font: inherit;
+  font-size: 18px;
+  line-height: 28px;
+  padding: 0 17px;
+}
+
+.stockInputRow > span,
+.quantityInputRow > span {
+  color: #64748b;
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.modalFooter,
+.shipmentFooter,
+.uploadFooter {
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+  padding: 24px 32px;
+}
+
+.shipmentFooter { padding: 17px 24px 16px; border-top: 1px solid #f3f4f6; }
+.uploadFooter { justify-content: center; padding: 20px 24px; border-top: 1px solid #f3f4f6; }
+
+.modalGhostButton,
+.modalPrimaryButton,
+.shipmentCancel,
+.shipmentSubmit {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.modalGhostButton {
+  min-width: 96px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.modalPrimaryButton,
+.shipmentSubmit {
+  min-width: 104px;
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px #bfdbfe, 0 4px 6px -4px #bfdbfe;
+}
+
+.shipmentTitleWrap {
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+}
+
+.shipmentIcon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.shipmentBody,
+.uploadModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+}
+
+.safeAlert,
+.criticalAlert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px 16px 16px 20px;
+  border-left: 4px solid;
+}
+
+.safeAlert {
+  border-color: #3b82f6;
+  border-radius: 0 8px 8px 0;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.criticalAlert {
+  border-color: #ef4444;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.safeAlert p,
+.criticalAlert p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.quantityInputRow input { width: 128px; text-align: center; }
+.quantityField em,
+.uploadStep em {
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.labelRow {
+  align-items: center;
+  gap: 8px;
+}
+
+.labelRow b,
+.stepHeader b {
+  border-radius: 4px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 9px;
+  line-height: 14px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+.notesField textarea {
+  min-height: 92px;
+  resize: vertical;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  color: #111827;
+  font: inherit;
+  padding: 16px;
+}
+
+.safeAlert + .quantityField + .notesField textarea {
+  border-color: #fca5a5;
+  background: rgb(254 242 242 / 0.2);
+}
+
+.validationText {
+  align-items: center;
+  gap: 6px;
+  color: #dc2626;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.shipmentCancel {
+  min-width: 96px;
+  background: transparent;
+  color: #2563eb;
+}
+
+.shipmentSubmit {
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 0 32px;
+  font-size: 14px;
+}
+
+.uploadStep h3,
+.stepHeader h3 {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.uploadSuccessCard {
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #dcfce7;
+  border-radius: 12px;
+  background: #f0fdf4;
+  padding: 17px;
+}
+
+.uploadSuccessCard span:first-child {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #16a34a;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+}
+
+.uploadSuccessCard > div {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.uploadSuccessCard strong {
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.uploadSuccessCard small { color: #6b7280; font-size: 12px; line-height: 16px; }
+.uploadSuccessCard > svg { color: #22c55e; }
+
+.stepHeader {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stepHeader strong { color: #2563eb; font-size: 12px; line-height: 16px; }
+.stepHeader b { background: #fef9c3; color: #a16207; }
+
+.progressTrack {
+  overflow: hidden;
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+  background: #f3f4f6;
+}
+
+.progressTrack span {
+  display: block;
+  width: 75%;
+  height: 100%;
+  background: #2563eb;
+}
+
+.extractTableWrap {
+  overflow-x: auto;
+  border: 1px solid #f3f4f6;
+  border-radius: 12px;
+}
+
+.extractTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.extractTable th,
+.extractTable td {
+  padding: 10px 16px;
+  color: #374151;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+}
+
+.extractTable th {
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.extractTable th:last-child,
+.extractTable td:last-child {
+  color: #111827;
+  font-weight: 800;
+  text-align: right;
+}
+
+.extractTable tr + tr td { border-top: 1px solid #f9fafb; }
+
+.uploadFooter .modalGhostButton { width: 184px; }
+.uploadFooter .modalPrimaryButton { flex: 1 1 auto; }
+
+.detailPage {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  color: #0f172a;
+}
+
+.detailHeader,
+.detailBreadcrumb,
+.statsGrid,
+.detailGrid,
+.detailCard header,
+.chartCard header,
+.historyCard header,
+.detailFooter,
+.detailFooter > div,
+.printButton,
+.removeButton,
+.backButton,
+.detailSaveButton,
+.predictionTitle,
+.predictionCard footer,
+.predictionCard footer button,
+.chartLegend,
+.historyTable td:nth-child(2),
+.historyInIcon,
+.historyOutIcon {
+  display: flex;
+}
+
+.detailHeader {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.detailHeader h1 {
+  margin: 8px 0 0;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 32px;
+}
+
+.detailBreadcrumb {
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.detailBreadcrumb a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.printButton,
+.detailSaveButton {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  line-height: 24px;
+  padding: 0 20px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.statCard,
+.detailCard,
+.chartCard,
+.historyCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.statCard { padding: 25px; }
+.statCard header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.statCard header span { color: #64748b; font-size: 14px; line-height: 20px; }
+.statCard header i { display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 8px; background: #eff6ff; color: #2563eb; font-style: normal; }
+.statCard p { margin: 12px 0 8px; color: #64748b; font-size: 16px; line-height: 24px; }
+.statCard p strong { color: #0f172a; font-size: 36px; line-height: 44px; }
+.statCard small { display: inline-flex; border-radius: 9999px; font-size: 11px; font-weight: 800; line-height: 16px; padding: 2px 10px; text-transform: uppercase; }
+.safeStat { background: #dcfce7; color: #059669; }
+.usageStat { background: transparent; color: #059669; padding-left: 0 !important; text-transform: none !important; }
+.warningStat { background: #fee2e2; color: #dc2626; }
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.infoStack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detailCard header,
+.chartCard header,
+.historyCard header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 20px 24px;
+}
+
+.detailCard h2,
+.chartCard h2,
+.historyCard h2,
+.predictionCard h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 24px;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 40px;
+  margin: 0;
+  padding: 24px;
+}
+
+.infoGrid div:last-child { grid-column: 1 / -1; }
+.infoGrid dt { color: #94a3b8; font-size: 11px; line-height: 16px; text-transform: uppercase; }
+.infoGrid dd { margin: 6px 0 0; color: #0f172a; font-size: 16px; font-weight: 800; line-height: 24px; }
+
+.predictionCard {
+  overflow: hidden;
+  border: 1px solid #facc15;
+  border-radius: 16px;
+  background: #fffbeb;
+  padding: 24px;
+}
+
+.predictionTitle { align-items: center; gap: 10px; }
+.predictionTitle span { border-radius: 4px; background: #f59e0b; color: #ffffff; font-size: 10px; font-weight: 800; line-height: 14px; padding: 2px 8px; text-transform: uppercase; }
+.predictionCard p { margin: 16px 0 20px; color: #92400e; font-size: 14px; line-height: 20px; }
+.predictionCard footer { align-items: center; justify-content: space-between; gap: 16px; color: #b45309; font-size: 12px; line-height: 16px; }
+.predictionCard footer button { align-items: center; border: 0; background: transparent; color: #92400e; cursor: pointer; font: inherit; font-weight: 800; }
+
+.chartCard { min-height: 100%; }
+.chartCard header button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; color: #475569; cursor: pointer; font: inherit; font-size: 12px; padding: 4px 10px; }
+.chartPlot { display: flex; height: 220px; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 28px 32px 10px; border-bottom: 1px dashed #e2e8f0; background: linear-gradient(#f8fafc 1px, transparent 1px) 0 25% / 100% 25%; }
+.chartPlot span { width: 16px; border-radius: 2px 2px 0 0; background: #eff6ff; }
+.chartPlot .highBar { background: #2563eb; }
+.chartAxis { display: flex; justify-content: space-between; margin: 0 32px; color: #94a3b8; font-size: 12px; line-height: 16px; }
+.chartLegend { justify-content: center; gap: 24px; margin: 26px 0; color: #64748b; font-size: 12px; line-height: 16px; }
+.chartLegend span { display: inline-flex; align-items: center; gap: 8px; }
+.chartLegend i { display: inline-block; width: 12px; height: 12px; border-radius: 9999px; background: #2563eb; }
+.chartLegend span:last-child i { background: #e2e8f0; }
+
+.historyCard { overflow: hidden; }
+.historyCard header button { border: 0; background: transparent; color: #2563eb; cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; line-height: 16px; }
+.historyScroll { overflow-x: auto; }
+.historyTable { width: 100%; min-width: 780px; border-collapse: collapse; }
+.historyTable th { padding: 16px 24px; background: #f8fafc; color: #64748b; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; text-align: left; text-transform: uppercase; }
+.historyTable td { padding: 18px 24px; border-top: 1px solid #f1f5f9; color: #475569; font-size: 14px; line-height: 20px; }
+.historyTable td:nth-child(2) { align-items: center; gap: 12px; color: #1e293b; }
+.historyInIcon,
+.historyOutIcon { width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 9999px; font-weight: 800; }
+.historyInIcon { background: #d1fae5; color: #059669; }
+.historyOutIcon { background: #fee2e2; color: #dc2626; }
+.amountIn { color: #059669 !important; font-weight: 800; }
+.amountOut { color: #dc2626 !important; font-weight: 800; }
+.verifiedPill { border-radius: 4px; background: #ecfdf5; color: #059669; font-size: 10px; font-weight: 800; line-height: 16px; padding: 2px 8px; text-transform: uppercase; }
+
+.detailFooter {
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 24px;
+}
+
+.detailFooter > div { gap: 16px; }
+.removeButton { align-items: center; gap: 8px; border: 0; background: transparent; color: #dc2626; cursor: pointer; font: inherit; font-size: 16px; font-weight: 800; }
+.backButton { align-items: center; justify-content: center; min-width: 104px; min-height: 44px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; color: #334155; font-size: 16px; font-weight: 800; text-decoration: none; }
+.detailSaveButton { min-width: 170px; box-shadow: 0 4px 6px -1px #bfdbfe, 0 2px 4px -2px #bfdbfe; }
 
 @media (max-width: 1080px) {
   .pageHeader {
@@ -373,6 +1014,11 @@
 
   .formGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statsGrid,
+  .detailGrid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -482,6 +1128,97 @@
     font-size: 16px;
     line-height: 24px;
   }
+
+  .modalOverlay {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .editModal,
+  .shipmentModal,
+  .uploadModal {
+    max-height: calc(100vh - 24px);
+    border-radius: 16px;
+  }
+
+  .modalHeaderLarge,
+  .shipmentHeader,
+  .uploadModalHeader,
+  .editModalBody,
+  .shipmentBody,
+  .uploadModalBody,
+  .modalFooter,
+  .shipmentFooter,
+  .uploadFooter {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .modalFooter,
+  .shipmentFooter,
+  .uploadFooter {
+    flex-wrap: wrap;
+  }
+
+  .modalGhostButton,
+  .modalPrimaryButton,
+  .shipmentCancel,
+  .shipmentSubmit,
+  .uploadFooter .modalGhostButton,
+  .uploadFooter .modalPrimaryButton {
+    flex: 1 1 160px;
+    width: auto;
+  }
+
+  .stockInputRow,
+  .quantityInputRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .stockInputRow input,
+  .quantityInputRow input {
+    width: 100%;
+  }
+
+  .detailHeader,
+  .detailFooter,
+  .detailFooter > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .printButton,
+  .backButton,
+  .detailSaveButton {
+    width: 100%;
+  }
+
+  .statsGrid {
+    gap: 16px;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .infoGrid div:last-child {
+    grid-column: auto;
+  }
+
+  .chartPlot {
+    gap: 9px;
+    margin: 24px 18px 10px;
+  }
+
+  .chartPlot span {
+    width: 12px;
+  }
+
+  .chartAxis {
+    margin: 0 18px;
+  }
 }
 
 @media (max-width: 430px) {
@@ -497,5 +1234,24 @@
   .medicationTable td {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .shipmentTitleWrap {
+    align-items: flex-start;
+  }
+
+  .uploadSuccessCard {
+    align-items: flex-start;
+  }
+
+  .predictionCard footer,
+  .stepHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .detailHeader h1 {
+    font-size: 22px;
+    line-height: 30px;
   }
 }
