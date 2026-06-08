@@ -96,6 +96,83 @@ describe('MaternaLink API', () => {
     expect(queue.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: queued.body.id, status: 'COMPLETED' })]));
   });
 
+  it('enforces IFK recommendation review, reorder, approval, and tracking workflow', async () => {
+    await prisma.distributionRecommendation.update({
+      where: { id: 'REC-DEMO-001' },
+      data: { status: 'PENDING', priorityRank: 2 },
+    });
+    await prisma.distributionRecommendationItem.update({
+      where: { id: 'RECITEM-DEMO-001' },
+      data: { aiQuantity: 20, finalQuantity: 20, overrideQuantity: null, overrideReason: null },
+    });
+
+    const reorderId = `REC-TEST-${Date.now()}`;
+    await prisma.distributionRecommendation.create({
+      data: {
+        id: reorderId,
+        puskesmasId: 'PKM-001',
+        periode: new Date('2026-06-01'),
+        urgency: 'WARNING',
+        status: 'PENDING',
+        source: 'RULE_BASED_FALLBACK',
+        priorityRank: 1,
+        justification: 'Reorder test recommendation.',
+      },
+    });
+
+    const bidanLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+    const bidanCookie = bidanLogin.headers['set-cookie'];
+
+    await request(app.getHttpServer())
+      .patch('/api/distribution/recommendations/REC-DEMO-001/approve')
+      .set('Cookie', bidanCookie)
+      .expect(403);
+
+    const ifkLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'ifk', password: 'password123' })
+      .expect(201);
+    const ifkCookie = ifkLogin.headers['set-cookie'];
+
+    const list = await request(app.getHttpServer()).get('/api/distribution/recommendations').set('Cookie', ifkCookie).expect(200);
+    expect(list.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'REC-DEMO-001', status: 'PENDING' })]));
+
+    await request(app.getHttpServer())
+      .patch('/api/distribution/recommendations/REC-DEMO-001/items/RECITEM-DEMO-001')
+      .set('Cookie', ifkCookie)
+      .send({ overrideQuantity: 24 })
+      .expect(400);
+
+    const overridden = await request(app.getHttpServer())
+      .patch('/api/distribution/recommendations/REC-DEMO-001/items/RECITEM-DEMO-001')
+      .set('Cookie', ifkCookie)
+      .send({ overrideQuantity: 24, overrideReason: 'Additional high-risk pregnancy buffer.' })
+      .expect(200);
+    expect(overridden.body).toEqual(expect.objectContaining({ overrideQuantity: 24, finalQuantity: 24 }));
+
+    const reordered = await request(app.getHttpServer())
+      .patch('/api/distribution/recommendations/reorder')
+      .set('Cookie', ifkCookie)
+      .send({ orderedIds: ['REC-DEMO-001', reorderId] })
+      .expect(200);
+    expect(reordered.body[0]).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', priorityRank: 1 }));
+
+    const approved = await request(app.getHttpServer())
+      .patch('/api/distribution/recommendations/REC-DEMO-001/approve')
+      .set('Cookie', ifkCookie)
+      .expect(200);
+    expect(approved.body).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', status: 'APPROVED' }));
+
+    const tracking = await request(app.getHttpServer())
+      .get('/api/distribution/recommendations/REC-DEMO-001/tracking')
+      .set('Cookie', ifkCookie)
+      .expect(200);
+    expect(tracking.body).toEqual(expect.arrayContaining([expect.objectContaining({ status: 'APPROVED' })]));
+  });
+
   it('lists medicine master data', async () => {
     const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));
