@@ -3,6 +3,10 @@ import Typography from 'antd/es/typography';
 import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../calendar.module.css';
 
+function showNextPhaseNotice(label: string) {
+  window.alert(`${label} akan tersedia pada fase berikutnya.`);
+}
+
 export function CalendarToolbar({ isRunning, monthLabel, onNextMonth, onPrevMonth, onRunWorkflow }: { isRunning: boolean; monthLabel: string; onNextMonth: () => void; onPrevMonth: () => void; onRunWorkflow: () => void }) {
   return (
     <section className={styles.toolbar} aria-label="Kontrol kalender">
@@ -22,7 +26,7 @@ export function CalendarToolbar({ isRunning, monthLabel, onNextMonth, onPrevMont
         <button type="button" className={styles.activeView} role="tab" aria-selected="true">
           Bulanan
         </button>
-        <button type="button" role="tab" aria-selected="false">
+        <button type="button" role="tab" aria-selected="false" onClick={() => showNextPhaseNotice('Mode kalender mingguan')}>
           Mingguan
         </button>
         <button type="button" disabled={isRunning} onClick={onRunWorkflow}>

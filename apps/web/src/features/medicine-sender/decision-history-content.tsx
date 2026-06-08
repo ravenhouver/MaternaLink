@@ -32,6 +32,10 @@ const bars = [
   { day: 'SUN', green: 45, red: 0 },
 ];
 
+function showNextPhaseNotice(label: string) {
+  window.alert(`${label} akan tersedia pada fase berikutnya.`);
+}
+
 function Sidebar() {
   return (
     <aside className={styles.dhSidebar}>
@@ -50,7 +54,7 @@ function Topbar() {
   return (
     <header className={styles.dhTopbar}>
       <div className={styles.dhCrumbs}><span>Home</span><AppIcon name="chevronRight" width={14} height={14} /><span>Patient List</span><AppIcon name="chevronRight" width={14} height={14} /><strong>Add New Patient</strong></div>
-      <div className={styles.dhTopActions}><button><AppIcon name="bell" width={18} height={18} /><i /></button><button><AppIcon name="settings" width={18} height={18} /></button><span /><div><strong>Pharmacy Management</strong><small>Administrator</small></div><b>PM</b></div>
+      <div className={styles.dhTopActions}><button type="button" onClick={() => showNextPhaseNotice('Notifikasi IFK')}><AppIcon name="bell" width={18} height={18} /><i /></button><button type="button" onClick={() => showNextPhaseNotice('Pengaturan IFK')}><AppIcon name="settings" width={18} height={18} /></button><span /><div><strong>Pharmacy Management</strong><small>Administrator</small></div><b>PM</b></div>
     </header>
   );
 }
@@ -90,12 +94,12 @@ export function DecisionHistoryContent() {
       <div className={styles.dhWorkspace}>
         <Topbar />
         <main className={styles.dhPage}>
-          <section className={styles.dhHeader}><div><p>Operational Ledger</p><h1>Riwayat Keputusan</h1></div><div><button><AppIcon name="fileText" width={14} height={14} />Export CSV</button><button><AppIcon name="fileText" width={14} height={14} />Export PDF</button></div></section>
+          <section className={styles.dhHeader}><div><p>Operational Ledger</p><h1>Riwayat Keputusan</h1></div><div><button type="button" onClick={() => showNextPhaseNotice('Export CSV')}><AppIcon name="fileText" width={14} height={14} />Export CSV</button><button type="button" onClick={() => showNextPhaseNotice('Export PDF')}><AppIcon name="fileText" width={14} height={14} />Export PDF</button></div></section>
           <section className={styles.dhMetrics}>{metrics.map((item) => <MetricCard item={item} key={item.label} />)}</section>
           <section className={styles.dhTablePanel}>
-            <div className={styles.dhTableHeader}><h2>Chronological Intelligence Log</h2><div><label><AppIcon name="search" width={14} height={14} />Search Petugas or Klinik...</label><button><AppIcon name="filter" width={14} height={14} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button></div></div>
+            <div className={styles.dhTableHeader}><h2>Chronological Intelligence Log</h2><div><label><AppIcon name="search" width={14} height={14} />Search Petugas or Klinik...</label><button type="button" onClick={() => showNextPhaseNotice('Filter history')}><AppIcon name="filter" width={14} height={14} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button></div></div>
             <div className={styles.dhScroller}><table className={styles.dhTable}><thead><tr><th>Tanggal</th><th>Petugas</th><th>Klinik</th><th>Tindakan</th><th>AI Prediction Stocks</th><th>Actual Decision</th></tr></thead><tbody>{ledgerRows.map((row) => <tr key={`${row.date}-${row.clinic}`}>{Object.entries(row).filter(([key]) => key !== 'tone').map(([key, value]) => <td className={key === 'prediction' ? styles.predictionCell : row.tone ? styles[row.tone] : undefined} key={key}>{String(value).split('\n').map((line) => <span key={line}>{line}</span>)}</td>)}</tr>)}</tbody></table></div>
-            <div className={styles.dhPagination}><span>Showing entries 1-4 of 1,240 Total Actions</span><div><button><AppIcon name="chevronLeft" width={14} height={14} /></button><button className={styles.current}>1</button><button>2</button><button>3</button><button><AppIcon name="chevronRight" width={14} height={14} /></button></div></div>
+            <div className={styles.dhPagination}><span>Showing entries {ledgerRows.length}</span><div><button type="button" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button><button type="button" className={styles.current}>1</button><button type="button" disabled>2</button><button type="button" disabled>3</button><button type="button" disabled><AppIcon name="chevronRight" width={14} height={14} /></button></div></div>
           </section>
           <section className={styles.dhBottomGrid}>
             <article className={styles.dhChart}><div><h2>Audit Trail Analysis</h2><p>Deviation distribution across Eastern Sector facilities</p><span><i />Matched <b />Deviated</span></div><div className={styles.dhBars}>{bars.map((bar) => <div key={bar.day}><span style={{ height: `${bar.green}px` }} /><b style={{ height: `${bar.red}px` }} /><small>{bar.day}</small></div>)}</div></article>

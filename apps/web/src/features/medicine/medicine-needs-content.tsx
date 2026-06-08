@@ -34,6 +34,10 @@ const statusLabel: Record<MedicationStatus, string> = {
   critical: 'CRITICAL',
 };
 
+function showNextPhaseNotice(label: string) {
+  window.alert(`${label} akan tersedia pada fase berikutnya.`);
+}
+
 export function MedicineNeedsContent() {
   const [activeModal, setActiveModal] = useState<'edit' | 'shipment' | 'upload' | null>(null);
   const [rows, setRows] = useState<MedicationRow[]>(medications);
@@ -69,11 +73,11 @@ export function MedicineNeedsContent() {
           <p>Monitor and update maternal medication availability in real-time</p>
         </div>
         <div className={styles.headerActions}>
-          <button type="button" className={styles.secondaryButton}>
+          <button type="button" className={styles.secondaryButton} onClick={() => showNextPhaseNotice('History Log')}>
             <AppIcon name="clock" width={18} height={18} />
             History Log
           </button>
-          <button type="button" className={styles.secondaryButton}>
+          <button type="button" className={styles.secondaryButton} onClick={() => showNextPhaseNotice('Download Report')}>
             <AppIcon name="upload" width={18} height={18} />
             Download Report
           </button>
@@ -109,7 +113,7 @@ export function MedicineNeedsContent() {
               <option>Tab</option>
             </select>
           </label>
-          <button type="button" className={styles.addButton}>
+          <button type="button" className={styles.addButton} onClick={() => showNextPhaseNotice('Manual stock add')}>
             <AppIcon name="plus" width={18} height={18} />
             Add
           </button>
@@ -173,16 +177,16 @@ export function MedicineNeedsContent() {
         <footer className={styles.pagination}>
           <p>Showing {rows.length} entries</p>
           <div className={styles.paginationControls}>
-            <button type="button" aria-label="Previous page"><AppIcon name="chevronLeft" width={16} height={16} /></button>
+            <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={16} height={16} /></button>
             <button type="button" aria-current="page">1</button>
-            <button type="button">2</button>
-            <button type="button">3</button>
-            <button type="button" aria-label="Next page"><AppIcon name="chevronRight" width={16} height={16} /></button>
+            <button type="button" disabled>2</button>
+            <button type="button" disabled>3</button>
+            <button type="button" aria-label="Next page" disabled><AppIcon name="chevronRight" width={16} height={16} /></button>
           </div>
         </footer>
       </section>
 
-      <button type="button" className={styles.saveButton}>
+      <button type="button" className={styles.saveButton} onClick={() => showNextPhaseNotice('Persist stock update')}>
         <AppIcon name="fileText" width={18} height={18} />
         Save Stock Update
       </button>
