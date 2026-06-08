@@ -16,6 +16,7 @@ const iconNames = {
   chevronDown: 'lucide:chevron-down',
   chevronLeft: 'lucide:chevron-left',
   chevronRight: 'lucide:chevron-right',
+  checkCircle: 'lucide:circle-check',
   clipboard: 'lucide:clipboard-list',
   clock: 'lucide:clock',
   cloudRain: 'lucide:cloud-rain',
@@ -26,6 +27,7 @@ const iconNames = {
   grid: 'lucide:grid-2x2',
   heart: 'lucide:heart-pulse',
   home: 'lucide:house',
+  hourglass: 'lucide:hourglass',
   info: 'lucide:info',
   lock: 'lucide:lock',
   mail: 'lucide:mail',
@@ -37,6 +39,7 @@ const iconNames = {
   send: 'lucide:send',
   settings: 'lucide:settings',
   shield: 'lucide:shield',
+  stethoscope: 'lucide:stethoscope',
   sun: 'lucide:sun',
   truck: 'lucide:truck',
   upload: 'lucide:upload',
@@ -56,4 +59,5 @@ type AppIconProps = Omit<IconProps, 'icon'> & {
 export function AppIcon({ name, 'aria-hidden': ariaHidden = true, ...props }: AppIconProps) {
   return <Icon aria-hidden={ariaHidden} icon={iconNames[name]} {...props} />;
 }
+
 

@@ -1,0 +1,524 @@
+.page {
+  display: flex;
+  min-height: calc(100vh - 56px);
+  flex-direction: column;
+  gap: 20px;
+  color: #191c20;
+}
+
+.headerCard,
+.summaryCard,
+.toolbar,
+.queueCard {
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+}
+
+.headerCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  border-radius: 8px;
+}
+
+.headerCard h1,
+.headerCard p,
+.summaryCard h2,
+.summaryCard p,
+.paginationFooter p {
+  margin: 0;
+}
+
+.headerCard h1 {
+  color: #1a73e8;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 28px;
+}
+
+.headerCard p {
+  margin-top: 4px;
+  color: #414754;
+  font-size: 14px;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+}
+
+.primaryButton,
+.filterButton,
+.callButton,
+.completeButton,
+.secondaryButton,
+.paginationControls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  font-family: Roboto, Arial, sans-serif;
+  cursor: pointer;
+}
+
+.primaryButton {
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #004eeb;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.15px;
+  line-height: 24px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.summaryCard {
+  display: flex;
+  height: 82px;
+  align-items: center;
+  gap: 16px;
+  padding: 17px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.summaryIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border-radius: 9999px;
+}
+
+.blue {
+  background: #d8e2ff;
+  color: #005bbf;
+}
+
+.red {
+  background: #ffdad6;
+  color: #ba1a1a;
+}
+
+.green {
+  background: #d8e2ff;
+  color: #15803d;
+}
+
+.summaryCard h2 {
+  color: #414754;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.summaryCard p {
+  color: #191c20;
+  font-size: 14px;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+}
+
+.summaryCard strong {
+  color: #1a73e8;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 28px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 13px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.searchBox {
+  display: flex;
+  height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #667085;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
+}
+
+.searchBox input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #191c20;
+  font: inherit;
+  outline: none;
+}
+
+.searchBox input::placeholder {
+  color: #9aa4b2;
+}
+
+.filterButton {
+  gap: 8px;
+  min-width: 96px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #414754;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.15px;
+  line-height: 24px;
+}
+
+.queueCard {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.queueTable {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.queueTable th {
+  padding: 14px 24px;
+  background: #f2f3f9;
+  color: #414754;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 16px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.queueTable td {
+  padding: 24px;
+  border-top: 1px solid #e2e8f0;
+  color: #191c20;
+  vertical-align: middle;
+}
+
+.queueTable td > strong,
+.queueTable td > span:not(.queueBadge):not(.examiningBadge):not(.highRiskBadge):not(.normalBadge),
+.patientName,
+.patientMeta,
+.doctorLine {
+  display: block;
+}
+
+.queueCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.queueBadge {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: #1a73e8;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.15px;
+  line-height: 24px;
+}
+
+.examiningBadge,
+.highRiskBadge,
+.normalBadge {
+  display: inline-flex;
+  width: max-content;
+  border-radius: 4px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.examiningBadge {
+  padding: 2px 8px;
+  background: #7e5260;
+  color: #ffffff;
+}
+
+.patientName {
+  color: #191c20;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.15px;
+  line-height: 24px;
+}
+
+.patientMeta {
+  color: #414754;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  line-height: 16px;
+}
+
+.queueTable td:nth-child(3) strong,
+.queueTable td:nth-child(3) span {
+  color: #191c20;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+}
+
+.dueSoon {
+  color: #7e5260 !important;
+}
+
+.highRiskBadge {
+  padding: 2px 8px;
+  background: #ffdad6;
+  color: #ba1a1a;
+}
+
+.normalBadge {
+  padding: 2px 8px;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.doctorLine {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  color: #414754;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.callButton,
+.completeButton,
+.secondaryButton {
+  min-height: 40px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.15px;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.callButton {
+  background: #004eeb;
+  color: #ffffff;
+}
+
+.actionGroup {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.completeButton {
+  background: #34a853;
+  color: #ffffff;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+}
+
+.secondaryButton {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #414754;
+}
+
+.highlightedRow {
+  background: rgb(26 115 232 / 0.04);
+  box-shadow: inset 4px 0 0 #d8e2ff;
+}
+
+.paginationFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.paginationFooter p {
+  color: #414754;
+  font-size: 14px;
+  letter-spacing: 0.1px;
+  line-height: 20px;
+}
+
+.paginationControls {
+  display: flex;
+  gap: 8px;
+}
+
+.paginationControls button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #414754;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.paginationControls button[aria-current='page'] {
+  border-color: transparent;
+  background: #d8e2ff;
+  color: #005bbf;
+}
+
+.paginationControls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primaryButton:hover,
+.filterButton:hover,
+.callButton:hover,
+.completeButton:hover,
+.secondaryButton:hover,
+.paginationControls button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:focus-visible,
+.filterButton:focus-visible,
+.callButton:focus-visible,
+.completeButton:focus-visible,
+.secondaryButton:focus-visible,
+.paginationControls button:focus-visible,
+.searchBox:focus-within {
+  outline: 3px solid rgb(26 115 232 / 0.2);
+  outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+  .headerCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .filterButton {
+    width: max-content;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    gap: 16px;
+  }
+
+  .headerCard,
+  .summaryCard,
+  .queueCard {
+    border-radius: 12px;
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+
+  .tableScroll {
+    overflow: visible;
+  }
+
+  .queueTable,
+  .queueTable thead,
+  .queueTable tbody,
+  .queueTable tr,
+  .queueTable th,
+  .queueTable td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .queueTable thead {
+    display: none;
+  }
+
+  .queueTable tr {
+    padding: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .queueTable tr:first-child {
+    border-top: 0;
+  }
+
+  .queueTable td {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.42fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 0;
+    border: 0;
+  }
+
+  .queueTable td::before {
+    color: #64748b;
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 16px;
+    text-transform: uppercase;
+  }
+
+  .queueCell,
+  .actionGroup {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .callButton,
+  .completeButton,
+  .secondaryButton {
+    width: 100%;
+  }
+
+  .paginationFooter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
