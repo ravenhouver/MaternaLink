@@ -124,7 +124,7 @@ export function PatientQueueContent() {
                         <button type="button" className={styles.secondaryButton}>View Details</button>
                       </div>
                     ) : (
-                      <button type="button" className={styles.callButton}>Call</button>
+                      <Link href="/inputs/examination" className={styles.callButton}>Call</Link>
                     )}
                   </td>
                 </tr>

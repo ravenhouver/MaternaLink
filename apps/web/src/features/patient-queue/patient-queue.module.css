@@ -466,6 +466,7 @@
 .callButton {
   background: #004eeb;
   color: #ffffff;
+  text-decoration: none;
 }
 
 .actionGroup {

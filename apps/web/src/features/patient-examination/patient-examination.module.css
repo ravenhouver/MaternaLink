@@ -1,0 +1,671 @@
+.page {
+  display: flex;
+  min-height: calc(100vh - 56px);
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 28px;
+  padding-bottom: 48px;
+  color: #191c20;
+  font-family: Roboto, Arial, sans-serif;
+}
+
+.breadcrumbs {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.breadcrumbs a,
+.breadcrumbs span,
+.breadcrumbs strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumbs a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.breadcrumbs strong {
+  color: #005bbf;
+  font-weight: 700;
+}
+
+.titleRow,
+.patientInfo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.titleRow h1,
+.titleRow p,
+.patientInfo h2,
+.patientInfo p,
+.methodSection h2,
+.methodSection p,
+.methodCard h3,
+.methodCard p,
+.recordingCard h2,
+.recordingCard p,
+.formHeader h2,
+.formFooter p {
+  margin: 0;
+}
+
+.titleRow h1 {
+  color: #191c20;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 40px;
+}
+
+.titleRow p {
+  color: #475569;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.sessionId {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.sessionId span {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.sessionId strong {
+  color: #191c20;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.patientInfo {
+  padding: 25px;
+  border: 1px solid #c1c6d6;
+  border-radius: 8px;
+  background: #fcfcfd;
+}
+
+.patientIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+}
+
+.patientPhoto {
+  display: block;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  overflow: hidden;
+  border: 1px solid #c1c6d6;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.patientPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.patientInfo h2 {
+  color: #191c20;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.patientInfo p {
+  color: #475569;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.pregnancyBadge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.pregnancyBadge span {
+  padding: 3px 12px;
+  border-radius: 9999px;
+  background: #d8e2ff;
+  color: #004493;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.pregnancyBadge strong {
+  margin-top: 6px;
+  color: #005bbf;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.pregnancyBadge small {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.methodSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding-top: 2px;
+}
+
+.sectionIntro {
+  text-align: center;
+}
+
+.sectionIntro h2 {
+  color: #191c20;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 36px;
+}
+
+.sectionIntro p {
+  color: #475569;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.methodGrid {
+  display: grid;
+  width: min(100%, 664px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding-top: 10px;
+}
+
+.methodCard {
+  display: flex;
+  min-height: 314px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+}
+
+.methodIcon,
+.voiceIcon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.methodIcon {
+  margin-bottom: 24px;
+  background: #eceef3;
+  color: #005bbf;
+}
+
+.methodCard h3 {
+  color: #191c20;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.methodCard p {
+  color: #414754;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.methodLead {
+  margin: 4px 0 16px !important;
+  color: #475569 !important;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.methodCard .outlineAction,
+.voiceAction {
+  margin-top: auto;
+}
+
+.voiceCard {
+  position: relative;
+  overflow: hidden;
+  border-color: #005bbf;
+  background: #005bbf;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.voiceCard::after {
+  position: absolute;
+  top: -32px;
+  right: -32px;
+  width: 128px;
+  height: 128px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.1);
+  content: '';
+  filter: blur(20px);
+}
+
+.voiceCard h3,
+.voiceCard p {
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
+}
+
+.voiceCard .methodLead {
+  color: rgb(255 255 255 / 0.8) !important;
+  font-style: normal;
+}
+
+.voiceTopline {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.voiceIcon {
+  background: rgb(255 255 255 / 0.2);
+  color: #ffffff;
+}
+
+.popularBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #34a853;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+.outlineAction,
+.primaryAction,
+.voiceAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border-radius: 12px;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.outlineAction {
+  width: 100%;
+  border: 2px solid #005bbf;
+  background: #ffffff;
+  color: #005bbf;
+}
+
+.primaryAction {
+  width: 100%;
+  border: 0;
+  background: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  text-transform: uppercase;
+}
+
+.voiceAction {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: #004eeb;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+}
+
+.recordingCard,
+.formCard {
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
+}
+
+.recordingCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 40px;
+  text-align: center;
+}
+
+.recordingPulse {
+  display: grid;
+  width: 112px;
+  height: 112px;
+  place-items: center;
+  border-radius: 9999px;
+  background: #005bbf;
+  color: #ffffff;
+  box-shadow: 0 0 0 18px rgb(0 91 191 / 0.1);
+}
+
+.recordingCard h2 {
+  font-size: 28px;
+  line-height: 36px;
+}
+
+.recordingCard p {
+  max-width: 560px;
+  color: #475569;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.waveform {
+  display: flex;
+  height: 74px;
+  align-items: center;
+  gap: 6px;
+}
+
+.waveform span {
+  display: block;
+  width: 6px;
+  border-radius: 9999px;
+  background: #1a73e8;
+}
+
+.recordingActions,
+.footerActions {
+  display: grid;
+  width: 100%;
+  gap: 16px;
+}
+
+.recordingActions {
+  max-width: 520px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.footerActions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.formCard {
+  padding: 24px;
+}
+
+.formHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #c1c6d6;
+  color: #005bbf;
+}
+
+.formHeader h2 {
+  color: #191c20;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px 16px;
+  padding-top: 24px;
+}
+
+.formField {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+  grid-column: span 2;
+}
+
+.formField:nth-of-type(3),
+.formField:nth-of-type(10) {
+  grid-column: span 1;
+}
+
+.wideField {
+  grid-column: 1 / -1;
+}
+
+.fieldLabelRow {
+  display: flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #475569;
+  font-size: 16px;
+  letter-spacing: 0.8px;
+  line-height: 24px;
+  text-transform: uppercase;
+}
+
+.fieldLabelRow em {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+.verifiedTag {
+  color: #34a853;
+}
+
+.manualTag {
+  color: #7e5260;
+}
+
+.inputShell {
+  display: flex;
+  min-height: 46px;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #191c20;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.textareaShell {
+  min-height: 64px;
+  align-items: flex-start;
+}
+
+.inputShell span {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.inputShell small {
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.placeholder {
+  color: #94a3b8;
+}
+
+.verifiedField .inputShell {
+  background: #fefce8;
+}
+
+.manualField .inputShell {
+  border-color: #7e5260;
+  background: #fff5f7;
+}
+
+.formFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(193 198 214 / 0.3);
+}
+
+.warningBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-left: 4px solid #7e5260;
+  border-radius: 0 8px 8px 0;
+  background: #fffaeb;
+  color: #191c20;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.formFooter p {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
+}
+
+.outlineAction:hover,
+.primaryAction:hover,
+.voiceAction:hover {
+  transform: translateY(-1px);
+}
+
+.outlineAction:focus-visible,
+.primaryAction:focus-visible,
+.voiceAction:focus-visible {
+  outline: 3px solid rgb(26 115 232 / 0.2);
+  outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+  .titleRow,
+  .patientInfo {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sessionId,
+  .pregnancyBadge {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .methodGrid,
+  .recordingActions,
+  .footerActions {
+    grid-template-columns: 1fr;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .formField,
+  .formField:nth-of-type(3),
+  .formField:nth-of-type(10),
+  .wideField {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    gap: 18px;
+    padding-top: 16px;
+  }
+
+  .breadcrumbs {
+    flex-wrap: wrap;
+  }
+
+  .titleRow h1 {
+    font-size: 26px;
+    line-height: 34px;
+  }
+
+  .patientInfo,
+  .methodCard,
+  .recordingCard,
+  .formCard {
+    padding: 20px;
+  }
+
+  .patientIdentity {
+    align-items: flex-start;
+  }
+
+  .methodGrid {
+    width: 100%;
+  }
+
+  .fieldLabelRow {
+    align-items: flex-start;
+    flex-direction: column;
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .waveform {
+    max-width: 100%;
+    overflow: hidden;
+  }
+}
