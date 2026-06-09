@@ -27,12 +27,12 @@ services:
       DB_PORT: 5432
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      WEB_ORIGIN: ${WEB_ORIGIN:-https://hisyamardiansyah.me}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://172.93.186.62:41873}
       AI_SERVICE_BASE_URL: http://ai-service:8000
       AI_MODE: ${AI_MODE:-fallback}
       AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-30000}
       RUN_SEED: ${RUN_SEED:-true}
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     ports:
       - "41874:3001"
     depends_on:
@@ -47,8 +47,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://hisyamardiansyah.me/maternalink/api}
-      NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/maternalink}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://172.93.186.62:41874/api}
     ports:
       - "41873:3000"
     depends_on:
