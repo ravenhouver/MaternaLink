@@ -47,6 +47,13 @@
   gap: 16px;
 }
 
+.dashboardError {
+  margin: 0;
+  color: #b42318;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .bellButton,
 .clinicPill,
 .alertButton,

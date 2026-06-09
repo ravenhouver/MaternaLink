@@ -3,8 +3,9 @@
 import dynamic from 'next/dynamic';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
+import { getAlerts, type AlertRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { getNextAlertFeedState } from './alert-feed-state';
 import { environmentalPoints, forecasts, routeVulnerabilities, type ForecastRisk, type RouteVulnerability } from './environment-monitoring-data';
@@ -106,6 +107,11 @@ function ForecastCard({ item }: { item: (typeof forecasts)[number] }) {
 
 function AlertFeed() {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+
+  useEffect(() => {
+    getAlerts().then(setAlerts).catch(() => setAlerts([]));
+  }, []);
 
   return (
     <aside className={[styles.alertFeed, isCollapsed ? styles.alertFeedCollapsed : ''].filter(Boolean).join(' ')} aria-label="Live environmental alert feed">
@@ -121,16 +127,14 @@ function AlertFeed() {
       </button>
       {!isCollapsed ? (
         <div id="environment-alert-feed-body" className={styles.alertFeedBody}>
-          <article>
-            <strong>Flash flood warning</strong>
-            <p>Maybrat district expected 150mm rainfall in 6 hours.</p>
-            <small><i />METEO-G1 - 14:22 WIT</small>
-          </article>
-          <article>
-            <strong className={styles.primaryAlert}>Sea swell advisory</strong>
-            <p>3.5m waves predicted for Misool-Sorong crossing.</p>
-            <small><i className={styles.primaryDot} />NAV-MAR - 15:05 WIT</small>
-          </article>
+          {alerts.length === 0 ? <article><strong>No active alerts</strong><p>Belum ada alert distribusi dari database.</p><small><i />SYSTEM</small></article> : null}
+          {alerts.slice(0, 5).map((alert) => (
+            <article key={alert.id}>
+              <strong className={alert.severity === 'CRITICAL' ? styles.primaryAlert : undefined}>{alert.type.replaceAll('_', ' ')}</strong>
+              <p>{alert.message}</p>
+              <small><i className={alert.severity === 'CRITICAL' ? styles.primaryDot : undefined} />{alert.puskesmasId} - {new Date(alert.createdAt).toLocaleString('id-ID')}</small>
+            </article>
+          ))}
         </div>
       ) : null}
     </aside>

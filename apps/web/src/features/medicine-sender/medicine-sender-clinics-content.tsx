@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
+import { getPuskesmas, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
@@ -84,6 +85,24 @@ const clinicRows: ClinicRow[] = [
   },
 ];
 
+function mapPuskesmasToClinic(row: PuskesmasRecord, index: number): ClinicRow {
+  const risk: ClinicRisk = row.rainyAccess === 'TERGANGGU' ? 'critical' : row.rainyAccess === 'TERBATAS' ? 'warning' : 'routine';
+  return {
+    id: row.id,
+    name: row.nama,
+    location: [row.kecamatan, row.kabupatenKota, row.provinsi].filter(Boolean).join(', '),
+    logisticDate: new Date().toLocaleDateString('id-ID'),
+    stockout: row.coldChainReady ? 'Safe' : 'Review',
+    stockItem: row.coldChainReady ? 'Cold chain ready' : 'Cold chain gap',
+    deliveries: String(Math.max(1, 20 - index * 3)).padStart(2, '0'),
+    risk,
+    riskLabel: risk === 'critical' ? 'Critical' : risk === 'warning' ? 'Warning' : 'Routine',
+    weather: row.rainyAccess,
+    weatherTone: risk === 'critical' ? 'danger' : 'neutral',
+    weatherIcon: risk === 'critical' ? 'alert' : 'sun',
+  };
+}
+
 const stats = [
   { label: 'Total Facilities', value: '142', tone: 'clinicStatBlue' },
   { label: 'Critical (Stockout)', value: '08', tone: 'clinicStatRed', delta: '+2%' },
@@ -142,7 +161,7 @@ function ClinicsTopbar({ detail }: { detail: boolean }) {
   );
 }
 
-function ClinicTable({ onView }: { onView: (clinic: ClinicRow) => void }) {
+function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
   return (
     <div className={styles.clinicTableCard}>
       <div className={styles.clinicFilters}>
@@ -162,7 +181,7 @@ function ClinicTable({ onView }: { onView: (clinic: ClinicRow) => void }) {
           </tr>
         </thead>
         <tbody>
-          {clinicRows.map((clinic) => (
+          {rows.map((clinic) => (
             <tr key={clinic.id}>
               <td>
                 <strong>{splitName(clinic.name).map((part) => <span key={part}>{part}</span>)}</strong>
@@ -190,7 +209,7 @@ function ClinicTable({ onView }: { onView: (clinic: ClinicRow) => void }) {
         </tbody>
       </table>
       <div className={styles.clinicPagination}>
-        <span>Showing 1-4 of 142 health facilities</span>
+        <span>Showing {rows.length} health facilities</span>
         <div>
           <button type="button" aria-label="Halaman sebelumnya"><AppIcon name="chevronLeft" width={14} height={14} /></button>
           <button type="button" className={styles.currentPage}>1</button>
@@ -205,7 +224,7 @@ function ClinicTable({ onView }: { onView: (clinic: ClinicRow) => void }) {
   );
 }
 
-function ClinicsList({ onView }: { onView: (clinic: ClinicRow) => void }) {
+function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
   return (
     <main className={styles.clinicsPage}>
       <section className={styles.clinicsHeader} aria-labelledby="clinics-title">
@@ -232,7 +251,7 @@ function ClinicsList({ onView }: { onView: (clinic: ClinicRow) => void }) {
       </section>
 
       <section className={styles.clinicRegistry} aria-label="Registry filters and table">
-        <ClinicTable onView={onView} />
+        <ClinicTable rows={rows} onView={onView} />
       </section>
     </main>
   );
@@ -352,13 +371,22 @@ function ClinicDetail({ clinic, onBack }: { clinic: ClinicRow; onBack: () => voi
 
 export function MedicineSenderClinicsContent() {
   const [selectedClinic, setSelectedClinic] = useState<ClinicRow | null>(null);
+  const [rows, setRows] = useState<ClinicRow[]>(clinicRows);
+
+  useEffect(() => {
+    getPuskesmas()
+      .then((records) => {
+        if (records.length) setRows(records.map(mapPuskesmasToClinic));
+      })
+      .catch(() => setRows(clinicRows));
+  }, []);
 
   return (
     <div className={styles.clinicsShell}>
       <ClinicsSidebar detail={Boolean(selectedClinic)} />
       <div className={styles.clinicsWorkspace}>
         <ClinicsTopbar detail={Boolean(selectedClinic)} />
-        {selectedClinic ? <ClinicDetail clinic={selectedClinic} onBack={() => setSelectedClinic(null)} /> : <ClinicsList onView={setSelectedClinic} />}
+        {selectedClinic ? <ClinicDetail clinic={selectedClinic} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onView={setSelectedClinic} />}
       </div>
     </div>
   );

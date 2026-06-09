@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
 import type { CurrentUser } from '../../common/auth/current-user';
@@ -23,9 +23,20 @@ export class QueueController {
     return this.service.today(request.user, puskesmasId);
   }
 
+  @Get()
+  list(@Req() request: { user: CurrentUser }, @Query('puskesmasId') puskesmasId?: string, @Query('status') status?: string) {
+    return this.service.list(request.user, { puskesmasId, status });
+  }
+
   @Roles(UserRole.BIDAN_PUSKESMAS)
   @Patch(':id/status')
   updateStatus(@Param('id') id: string, @Body() body: UpdateQueueStatusDto) {
     return this.service.updateStatus(id, body);
+  }
+
+  @Roles(UserRole.BIDAN_PUSKESMAS)
+  @Delete(':id')
+  remove(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
+    return this.service.remove(id, request.user);
   }
 }

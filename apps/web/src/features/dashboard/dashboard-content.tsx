@@ -1,8 +1,10 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
+import { getCurrentUser, getDashboardSummary, type CurrentUser, type DashboardSummary } from '@/lib/api';
 import styles from './dashboard.module.css';
 
 type StatCard = {
@@ -26,13 +28,6 @@ type Activity = {
   tone: string;
 };
 
-const statCards: StatCard[] = [
-  { label: 'Total Registered Patients', value: '42', tag: '+4 this month', icon: 'users', accent: '#1a73e8' },
-  { label: 'Deliveries This Month', value: '8', tag: 'Normal', icon: 'heart', accent: '#006948' },
-  { label: 'High-Risk Patients', value: '5', tag: 'Needs Monitoring', icon: 'alert', accent: '#a33d23' },
-  { label: 'Medications To Restock', value: '3', tag: 'Critical', icon: 'package', accent: '#f59e0b' },
-];
-
 const quickActions: QuickAction[] = [
   { label: 'New Patient', icon: 'users' },
   { label: 'Calendar', icon: 'calendar' },
@@ -47,23 +42,61 @@ const activities: Activity[] = [
 ];
 
 export function DashboardContent() {
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([getDashboardSummary(), getCurrentUser()])
+      .then(([nextSummary, nextUser]) => {
+        if (!mounted) return;
+        setSummary(nextSummary);
+        setUser(nextUser);
+      })
+      .catch((loadError) => {
+        if (!mounted) return;
+        setError(loadError instanceof Error ? loadError.message : 'Gagal memuat dashboard');
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  const statCards = useMemo<StatCard[]>(() => {
+    if (summary?.role === 'IFK_ADMIN') {
+      return [
+        { label: 'Pending Recommendations', value: String(summary.recommendations?.pending ?? 0), tag: 'Needs Review', icon: 'clipboard', accent: '#1a73e8' },
+        { label: 'Approved Recommendations', value: String(summary.recommendations?.approved ?? 0), tag: 'Approved', icon: 'heart', accent: '#006948' },
+        { label: 'Rejected Recommendations', value: String(summary.recommendations?.rejected ?? 0), tag: 'Rejected', icon: 'alert', accent: '#a33d23' },
+        { label: 'Active Deliveries', value: String(summary.deliveries?.active ?? 0), tag: 'In Progress', icon: 'package', accent: '#f59e0b' },
+      ];
+    }
+    return [
+      { label: 'Total Registered Patients', value: String(summary?.patients?.total ?? 0), tag: 'Database', icon: 'users', accent: '#1a73e8' },
+      { label: 'Waiting Queue', value: String(summary?.queue?.waiting ?? 0), tag: 'Today', icon: 'calendar', accent: '#006948' },
+      { label: 'In Examination', value: String(summary?.queue?.examining ?? 0), tag: 'Active', icon: 'clipboard', accent: '#a33d23' },
+      { label: 'Medications To Restock', value: String(summary?.medicine?.criticalCount ?? 0), tag: 'Critical', icon: 'package', accent: '#f59e0b' },
+    ];
+  }, [summary]);
+
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Welcome, Bidan Sari</h1>
-          <p>Sejahtera Clinic activity report for today</p>
+          <h1>Welcome, {user?.displayName ?? user?.username ?? 'User'}</h1>
+          <p>{summary?.role === 'IFK_ADMIN' ? 'IFK distribution report from live data' : 'Puskesmas activity report from live data'}</p>
         </div>
         <div className={styles.headerActions}>
           <button type="button" className={styles.bellButton} aria-label="Notifications">
             <AppIcon name="bell" width={20} height={20} />
           </button>
           <button type="button" className={styles.clinicPill} aria-label="Current clinic: Sejahtera Clinic">
-            <span>Sejahtera Clinic</span>
-            <strong>KS</strong>
+            <span>{user?.puskesmasId ?? 'IFK'}</span>
+            <strong>{summary?.role === 'IFK_ADMIN' ? 'IFK' : 'PKM'}</strong>
           </button>
         </div>
       </header>
+
+      {error ? <p className={styles.dashboardError}>{error}</p> : null}
 
       <section className={styles.alertBanner} aria-label="Delivery date alert">
         <div className={styles.alertCopy}>
@@ -71,8 +104,8 @@ export function DashboardContent() {
             <AppIcon name="alert" width={28} height={28} />
           </span>
           <div>
-            <h2>2 patients reaching EDD (Estimated Delivery Date) this week</h2>
-            <p>Check the availability of medications and supplies now.</p>
+            <h2>{summary?.queue?.waiting ?? summary?.recommendations?.pending ?? 0} items need attention</h2>
+            <p>{summary?.role === 'IFK_ADMIN' ? 'Review pending distribution recommendations.' : 'Check queue and medication availability now.'}</p>
           </div>
         </div>
         <button type="button" className={styles.alertButton}>Check Now</button>

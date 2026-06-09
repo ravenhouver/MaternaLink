@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RolesGuard } from '../../common/auth/roles.guard';
-import { CreatePatientDto } from './patients.dto';
+import { CreatePatientDto, UpdatePatientDto } from './patients.dto';
 import { PatientsService } from './patients.service';
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -26,5 +26,17 @@ export class PatientsController {
   @Get(':id')
   get(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
     return this.service.get(id, request.user);
+  }
+
+  @Roles(UserRole.BIDAN_PUSKESMAS)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() body: UpdatePatientDto, @Req() request: { user: CurrentUser }) {
+    return this.service.update(id, body, request.user);
+  }
+
+  @Roles(UserRole.BIDAN_PUSKESMAS)
+  @Delete(':id')
+  remove(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
+    return this.service.remove(id, request.user);
   }
 }

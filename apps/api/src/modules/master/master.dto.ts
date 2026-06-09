@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/mapped-types';
 import { MedicineCategory, MedicineType, PuskesmasType, RainyAccess } from '@prisma/client';
 import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
@@ -113,3 +114,7 @@ export class CreateObatDto {
   @Min(0)
   durasiPengobatanHari?: number;
 }
+
+export class UpdatePuskesmasDto extends PartialType(CreatePuskesmasDto) {}
+
+export class UpdateObatDto extends PartialType(CreateObatDto) {}

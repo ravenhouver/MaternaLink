@@ -95,6 +95,13 @@
   gap: 13px;
 }
 
+.formError {
+  margin: 0;
+  color: #b42318;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .searchBox {
   display: flex;
   height: 44px;

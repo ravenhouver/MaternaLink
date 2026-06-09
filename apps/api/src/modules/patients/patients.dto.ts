@@ -1,5 +1,6 @@
+import { PartialType } from '@nestjs/mapped-types';
 import { PregnancyRiskLevel } from '@prisma/client';
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class CreatePatientDto {
   @IsString()
@@ -7,6 +8,10 @@ export class CreatePatientDto {
 
   @IsString()
   nik!: string;
+
+  @IsOptional()
+  @IsDateString()
+  dateOfBirth?: string;
 
   @IsOptional()
   @IsString()
@@ -17,6 +22,38 @@ export class CreatePatientDto {
   address?: string;
 
   @IsOptional()
+  @IsString()
+  bpjsNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  emergencyName?: string;
+
+  @IsOptional()
+  @IsString()
+  emergencyPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  bloodType?: string;
+
+  @IsOptional()
+  @IsString()
+  allergy?: string;
+
+  @IsOptional()
+  @IsString()
+  chronicHistory?: string;
+
+  @IsOptional()
+  @IsDateString()
+  lmp?: string;
+
+  @IsOptional()
+  @IsDateString()
+  edd?: string;
+
+  @IsOptional()
   @IsInt()
   gestationalAge?: number;
 
@@ -25,6 +62,24 @@ export class CreatePatientDto {
   ancVisit?: string;
 
   @IsOptional()
+  @IsInt()
+  gravida?: number;
+
+  @IsOptional()
+  @IsInt()
+  para?: number;
+
+  @IsOptional()
+  @IsInt()
+  abortus?: number;
+
+  @IsOptional()
+  @IsString()
+  pregnancyType?: string;
+
+  @IsOptional()
   @IsEnum(PregnancyRiskLevel)
   riskLevel?: PregnancyRiskLevel;
 }
+
+export class UpdatePatientDto extends PartialType(CreatePatientDto) {}

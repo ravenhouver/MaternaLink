@@ -9,6 +9,14 @@ function hashPassword(password: string, salt = randomBytes(16).toString('hex')) 
 }
 
 async function main() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const queueAt = (hour: number, minute = 0) => {
+    const value = new Date(today);
+    value.setHours(hour, minute, 0, 0);
+    return value;
+  };
+
   const puskesmasRows = [
     {
       id: 'PKM-001',
@@ -301,7 +309,7 @@ async function main() {
       puskesmasId_queueNo_queuedAt: {
         puskesmasId: 'PKM-001',
         queueNo: 'A-001',
-        queuedAt: new Date('2026-06-08T08:00:00.000Z'),
+        queuedAt: queueAt(8),
       },
     },
     update: {
@@ -319,9 +327,89 @@ async function main() {
       queueNo: 'A-001',
       assignedDoctor: 'dr. Ratna Wulandari',
       status: 'WAITING',
-      queuedAt: new Date('2026-06-08T08:00:00.000Z'),
+      queuedAt: queueAt(8),
     },
   });
+
+  const patientSeeds = [
+    {
+      queueNo: 'A-002',
+      nik: '3404015204920002',
+      fullName: 'Ny. Dewi Lestari',
+      phone: '081234567891',
+      address: 'Kotagede, Kota Yogyakarta',
+      pregnancyId: 'PREG-DEMO-002',
+      gestationalAge: 28,
+      ancVisit: 'K3 - Trimester 2',
+      riskLevel: 'MEDIUM' as const,
+      queueStatus: 'EXAMINING' as const,
+      queuedAt: queueAt(8, 20),
+    },
+    {
+      queueNo: 'A-003',
+      nik: '3404015205010003',
+      fullName: 'Ny. Maria Ulfa',
+      phone: '081234567892',
+      address: 'Mergangsan, Kota Yogyakarta',
+      pregnancyId: 'PREG-DEMO-003',
+      gestationalAge: 32,
+      ancVisit: 'K4 - Trimester 3',
+      riskLevel: 'LOW' as const,
+      queueStatus: 'WAITING' as const,
+      queuedAt: queueAt(8, 40),
+    },
+  ];
+
+  for (const item of patientSeeds) {
+    const seededPatient = await prisma.patient.upsert({
+      where: { nik: item.nik },
+      update: { fullName: item.fullName, phone: item.phone, address: item.address, puskesmasId: 'PKM-001' },
+      create: { nik: item.nik, fullName: item.fullName, phone: item.phone, address: item.address, puskesmasId: 'PKM-001' },
+    });
+
+    const seededPregnancy = await prisma.pregnancy.upsert({
+      where: { id: item.pregnancyId },
+      update: {
+        patientId: seededPatient.id,
+        puskesmasId: 'PKM-001',
+        gestationalAge: item.gestationalAge,
+        ancVisit: item.ancVisit,
+        riskLevel: item.riskLevel,
+        active: true,
+      },
+      create: {
+        id: item.pregnancyId,
+        patientId: seededPatient.id,
+        puskesmasId: 'PKM-001',
+        gestationalAge: item.gestationalAge,
+        ancVisit: item.ancVisit,
+        riskLevel: item.riskLevel,
+        active: true,
+      },
+    });
+
+    await prisma.patientQueue.upsert({
+      where: { puskesmasId_queueNo_queuedAt: { puskesmasId: 'PKM-001', queueNo: item.queueNo, queuedAt: item.queuedAt } },
+      update: {
+        patientId: seededPatient.id,
+        pregnancyId: seededPregnancy.id,
+        status: item.queueStatus,
+        assignedDoctor: 'dr. Ratna Wulandari',
+        calledAt: item.queueStatus === 'EXAMINING' ? queueAt(9) : null,
+        completedAt: null,
+      },
+      create: {
+        patientId: seededPatient.id,
+        pregnancyId: seededPregnancy.id,
+        puskesmasId: 'PKM-001',
+        queueNo: item.queueNo,
+        assignedDoctor: 'dr. Ratna Wulandari',
+        status: item.queueStatus,
+        queuedAt: item.queuedAt,
+        calledAt: item.queueStatus === 'EXAMINING' ? queueAt(9) : null,
+      },
+    });
+  }
 
   await prisma.stokPuskesmas.upsert({
     where: {
@@ -417,6 +505,51 @@ async function main() {
       note: 'Recommendation created from seeded deterministic scenario.',
     },
   });
+
+  const remoteRecommendation = await prisma.distributionRecommendation.upsert({
+    where: { id: 'REC-DEMO-002' },
+    update: {
+      puskesmasId: 'PKM-REMOTE-001',
+      periode: new Date('2026-06-01'),
+      status: 'PENDING',
+      urgency: 'WARNING',
+      priorityRank: 2,
+      source: 'SEEDED_DETERMINISTIC',
+      justification: 'Remote rainy access and limited cold chain require prioritized buffer stock.',
+      routeSummary: { estimateMinutes: 260, courier: 'Tim IFK Mobile', route: 'IFK - Puskesmas Lembah Sari' },
+    },
+    create: {
+      id: 'REC-DEMO-002',
+      puskesmasId: 'PKM-REMOTE-001',
+      periode: new Date('2026-06-01'),
+      status: 'PENDING',
+      urgency: 'WARNING',
+      priorityRank: 2,
+      source: 'SEEDED_DETERMINISTIC',
+      justification: 'Remote rainy access and limited cold chain require prioritized buffer stock.',
+      routeSummary: { estimateMinutes: 260, courier: 'Tim IFK Mobile', route: 'IFK - Puskesmas Lembah Sari' },
+    },
+  });
+
+  await prisma.distributionRecommendationItem.upsert({
+    where: { id: 'RECITEM-DEMO-002' },
+    update: { aiQuantity: 35, finalQuantity: 35, overrideQuantity: null, overrideReason: null },
+    create: { id: 'RECITEM-DEMO-002', recommendationId: remoteRecommendation.id, obatId: 'OBT-004', aiQuantity: 35, finalQuantity: 35 },
+  });
+
+  const alertRows = [
+    { puskesmasId: 'PKM-REMOTE-001', type: 'ROUTE_DISRUPTION' as const, severity: 'HIGH' as const, message: 'Rainy access disruption risk for Puskesmas Lembah Sari.', resolved: false },
+    { puskesmasId: 'PKM-001', type: 'LOW_STOCK' as const, severity: 'CRITICAL' as const, message: 'MgSO4 stock at PKM-001 is below emergency buffer.', resolved: false },
+  ];
+
+  for (const row of alertRows) {
+    const existingAlert = await prisma.alert.findFirst({ where: { puskesmasId: row.puskesmasId, type: row.type, message: row.message } });
+    if (existingAlert) {
+      await prisma.alert.update({ where: { id: existingAlert.id }, data: row });
+    } else {
+      await prisma.alert.create({ data: row });
+    }
+  }
 }
 
 main()

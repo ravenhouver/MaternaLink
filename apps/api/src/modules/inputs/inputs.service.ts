@@ -5,9 +5,21 @@ import { AnamnesisInputDto, DiagnosisInputDto, GejalaInputDto, KonteksInputDto, 
 
 const toDate = (value: string) => new Date(value);
 
+function periodFilter(periode?: string) {
+  return periode ? toDate(periode) : undefined;
+}
+
 @Injectable()
 export class InputsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  listDiagnosis(puskesmasId?: string, periode?: string) {
+    return this.prisma.diagnosisPeriode.findMany({
+      where: { puskesmasId, periode: periodFilter(periode) },
+      include: { puskesmas: true, kondisi: true },
+      orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
+    });
+  }
 
   createDiagnosis(data: DiagnosisInputDto) {
     return this.prisma.diagnosisPeriode.upsert({
@@ -17,11 +29,37 @@ export class InputsService {
     });
   }
 
+  async removeDiagnosis(id: number) {
+    await this.prisma.diagnosisPeriode.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  listGejala(puskesmasId?: string, periode?: string) {
+    return this.prisma.gejalaPeriode.findMany({
+      where: { puskesmasId, periode: periodFilter(periode) },
+      include: { puskesmas: true, gejala: true },
+      orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
+    });
+  }
+
   createGejala(data: GejalaInputDto) {
     return this.prisma.gejalaPeriode.upsert({
       where: { puskesmasId_gejalaId_periode: { puskesmasId: data.puskesmasId, gejalaId: data.gejalaId, periode: toDate(data.periode) } },
       update: { jumlah: data.jumlah },
       create: { ...data, periode: toDate(data.periode) },
+    });
+  }
+
+  async removeGejala(id: number) {
+    await this.prisma.gejalaPeriode.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  listKonteks(puskesmasId?: string, periode?: string) {
+    return this.prisma.konteksPeriode.findMany({
+      where: { puskesmasId, periode: periodFilter(periode) },
+      include: { puskesmas: true },
+      orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
     });
   }
 
@@ -43,11 +81,37 @@ export class InputsService {
     });
   }
 
+  async removeKonteks(id: number) {
+    await this.prisma.konteksPeriode.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  listStok(puskesmasId?: string, periode?: string) {
+    return this.prisma.stokPuskesmas.findMany({
+      where: { puskesmasId, periode: periodFilter(periode) },
+      include: { puskesmas: true, obat: true },
+      orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
+    });
+  }
+
   createStok(data: StokInputDto) {
     return this.prisma.stokPuskesmas.upsert({
       where: { puskesmasId_obatId_periode: { puskesmasId: data.puskesmasId, obatId: data.obatId, periode: toDate(data.periode) } },
       update: { stokAwal: data.stokAwal, konsumsiPeriode: data.konsumsiPeriode, stokSaatIni: data.stokSaatIni },
       create: { ...data, periode: toDate(data.periode) },
+    });
+  }
+
+  async removeStok(id: number) {
+    await this.prisma.stokPuskesmas.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  listAnamnesis(puskesmasId?: string, periode?: string) {
+    return this.prisma.anamnesisRaw.findMany({
+      where: { puskesmasId, periode: periodFilter(periode) },
+      include: { puskesmas: true },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -64,5 +128,10 @@ export class InputsService {
         extractionModel: data.extractionModel,
       },
     });
+  }
+
+  async removeAnamnesis(id: number) {
+    await this.prisma.anamnesisRaw.delete({ where: { id } });
+    return { id, deleted: true };
   }
 }

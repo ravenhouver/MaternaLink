@@ -18,15 +18,38 @@ export type PatientRecord = {
   id: string;
   fullName: string;
   nik: string;
+  dateOfBirth?: string | null;
   phone?: string | null;
   address?: string | null;
+  bpjsNumber?: string | null;
+  emergencyName?: string | null;
+  emergencyPhone?: string | null;
+  bloodType?: string | null;
+  allergy?: string | null;
+  chronicHistory?: string | null;
+  pregnancies?: PregnancyRecord[];
 };
 
 export type PregnancyRecord = {
   id: string;
+  lmp?: string | null;
+  edd?: string | null;
   gestationalAge?: number | null;
   ancVisit?: string | null;
+  gravida?: number | null;
+  para?: number | null;
+  abortus?: number | null;
+  pregnancyType?: string | null;
   riskLevel: PregnancyRiskLevel;
+};
+
+export type DashboardSummary = {
+  role: UserRole;
+  queue?: { waiting: number; examining: number; completed: number };
+  patients?: { total: number };
+  medicine?: { criticalCount: number };
+  recommendations?: { pending: number; approved: number; rejected: number; critical: number };
+  deliveries?: { active: number };
 };
 
 export type QueueRecord = {
@@ -88,11 +111,51 @@ export type DistributionRecommendation = {
 export type CreatePatientPayload = {
   fullName: string;
   nik: string;
+  dateOfBirth?: string;
   phone?: string;
   address?: string;
+  bpjsNumber?: string;
+  emergencyName?: string;
+  emergencyPhone?: string;
+  bloodType?: string;
+  allergy?: string;
+  chronicHistory?: string;
+  lmp?: string;
+  edd?: string;
   gestationalAge?: number;
   ancVisit?: string;
+  gravida?: number;
+  para?: number;
+  abortus?: number;
+  pregnancyType?: string;
   riskLevel?: PregnancyRiskLevel;
+};
+
+export type PuskesmasRecord = {
+  id: string;
+  nama: string;
+  kecamatan: string;
+  kabupatenKota?: string | null;
+  provinsi?: string | null;
+  tipe: string;
+  rainyAccess: string;
+  coldChainReady: boolean;
+  statusEndemisMalaria: boolean;
+  ketersediaanLab: boolean;
+  kapasitasSimpanObat?: number | null;
+  jarakKeIfkKm?: number | null;
+  leadTimeHari?: number | null;
+  skorAksesibilitas: number;
+};
+
+export type AlertRecord = {
+  id: number;
+  puskesmasId: string;
+  type: string;
+  severity: string;
+  message: string;
+  resolved: boolean;
+  createdAt: string;
 };
 
 export type CreateExaminationPayload = {
@@ -190,6 +253,30 @@ export async function createPatient(payload: CreatePatientPayload): Promise<{ pa
   return apiFetch('/patients', { method: 'POST', body: JSON.stringify(payload) });
 }
 
+export async function getPatients(): Promise<PatientRecord[]> {
+  return apiFetch('/patients');
+}
+
+export async function updatePatient(id: string, payload: Partial<CreatePatientPayload>): Promise<PatientRecord> {
+  return apiFetch(`/patients/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+
+export async function deletePatient(id: string): Promise<{ id: string; deleted: boolean }> {
+  return apiFetch(`/patients/${id}`, { method: 'DELETE' });
+}
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  return apiFetch('/dashboard/summary');
+}
+
+export async function getPuskesmas(): Promise<PuskesmasRecord[]> {
+  return apiFetch('/master/puskesmas');
+}
+
+export async function getAlerts(): Promise<AlertRecord[]> {
+  return apiFetch('/distribution/alerts');
+}
+
 export async function createQueue(payload: { patientId: string; pregnancyId: string }): Promise<QueueRecord> {
   return apiFetch('/queue', { method: 'POST', body: JSON.stringify(payload) });
 }
@@ -199,8 +286,20 @@ export async function getTodayQueue(params?: { puskesmasId?: string }): Promise<
   return apiFetch(`/queue/today${query}`);
 }
 
+export async function getQueue(params?: { puskesmasId?: string; status?: QueueStatus }): Promise<QueueRecord[]> {
+  const query = new URLSearchParams();
+  if (params?.puskesmasId) query.set('puskesmasId', params.puskesmasId);
+  if (params?.status) query.set('status', params.status);
+  const suffix = query.size ? `?${query.toString()}` : '';
+  return apiFetch(`/queue${suffix}`);
+}
+
 export async function updateQueueStatus(id: string, status: QueueStatus): Promise<QueueRecord> {
   return apiFetch(`/queue/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+}
+
+export async function deleteQueue(id: string): Promise<{ id: string; deleted: boolean }> {
+  return apiFetch(`/queue/${id}`, { method: 'DELETE' });
 }
 
 export async function createExamination(payload: CreateExaminationPayload) {

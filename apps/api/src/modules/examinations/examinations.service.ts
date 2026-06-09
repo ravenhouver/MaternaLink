@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateExaminationDto } from './examinations.dto';
+import { CreateExaminationDto, UpdateExaminationDto } from './examinations.dto';
 
 const DEMO_PERIOD = new Date('2026-06-01');
 
@@ -78,6 +78,51 @@ export class ExaminationsService {
   }
 
   get(id: string) {
-    return this.prisma.examination.findUniqueOrThrow({ where: { id } });
+    return this.prisma.examination.findUniqueOrThrow({ where: { id }, include: { patient: true, pregnancy: true, queue: true } });
+  }
+
+  list(user: CurrentUser, filters: { patientId?: string; puskesmasId?: string }) {
+    const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId ?? undefined : filters.puskesmasId;
+    return this.prisma.examination.findMany({
+      where: { puskesmasId, patientId: filters.patientId },
+      include: { patient: true, pregnancy: true, queue: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async update(id: string, data: UpdateExaminationDto, user: CurrentUser) {
+    const existing = await this.prisma.examination.findFirstOrThrow({
+      where: { id, ...(user.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
+    });
+
+    const diagnosis = data.diagnosis as unknown as Prisma.InputJsonValue | undefined;
+    const symptoms = data.symptoms as unknown as Prisma.InputJsonValue | undefined;
+    const medication = data.medication as unknown as Prisma.InputJsonValue | undefined;
+
+    const updated = await this.prisma.examination.update({
+      where: { id: existing.id },
+      data: {
+        source: data.source,
+        complaint: data.complaint,
+        gestationalAge: data.gestationalAge,
+        ancVisit: data.ancVisit,
+        diagnosis,
+        symptoms,
+        medication,
+        notes: data.notes,
+      },
+      include: { patient: true, pregnancy: true, queue: true },
+    });
+    await this.prisma.auditLog.create({ data: { userId: user.id, action: 'examination.update', entityType: 'Examination', entityId: existing.id } });
+    return updated;
+  }
+
+  async remove(id: string, user: CurrentUser) {
+    const existing = await this.prisma.examination.findFirstOrThrow({
+      where: { id, ...(user.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
+    });
+    await this.prisma.examination.delete({ where: { id: existing.id } });
+    await this.prisma.auditLog.create({ data: { userId: user.id, action: 'examination.delete', entityType: 'Examination', entityId: existing.id } });
+    return { id: existing.id, deleted: true };
   }
 }

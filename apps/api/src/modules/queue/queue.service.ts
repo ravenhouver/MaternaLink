@@ -53,6 +53,17 @@ export class QueueService {
     });
   }
 
+  list(user: CurrentUser, filters: { puskesmasId?: string; status?: string }) {
+    const scopedPuskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId : filters.puskesmasId;
+    const status = Object.values(QueueStatus).includes(filters.status as QueueStatus) ? (filters.status as QueueStatus) : undefined;
+    return this.prisma.patientQueue.findMany({
+      where: { puskesmasId: scopedPuskesmasId ?? undefined, status },
+      include: { patient: true, pregnancy: true },
+      orderBy: { queuedAt: 'desc' },
+      take: 100,
+    });
+  }
+
   async updateStatus(id: string, data: UpdateQueueStatusDto) {
     const existing = await this.prisma.patientQueue.findUniqueOrThrow({ where: { id } });
     if (!transitionMap[existing.status].includes(data.status)) {
@@ -69,5 +80,14 @@ export class QueueService {
       },
       include: { patient: true, pregnancy: true },
     });
+  }
+
+  async remove(id: string, user: CurrentUser) {
+    const existing = await this.prisma.patientQueue.findFirstOrThrow({
+      where: { id, ...(user.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
+    });
+    await this.prisma.examination.deleteMany({ where: { queueId: existing.id } });
+    await this.prisma.patientQueue.delete({ where: { id: existing.id } });
+    return { id: existing.id, deleted: true };
   }
 }

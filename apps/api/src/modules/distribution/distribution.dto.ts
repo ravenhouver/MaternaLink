@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/mapped-types';
 import { IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RecommendationStatus, TrackingStatus } from '@prisma/client';
@@ -14,6 +15,8 @@ export class CreateAllocationPlanDto {
   @ApiProperty({ example: '2025-03-01' }) @IsDateString() periode!: string;
   @ApiProperty({ type: [AllocationPlanItemDto] }) @IsArray() @ValidateNested({ each: true }) @Type(() => AllocationPlanItemDto) items!: AllocationPlanItemDto[];
 }
+
+export class UpdateAllocationPlanDto extends PartialType(CreateAllocationPlanDto) {}
 
 export class UpdateRecommendationItemDto {
   @ApiProperty({ example: 24, required: false }) @IsOptional() @IsInt() @Min(0) overrideQuantity?: number;

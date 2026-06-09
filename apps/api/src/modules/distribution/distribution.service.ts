@@ -5,6 +5,7 @@ import {
   CreateAllocationPlanDto,
   ListRecommendationsQueryDto,
   TrackingEventDto,
+  UpdateAllocationPlanDto,
   UpdateRecommendationItemDto,
 } from './distribution.dto';
 
@@ -159,8 +160,41 @@ export class DistributionService {
     });
   }
 
+  listPlans(puskesmasId?: string) {
+    return this.prisma.allocationPlan.findMany({
+      where: { puskesmasId },
+      include: { puskesmas: true, items: { include: { obat: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   getPlan(id: number) {
-    return this.prisma.allocationPlan.findUniqueOrThrow({ where: { id }, include: { items: true } });
+    return this.prisma.allocationPlan.findUniqueOrThrow({ where: { id }, include: { puskesmas: true, items: { include: { obat: true } } } });
+  }
+
+  updatePlan(id: number, data: UpdateAllocationPlanDto) {
+    return this.prisma.$transaction(async (tx) => {
+      if (data.items) {
+        await tx.allocationPlanItem.deleteMany({ where: { allocationPlanId: id } });
+      }
+      return tx.allocationPlan.update({
+        where: { id },
+        data: {
+          puskesmasId: data.puskesmasId,
+          periode: data.periode ? toDate(data.periode) : undefined,
+          items: data.items ? { create: data.items } : undefined,
+        },
+        include: { puskesmas: true, items: { include: { obat: true } } },
+      });
+    });
+  }
+
+  async removePlan(id: number) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.allocationPlanItem.deleteMany({ where: { allocationPlanId: id } });
+      await tx.allocationPlan.delete({ where: { id } });
+    });
+    return { id, deleted: true };
   }
 
   async simulate(id: number) {

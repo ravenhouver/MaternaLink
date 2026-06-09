@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { AuthGuard } from '../../common/auth/auth.guard';
@@ -11,6 +11,7 @@ import {
   RejectRecommendationDto,
   ReorderRecommendationsDto,
   TrackingEventDto,
+  UpdateAllocationPlanDto,
   UpdateRecommendationItemDto,
 } from './distribution.dto';
 import { DistributionService } from './distribution.service';
@@ -90,9 +91,18 @@ export class DistributionController {
   @ApiOperation({ summary: 'Create allocation plan' })
   @ApiResponse({ status: 201, description: 'Allocation plan created' })
   @Post('plans') createPlan(@Body() body: CreateAllocationPlanDto) { return this.service.createPlan(body); }
+  @ApiOperation({ summary: 'List allocation plans' })
+  @ApiResponse({ status: 200, description: 'Allocation plans returned' })
+  @Get('plans') listPlans(@Query('puskesmasId') puskesmasId?: string) { return this.service.listPlans(puskesmasId); }
   @ApiOperation({ summary: 'Get allocation plan by ID' })
   @ApiResponse({ status: 200, description: 'Allocation plan returned' })
   @Get('plans/:id') getPlan(@Param('id', ParseIntPipe) id: number) { return this.service.getPlan(id); }
+  @ApiOperation({ summary: 'Update allocation plan' })
+  @ApiResponse({ status: 200, description: 'Allocation plan updated' })
+  @Patch('plans/:id') updatePlan(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateAllocationPlanDto) { return this.service.updatePlan(id, body); }
+  @ApiOperation({ summary: 'Delete allocation plan' })
+  @ApiResponse({ status: 200, description: 'Allocation plan deleted' })
+  @Delete('plans/:id') removePlan(@Param('id', ParseIntPipe) id: number) { return this.service.removePlan(id); }
   @ApiOperation({ summary: 'Simulate allocation route and cold-chain risk' })
   @ApiResponse({ status: 201, description: 'Simulation result returned with alerts' })
   @Post('plans/:id/simulate') simulate(@Param('id', ParseIntPipe) id: number) { return this.service.simulate(id); }

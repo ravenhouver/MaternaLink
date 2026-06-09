@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreateObatDto, CreatePuskesmasDto } from './master.dto';
+import { CreateObatDto, CreatePuskesmasDto, UpdateObatDto, UpdatePuskesmasDto } from './master.dto';
 import { MasterService } from './master.service';
 
 @ApiTags('master')
@@ -22,6 +22,16 @@ export class MasterController {
     return this.service.createPuskesmas(body);
   }
 
+  @Patch('puskesmas/:id')
+  updatePuskesmas(@Param('id') id: string, @Body() body: UpdatePuskesmasDto) {
+    return this.service.updatePuskesmas(id, body);
+  }
+
+  @Delete('puskesmas/:id')
+  removePuskesmas(@Param('id') id: string) {
+    return this.service.removePuskesmas(id);
+  }
+
   @ApiOperation({ summary: 'List medicine master data' })
   @ApiResponse({ status: 200, description: 'Medicine list returned' })
   @Get('obat')
@@ -34,6 +44,16 @@ export class MasterController {
   @Post('obat')
   createObat(@Body() body: CreateObatDto) {
     return this.service.createObat(body);
+  }
+
+  @Patch('obat/:id')
+  updateObat(@Param('id') id: string, @Body() body: UpdateObatDto) {
+    return this.service.updateObat(id, body);
+  }
+
+  @Delete('obat/:id')
+  removeObat(@Param('id') id: string) {
+    return this.service.removeObat(id);
   }
 
   @ApiOperation({ summary: 'List clinical conditions' })
