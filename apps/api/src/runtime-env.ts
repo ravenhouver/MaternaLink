@@ -1,8 +1,25 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const API_ENV_KEYS = new Set(['DATABASE_URL', 'JWT_SECRET', 'WEB_ORIGIN', 'AI_MODE', 'AI_SERVICE_BASE_URL', 'AI_SERVICE_TIMEOUT_MS', 'PORT']);
-const ROOT_ENV_KEYS = new Set(['DATABASE_URL', 'JWT_SECRET', 'WEB_ORIGIN', 'AI_MODE', 'AI_SERVICE_BASE_URL', 'AI_SERVICE_TIMEOUT_MS']);
+const API_ENV_KEYS = new Set([
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'WEB_ORIGIN',
+  'AI_MODE',
+  'AI_SERVICE_BASE_URL',
+  'AI_SERVICE_TIMEOUT_MS',
+  'PORT',
+  'SESSION_COOKIE_SECURE',
+]);
+const ROOT_ENV_KEYS = new Set([
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'WEB_ORIGIN',
+  'AI_MODE',
+  'AI_SERVICE_BASE_URL',
+  'AI_SERVICE_TIMEOUT_MS',
+  'SESSION_COOKIE_SECURE',
+]);
 
 function parseEnvFile(path: string) {
   if (!existsSync(path)) return [];

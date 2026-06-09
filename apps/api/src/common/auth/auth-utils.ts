@@ -63,7 +63,9 @@ export function getSessionCookieName() {
 }
 
 export function buildSessionCookie(token: string) {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secureCookieEnv = process.env.SESSION_COOKIE_SECURE?.toLowerCase();
+  const shouldUseSecureCookie = secureCookieEnv ? secureCookieEnv === 'true' : process.env.NODE_ENV === 'production';
+  const secure = shouldUseSecureCookie ? '; Secure' : '';
   return `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=28800${secure}`;
 }
 

@@ -11,6 +11,9 @@ RUN pnpm install --frozen-lockfile --filter @maternalink/web...
 
 FROM deps AS build
 
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
 COPY apps/web ./apps/web
 
 WORKDIR /app/apps/web
@@ -24,6 +27,8 @@ WORKDIR /app
 ARG PNPM_VERSION=10.11.0
 ENV NODE_ENV=production
 ENV PORT=3000
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 RUN npm install -g pnpm@${PNPM_VERSION}
 

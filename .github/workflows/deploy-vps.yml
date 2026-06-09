@@ -1,0 +1,98 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: maternalink-vps-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy with Podman
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VPS_HOST}" ] || [ -z "${VPS_USER}" ] || [ -z "${VPS_PASSWORD}" ] || [ -z "${VPS_DEPLOY_PATH}" ]; then
+            echo "Missing one or more required secrets: VPS_HOST, VPS_USER, VPS_PASSWORD, VPS_DEPLOY_PATH" >&2
+            exit 1
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+          sshpass -p "${VPS_PASSWORD}" ssh -o StrictHostKeyChecking=accept-new "${VPS_USER}@${VPS_HOST}" \
+            "VPS_DEPLOY_PATH='${VPS_DEPLOY_PATH}' bash -s" <<'REMOTE'
+          set -euo pipefail
+
+          REPO_URL="https://github.com/0xSyam/MaternaLink.git"
+          BRANCH="main"
+          DEPLOY_PATH="${VPS_DEPLOY_PATH}"
+
+          if ! command -v git >/dev/null 2>&1; then
+            echo "git is required on the VPS" >&2
+            exit 1
+          fi
+
+          if ! command -v podman >/dev/null 2>&1; then
+            echo "podman is required on the VPS" >&2
+            exit 1
+          fi
+
+          if podman compose version >/dev/null 2>&1; then
+            COMPOSE="podman compose"
+          elif command -v podman-compose >/dev/null 2>&1; then
+            COMPOSE="podman-compose"
+          else
+            echo "podman compose or podman-compose is required on the VPS" >&2
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "${DEPLOY_PATH}")"
+
+          if [ ! -d "${DEPLOY_PATH}/.git" ]; then
+            rm -rf "${DEPLOY_PATH}"
+            git clone --branch "${BRANCH}" "${REPO_URL}" "${DEPLOY_PATH}"
+          fi
+
+          cd "${DEPLOY_PATH}"
+          git checkout "${BRANCH}"
+          git pull --ff-only origin "${BRANCH}"
+
+          if [ ! -f .env.production ]; then
+            POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+            JWT_SECRET="$(openssl rand -hex 32)"
+            cat > .env.production <<ENV
+          POSTGRES_DB=maternalink
+          POSTGRES_USER=maternalink
+          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          DATABASE_URL=postgresql://maternalink:${POSTGRES_PASSWORD}@postgres:5432/maternalink?schema=public
+          JWT_SECRET=${JWT_SECRET}
+          WEB_ORIGIN=http://172.93.186.62:41873
+          NEXT_PUBLIC_API_BASE_URL=http://172.93.186.62:41874/api
+          AI_MODE=fallback
+          AI_SERVICE_TIMEOUT_MS=30000
+          RUN_SEED=true
+          SESSION_COOKIE_SECURE=false
+          ENV
+            chmod 600 .env.production
+          fi
+
+          set -a
+          . ./.env.production
+          set +a
+
+          ${COMPOSE} -f podman-compose.prod.yml up -d --build
+          ${COMPOSE} -f podman-compose.prod.yml ps
+          REMOTE
