@@ -32,7 +32,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y sshpass
 
-          sshpass -p "${VPS_PASSWORD}" ssh -o StrictHostKeyChecking=accept-new "${VPS_USER}@${VPS_HOST}" \
+          sshpass -p "${VPS_PASSWORD}" ssh \
+            -o StrictHostKeyChecking=accept-new \
+            -o PreferredAuthentications=password \
+            -o PubkeyAuthentication=no \
+            -o KbdInteractiveAuthentication=no \
+            "${VPS_USER}@${VPS_HOST}" \
             "VPS_DEPLOY_PATH='${VPS_DEPLOY_PATH}' bash -s" <<'REMOTE'
           set -euo pipefail
 
