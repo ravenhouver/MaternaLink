@@ -3,10 +3,12 @@
 import Layout from 'antd/es/layout';
 import Typography from 'antd/es/typography';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import type { CurrentUser, UserRole } from '@/lib/api';
+import { logout, type CurrentUser, type UserRole } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { performLogout } from './logout-action';
 import styles from './sidebar.module.css';
 
 const { Sider } = Layout;
@@ -51,6 +53,8 @@ function resolveSelectedKey(pathname: string) {
 
 export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const hasTopbar = pathname !== routes.dashboard;
   const selectedKey = resolveSelectedKey(pathname);
   const visibleItems = navItems.filter((item) => hasRole(item.roles, user.role));
@@ -60,6 +64,15 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
     photo: user.role === 'IFK_ADMIN' ? '/figma-medicine/bidan-sarah.png' : '/figma-patients/doctor-siti.png',
   };
   const brandHref = user.role === 'IFK_ADMIN' ? routes.ifkRecommendations : routes.dashboard;
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    await performLogout({
+      logout,
+      redirectToLogin: () => router.replace(routes.login),
+    });
+  };
 
   return (
     <Sider
@@ -117,11 +130,15 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
 
       <div className={styles.profileArea}>
         {hasTopbar || collapsed ? (
-          <Link href="/settings" className={[styles.navItem, styles.settingsLink].join(' ')} prefetch={false}>
+          <Link href="/settings" className={styles.navItem} prefetch={false}>
             <AppIcon name="settings" className={styles.navIcon} width={22} height={22} />
             <span>Pengaturan</span>
           </Link>
         ) : null}
+        <button type="button" className={[styles.navItem, styles.navButton].join(' ')} onClick={handleLogout} disabled={isLoggingOut}>
+          <AppIcon name="logOut" className={styles.navIcon} width={22} height={22} />
+          <span>{isLoggingOut ? 'Keluar...' : 'Logout'}</span>
+        </button>
         {hasTopbar && !collapsed ? (
           <div className={styles.profileCard}>
             <span className={styles.profilePhoto}>

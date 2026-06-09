@@ -118,12 +118,24 @@
   width: 100%;
   min-height: 44px;
   padding: 12px 16px;
+  border: 0;
   border-radius: 24px;
+  background: transparent;
   color: #697586;
+  cursor: pointer;
   font-family: Roboto, Arial, sans-serif;
   font-size: 14px;
   letter-spacing: 0.1px;
   line-height: 20px;
+}
+
+.navButton {
+  text-align: left;
+}
+
+.navButton:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .active {
@@ -258,7 +270,7 @@
   content: '';
 }
 
-.sider:global(.ant-layout-sider-collapsed) .settingsLink {
+.sider:global(.ant-layout-sider-collapsed) .navButton {
   margin-bottom: 0;
 }
 
