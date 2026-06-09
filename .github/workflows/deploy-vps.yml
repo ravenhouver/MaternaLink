@@ -58,7 +58,8 @@ jobs:
           target: runner
           push: true
           build-args: |
-            NEXT_PUBLIC_API_BASE_URL=http://172.93.186.62:41874/api
+            NEXT_PUBLIC_API_BASE_URL=https://hisyamardiansyah.me/maternalink/api
+            NEXT_PUBLIC_BASE_PATH=/maternalink
           tags: |
             ${{ env.WEB_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
             ${{ env.WEB_IMAGE_REPO }}:latest
@@ -160,15 +161,31 @@ jobs:
           POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
           DATABASE_URL=postgresql://maternalink:${POSTGRES_PASSWORD}@postgres:5432/maternalink?schema=public
           JWT_SECRET=${JWT_SECRET}
-          WEB_ORIGIN=http://172.93.186.62:41873
-          NEXT_PUBLIC_API_BASE_URL=http://172.93.186.62:41874/api
+          WEB_ORIGIN=https://hisyamardiansyah.me
+          NEXT_PUBLIC_API_BASE_URL=https://hisyamardiansyah.me/maternalink/api
+          NEXT_PUBLIC_BASE_PATH=/maternalink
           AI_MODE=fallback
           AI_SERVICE_TIMEOUT_MS=30000
           RUN_SEED=true
-          SESSION_COOKIE_SECURE=false
+          SESSION_COOKIE_SECURE=true
           ENV
             chmod 600 .env.production
           fi
+
+          upsert_env() {
+            key="$1"
+            value="$2"
+            if grep -q "^${key}=" .env.production; then
+              sed -i "s|^${key}=.*|${key}=${value}|" .env.production
+            else
+              printf '%s=%s\n' "${key}" "${value}" >> .env.production
+            fi
+          }
+
+          upsert_env WEB_ORIGIN https://hisyamardiansyah.me
+          upsert_env NEXT_PUBLIC_API_BASE_URL https://hisyamardiansyah.me/maternalink/api
+          upsert_env NEXT_PUBLIC_BASE_PATH /maternalink
+          upsert_env SESSION_COOKIE_SECURE true
 
           set -a
           . ./.env.production
