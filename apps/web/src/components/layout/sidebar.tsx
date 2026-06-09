@@ -8,28 +8,11 @@ import { useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { logout, type CurrentUser, type UserRole } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { getBrandHref, getProfile, getVisibleNavItems, resolveSelectedKey } from './layout-menu';
 import { performLogout } from './logout-action';
 import styles from './sidebar.module.css';
 
 const { Sider } = Layout;
-
-const navItems = [
-  { key: routes.dashboard, href: routes.dashboard, icon: 'home', label: 'Dashboard', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
-  { key: routes.queue, href: routes.queue, icon: 'userPlus', label: 'Patient Queue', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
-  { key: routes.patients, href: routes.patients, icon: 'users', label: 'Patient List', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
-  { key: routes.forecastCalendar, href: routes.forecastCalendar, icon: 'calendar', label: 'Prediction Calendar', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
-  { key: routes.medicineNeeds, href: routes.medicineNeeds, icon: 'plus', label: 'Medicine Needs', roles: ['BIDAN_PUSKESMAS', 'SUPER_ADMIN'] },
-  { key: routes.ifk, href: routes.ifk, icon: 'home', label: 'IFK Dashboard', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
-  { key: routes.ifkRecommendations, href: routes.ifkRecommendations, icon: 'package', label: 'Recommendations', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
-  { key: routes.ifkClinics, href: routes.ifkClinics, icon: 'users', label: 'Clinics', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
-  { key: routes.ifkEnvironment, href: routes.ifkEnvironment, icon: 'calendar', label: 'Environment', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
-  { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'settings', label: 'Decision History', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
-  { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', roles: ['IFK_ADMIN', 'SUPER_ADMIN'] },
-] satisfies Array<{ key: string; href: string; icon: AppIconName; label: string; roles: UserRole[] }>;
-
-function hasRole(roles: UserRole[], role: UserRole) {
-  return roles.some((allowedRole) => allowedRole === role);
-}
 
 type SidebarProps = {
   collapsed: boolean;
@@ -37,33 +20,15 @@ type SidebarProps = {
   onToggle: () => void;
 };
 
-function resolveSelectedKey(pathname: string) {
-  if (pathname.startsWith(routes.patients)) return routes.patients;
-  if (pathname.startsWith(routes.forecastCalendar)) return routes.forecastCalendar;
-  if (pathname.startsWith(routes.medicineNeeds)) return routes.medicineNeeds;
-  if (pathname.startsWith(routes.deliveries)) return routes.deliveries;
-  if (pathname.startsWith(routes.queue)) return routes.queue;
-  if (pathname.startsWith(routes.ifkDecisionHistory)) return routes.ifkDecisionHistory;
-  if (pathname.startsWith(routes.ifkEnvironment)) return routes.ifkEnvironment;
-  if (pathname.startsWith(routes.ifkClinics)) return routes.ifkClinics;
-  if (pathname.startsWith(routes.ifkRecommendations)) return routes.ifkRecommendations;
-  if (pathname.startsWith(routes.ifk)) return routes.ifk;
-  return routes.dashboard;
-}
-
 export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const hasTopbar = pathname !== routes.dashboard;
   const selectedKey = resolveSelectedKey(pathname);
-  const visibleItems = navItems.filter((item) => hasRole(item.roles, user.role));
-  const profile = {
-    name: user.username,
-    role: user.role === 'IFK_ADMIN' ? 'Admin IFK' : user.role === 'SUPER_ADMIN' ? 'Super Admin' : user.puskesmasId ?? 'Bidan Puskesmas',
-    photo: user.role === 'IFK_ADMIN' ? '/figma-medicine/bidan-sarah.png' : '/figma-patients/doctor-siti.png',
-  };
-  const brandHref = user.role === 'IFK_ADMIN' ? routes.ifkRecommendations : routes.dashboard;
+  const visibleItems = getVisibleNavItems(user.role) as Array<{ key: string; href: string; icon: AppIconName; label: string; roles: UserRole[] }>;
+  const profile = getProfile(user);
+  const brandHref = getBrandHref(user.role);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;

@@ -37,6 +37,7 @@ const iconNames = {
   mail: 'lucide:mail',
   logOut: 'lucide:log-out',
   mapPin: 'lucide:map-pin',
+  menu: 'lucide:menu',
   moreVertical: 'lucide:ellipsis-vertical',
   mic: 'lucide:mic',
   package: 'lucide:package',

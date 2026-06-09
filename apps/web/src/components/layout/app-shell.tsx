@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { getCurrentUser, type CurrentUser } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { MobileNavbar } from './mobile-navbar';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import styles from './app-shell.module.css';
@@ -84,6 +85,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <ConfigProvider theme={themeConfig}>
       <Layout className={[styles.shell, isSidebarCollapsed ? styles.collapsed : ''].filter(Boolean).join(' ')}>
+        <MobileNavbar user={user} />
         <Sidebar collapsed={isSidebarCollapsed} user={user} onToggle={() => setIsSidebarCollapsed((current) => !current)} />
         <Layout className={styles.mainLayout}>
           {hasTopbar ? <Topbar /> : null}

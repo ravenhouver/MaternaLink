@@ -41,3 +41,9 @@
   max-width: 20px;
   max-height: 20px;
 }
+
+@media (max-width: 991px) {
+  .topbar {
+    display: none;
+  }
+}

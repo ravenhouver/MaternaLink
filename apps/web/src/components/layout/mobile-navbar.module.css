@@ -1,0 +1,182 @@
+.mobileBar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: none;
+  height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5edf7;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.brand,
+.drawerBrand,
+.navItem,
+.profileCard {
+  display: flex;
+  align-items: center;
+}
+
+.brand,
+.drawerBrand {
+  min-width: 0;
+  gap: 10px;
+}
+
+.brandIcon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.brandCopy,
+.profileCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.brandTitle:global(.ant-typography) {
+  color: var(--color-primary-strong);
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.brandSubtitle:global(.ant-typography) {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.menuButton,
+.closeButton {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  cursor: pointer;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.drawerRoot :global(.ant-drawer-content-wrapper) {
+  max-width: calc(100vw - 32px);
+}
+
+.drawerRoot :global(.ant-drawer-body) {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 22px;
+}
+
+.nav,
+.drawerFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.navItem {
+  min-height: 46px;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: left;
+}
+
+.active {
+  background: #ffffff;
+  color: #004eeb;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.08);
+}
+
+.navIcon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.navButton:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.profileCard {
+  gap: 12px;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 0.08);
+}
+
+.profilePhoto {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px rgb(26 115 232 / 0.2);
+}
+
+.profilePhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileName:global(.ant-typography) {
+  color: var(--color-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.profileRole:global(.ant-typography) {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 991px) {
+  .mobileBar {
+    display: flex;
+  }
+}
