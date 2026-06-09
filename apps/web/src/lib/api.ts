@@ -73,6 +73,8 @@ export type LplpoRow = {
   periode: string;
   jumlahDiminta: number;
   daysOfStock?: number | null;
+  obat?: ObatRecord;
+  puskesmas?: PuskesmasRecord;
 };
 
 export type RecommendationItem = {
@@ -156,6 +158,47 @@ export type AlertRecord = {
   message: string;
   resolved: boolean;
   createdAt: string;
+};
+
+export type ObatRecord = {
+  id: string;
+  nama: string;
+  kategori: string;
+  tipe: string;
+  perluColdChain: boolean;
+  satuan: string;
+  dosisStandarHarian?: number | null;
+  durasiPengobatanHari?: number | null;
+};
+
+export type StokRow = {
+  id: number;
+  puskesmasId: string;
+  obatId: string;
+  periode: string;
+  stokAwal: number;
+  konsumsiPeriode: number;
+  stokSaatIni: number;
+  obat?: ObatRecord;
+  puskesmas?: PuskesmasRecord;
+};
+
+export type ForecastRun = {
+  id: number;
+  puskesmasId: string;
+  periode: string;
+  status: string;
+  confidence: string;
+  createdAt: string;
+  prediksi?: Array<{
+    id: number;
+    obatId: string;
+    kebutuhanObat: number;
+    bufferPersen: number;
+    totalRekomendasi: number;
+    stokSaatIni: number;
+    konsumsiPeriode: number;
+  }>;
 };
 
 export type CreateExaminationPayload = {
@@ -273,8 +316,24 @@ export async function getPuskesmas(): Promise<PuskesmasRecord[]> {
   return apiFetch('/master/puskesmas');
 }
 
+export async function getObat(): Promise<ObatRecord[]> {
+  return apiFetch('/master/obat');
+}
+
 export async function getAlerts(): Promise<AlertRecord[]> {
   return apiFetch('/distribution/alerts');
+}
+
+export async function getStokRows(params?: { puskesmasId?: string; periode?: string }): Promise<StokRow[]> {
+  const query = new URLSearchParams();
+  if (params?.puskesmasId) query.set('puskesmasId', params.puskesmasId);
+  if (params?.periode) query.set('periode', params.periode);
+  const suffix = query.size ? `?${query.toString()}` : '';
+  return apiFetch(`/inputs/stok${suffix}`);
+}
+
+export async function upsertStok(payload: { puskesmasId: string; obatId: string; periode: string; stokAwal: number; konsumsiPeriode: number; stokSaatIni: number }): Promise<StokRow> {
+  return apiFetch('/inputs/stok', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function createQueue(payload: { patientId: string; pregnancyId: string }): Promise<QueueRecord> {
@@ -314,7 +373,7 @@ export async function getDemoWorkflowState() {
   return apiFetch('/workflow/demo/state');
 }
 
-export async function getForecastRuns() {
+export async function getForecastRuns(): Promise<ForecastRun[]> {
   return apiFetch('/forecast/runs');
 }
 

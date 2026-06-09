@@ -2,9 +2,11 @@
 
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { getCurrentUser, getDashboardSummary, type CurrentUser, type DashboardSummary } from '@/lib/api';
+import { getCurrentUser, getDashboardSummary, getQueue, getRecommendations, type CurrentUser, type DashboardSummary } from '@/lib/api';
+import { routes } from '@/lib/routes';
 import styles from './dashboard.module.css';
 
 type StatCard = {
@@ -18,6 +20,7 @@ type StatCard = {
 type QuickAction = {
   label: string;
   icon: AppIconName;
+  href: string;
 };
 
 type Activity = {
@@ -29,30 +32,29 @@ type Activity = {
 };
 
 const quickActions: QuickAction[] = [
-  { label: 'New Patient', icon: 'users' },
-  { label: 'Calendar', icon: 'calendar' },
-  { label: 'Add Medicines', icon: 'plus' },
-  { label: 'Delivering', icon: 'package' },
-];
-
-const activities: Activity[] = [
-  { name: 'Mrs. Maria', title: 'ANC (Antenatal Care) Visit', meta: '10 minutes ago - Routine 2nd trimester check-up', icon: 'clipboard', tone: 'blue' },
-  { name: 'Mrs. Siti', title: 'Risk Data Updated', meta: '1 hour ago - Elevated blood pressure (140/90)', icon: 'alert', tone: 'red' },
-  { name: 'Mrs. Rahayu', title: 'Lab Results', meta: '3 Jam yang lalu - Hemoglobin: 11.5 g/dL (Normal)', icon: 'fileText', tone: 'green' },
+  { label: 'New Patient', icon: 'users', href: routes.newPatient },
+  { label: 'Calendar', icon: 'calendar', href: routes.forecastCalendar },
+  { label: 'Add Medicines', icon: 'plus', href: routes.medicineNeeds },
+  { label: 'Delivering', icon: 'package', href: routes.deliveries },
 ];
 
 export function DashboardContent() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([getDashboardSummary(), getCurrentUser()])
-      .then(([nextSummary, nextUser]) => {
+    Promise.all([getDashboardSummary(), getCurrentUser(), getQueue().catch(() => []), getRecommendations().catch(() => [])])
+      .then(([nextSummary, nextUser, queueRows, recommendations]) => {
         if (!mounted) return;
         setSummary(nextSummary);
         setUser(nextUser);
+        setActivities([
+          ...queueRows.slice(0, 2).map((row) => ({ name: row.patient.fullName, title: `Queue ${row.status}`, meta: `${row.queueNo} - ${new Date(row.queuedAt).toLocaleString('id-ID')}`, icon: 'clipboard' as const, tone: row.status === 'WAITING' ? 'blue' : 'green' })),
+          ...recommendations.slice(0, 2).map((row) => ({ name: row.puskesmas?.nama ?? row.puskesmasId, title: `Distribution ${row.status}`, meta: row.justification ?? row.source, icon: row.urgency === 'CRITICAL' ? 'alert' as const : 'package' as const, tone: row.urgency === 'CRITICAL' ? 'red' : 'green' })),
+        ]);
       })
       .catch((loadError) => {
         if (!mounted) return;
@@ -129,10 +131,10 @@ export function DashboardContent() {
           <h2 className={styles.sectionTitle}><AppIcon name="zap" width={18} height={18} />Quick Actions</h2>
           <div className={styles.quickGrid}>
             {quickActions.map((action) => (
-              <button type="button" className={styles.quickAction} key={action.label}>
+              <Link href={action.href} className={styles.quickAction} key={action.label}>
                 <span><AppIcon name={action.icon} width={24} height={24} /></span>
                 {action.label}
-              </button>
+              </Link>
             ))}
           </div>
         </div>
@@ -143,6 +145,7 @@ export function DashboardContent() {
             <button type="button">View All</button>
           </div>
           <div className={styles.activityCard}>
+            {activities.length === 0 ? <button type="button" className={styles.activityRow}><span className={[styles.activityIcon, styles.blue].join(' ')}><AppIcon name="clipboard" width={22} height={22} /></span><span className={styles.activityText}><span><strong>No activity</strong> - database kosong</span><small>Tambah pasien atau rekomendasi untuk melihat aktivitas.</small></span></button> : null}
             {activities.map((activity) => (
               <button type="button" className={styles.activityRow} key={activity.name}>
                 <span className={[styles.activityIcon, styles[activity.tone]].join(' ')}>

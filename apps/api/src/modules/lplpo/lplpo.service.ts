@@ -44,6 +44,7 @@ export class LplpoService {
   list(puskesmasId?: string, periode?: string) {
     return this.prisma.lplpoPrediktif.findMany({
       where: { puskesmasId, periode: periode ? toDate(periode) : undefined },
+      include: { obat: true, puskesmas: true },
       orderBy: { id: 'asc' },
     });
   }

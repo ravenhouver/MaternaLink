@@ -1,8 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useEffect, useMemo, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
+import { getRecommendations, type DistributionRecommendation, type RecommendationStatus } from '@/lib/api';
 import styles from './distribution.module.css';
 
 const DistributionMap = dynamic(() => import('./distribution-map').then((module) => module.DistributionMap), {
@@ -27,53 +29,29 @@ type Shipment = {
 
 const filterChips = ['All', 'In Transit', 'Awaiting Approval', 'Approved', 'Received', 'Rejected'];
 
-const shipments: Shipment[] = [
-  {
-    id: 'fe-tablets',
-    medicine: 'Fe 60mg Tablets',
-    quantity: '30 strips',
-    code: 'PKM-TF-2024-001',
-    status: 'transit',
-    statusLabel: 'In Transit',
-    statusMeta: 'Estimated arrival: Tomorrow, 10:00 WIB',
-    icon: 'package',
-    expanded: true,
-    borderTone: 'blue',
-  },
-  {
-    id: 'mgso4',
-    medicine: 'MgSO4 40%',
-    quantity: '50 vials',
-    code: 'PKM-MG-2024-002',
-    status: 'awaiting',
-    statusLabel: 'Awaiting IFK Approval',
-    statusMeta: 'Requested Oct 31, 2024',
-    icon: 'hourglass',
-    borderTone: 'brown',
-  },
-  {
-    id: 'oxytocin',
-    medicine: 'Oxytocin 10IU',
-    quantity: '45 ampoules',
-    code: 'PKM-OX-2024-003',
-    status: 'delivered',
-    statusLabel: 'Delivered',
-    statusMeta: 'Delivered Oct 28, 2024, 14:30',
-    icon: 'checkCircle',
-    borderTone: 'green',
-  },
-  {
-    id: 'nifedipine',
-    medicine: 'Nifedipine 10mg',
-    quantity: '100 tablets',
-    code: 'PKM-NF-2024-004',
-    status: 'rejected',
-    statusLabel: 'Rejected by IFK',
-    statusMeta: 'Rejected Oct 29, 2024',
-    icon: 'x',
-    borderTone: 'red',
-  },
-];
+function mapRecommendation(row: DistributionRecommendation): Shipment {
+  const statusMap: Record<RecommendationStatus, Pick<Shipment, 'status' | 'statusLabel' | 'icon' | 'borderTone'>> = {
+    PENDING: { status: 'awaiting', statusLabel: 'Awaiting IFK Approval', icon: 'hourglass', borderTone: 'brown' },
+    APPROVED: { status: 'transit', statusLabel: 'Approved', icon: 'package', borderTone: 'blue' },
+    DISPATCHED: { status: 'transit', statusLabel: 'In Transit', icon: 'package', borderTone: 'blue' },
+    RECEIVED: { status: 'delivered', statusLabel: 'Received', icon: 'checkCircle', borderTone: 'green' },
+    REJECTED: { status: 'rejected', statusLabel: 'Rejected by IFK', icon: 'x', borderTone: 'red' },
+    CANCELLED: { status: 'rejected', statusLabel: 'Cancelled', icon: 'x', borderTone: 'red' },
+  };
+  const mapped = statusMap[row.status];
+  return {
+    id: row.id,
+    medicine: row.items.map((item) => item.obat?.nama ?? item.obatId).join(', ') || row.id,
+    quantity: row.items.map((item) => `${item.finalQuantity} ${item.obat?.satuan ?? 'unit'}`).join(', '),
+    code: row.id,
+    status: mapped.status,
+    statusLabel: mapped.statusLabel,
+    statusMeta: row.trackingEvents?.[0] ? `${row.trackingEvents[0].status} ${new Date(row.trackingEvents[0].createdAt).toLocaleString('id-ID')}` : `Requested ${new Date(row.periode).toLocaleDateString('id-ID')}`,
+    icon: mapped.icon,
+    expanded: row.status === 'APPROVED' || row.status === 'DISPATCHED',
+    borderTone: mapped.borderTone,
+  };
+}
 
 const steps = [
   { label: 'Requested', done: true },
@@ -89,6 +67,22 @@ const trackingHistory = [
 ];
 
 export function DistributionPageContent() {
+  const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getRecommendations()
+      .then(setRecommendations)
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat pengiriman'));
+  }, []);
+
+  const shipments = useMemo(() => {
+    const rows = recommendations.map(mapRecommendation);
+    if (activeFilter === 'All') return rows;
+    return rows.filter((row) => row.statusLabel === activeFilter || (activeFilter === 'In Transit' && row.status === 'transit'));
+  }, [activeFilter, recommendations]);
+
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.pageHeader}>
@@ -105,15 +99,18 @@ export function DistributionPageContent() {
       <section className={styles.filterRow} aria-label="Shipment filters">
         <div className={styles.filterChips}>
           {filterChips.map((chip) => (
-            <button className={chip === 'All' ? styles.activeChip : ''} key={chip} type="button">
+            <button className={chip === activeFilter ? styles.activeChip : ''} key={chip} type="button" onClick={() => setActiveFilter(chip)}>
               {chip}
             </button>
           ))}
         </div>
-        <span>4 active shipments</span>
+        <span>{shipments.length} active shipments</span>
       </section>
 
+      {error ? <p className={styles.distributionError}>{error}</p> : null}
+
       <section className={styles.shipmentList} aria-label="Medicine shipments">
+        {shipments.length === 0 ? <article className={styles.shipmentCard}><div className={styles.cardContent}>Belum ada data pengiriman.</div></article> : null}
         {shipments.map((shipment) => (
           <ShipmentCard shipment={shipment} key={shipment.id} />
         ))}

@@ -80,6 +80,13 @@
   padding-top: 8px;
 }
 
+.distributionError {
+  margin: 0;
+  color: #b42318;
+  font-weight: 700;
+  font-size: 14px;
+}
+
 .filterChips {
   display: flex;
   overflow-x: auto;

@@ -3,8 +3,8 @@
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
-import { getLplpoRows } from '@/lib/api';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { getObat, getStokRows, upsertStok, type ObatRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
@@ -20,13 +20,8 @@ type MedicationRow = {
   lastUpdated: string;
 };
 
-const medications: MedicationRow[] = [
-  { slug: 'oxytocin-10iu', name: 'Oxytocin 10IU', stock: 50, unit: 'ampul', estimatedEmpty: '28+ days', status: 'safe', lastUpdated: 'Today' },
-  { slug: 'mgso4-40', name: 'MgSO4 40%', stock: 18, unit: 'vial', estimatedEmpty: '~6 days', status: 'warning', lastUpdated: '2 days ago' },
-  { slug: 'tablet-fe-60mg', name: 'Tablet Fe 60mg', stock: 5, unit: 'strip', estimatedEmpty: '~2 days', status: 'critical', lastUpdated: '3 days ago' },
-  { slug: 'nifedipine', name: 'Nifedipine', stock: 120, unit: 'tab', estimatedEmpty: '30+ days', status: 'safe', lastUpdated: 'Yesterday' },
-  { slug: 'misoprostol', name: 'Misoprostol', stock: 45, unit: 'tab', estimatedEmpty: '20+ days', status: 'safe', lastUpdated: '4 days ago' },
-];
+const DEFAULT_PUSKESMAS_ID = 'PKM-001';
+const DEFAULT_PERIOD = '2026-06-01';
 
 const statusLabel: Record<MedicationStatus, string> = {
   safe: 'SAFE',
@@ -38,45 +33,69 @@ function isMedicationRow(row: MedicationRow | null | undefined): row is Medicati
   return Boolean(row?.slug && row.name && row.status);
 }
 
-function showNextPhaseNotice(label: string) {
-  window.alert(`${label} akan tersedia pada fase berikutnya.`);
-}
-
 export function MedicineNeedsContent() {
   const [activeModal, setActiveModal] = useState<'edit' | 'shipment' | 'upload' | null>(null);
-  const [rows, setRows] = useState<MedicationRow[]>(medications);
-  const [selectedMedication, setSelectedMedication] = useState<MedicationRow>(medications[0]);
+  const [rows, setRows] = useState<MedicationRow[]>([]);
+  const [obatRows, setObatRows] = useState<ObatRecord[]>([]);
+  const [selectedMedication, setSelectedMedication] = useState<MedicationRow | null>(null);
+  const [selectedObatId, setSelectedObatId] = useState('');
+  const [quantity, setQuantity] = useState('0');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    getLplpoRows({ puskesmasId: 'PKM-001', periode: '2026-06-01' })
-      .then((lplpoRows) => {
-        if (!Array.isArray(lplpoRows) || !lplpoRows.length) return;
-        const mappedRows = lplpoRows
-          .map((row, index) => {
-            const name = row?.obatId || 'Unknown medication';
-            const stock = row?.jumlahDiminta ?? 0;
+  async function refreshRows() {
+    setError(null);
+    try {
+      const [stockRows, medicines] = await Promise.all([getStokRows({ puskesmasId: DEFAULT_PUSKESMAS_ID, periode: DEFAULT_PERIOD }), getObat()]);
+      setObatRows(medicines);
+      const mappedRows = stockRows.map((row) => {
+        const stock = row.stokSaatIni;
+        const dailyUse = row.konsumsiPeriode > 0 ? row.konsumsiPeriode / 30 : 0;
+        const days = dailyUse > 0 ? stock / dailyUse : null;
+        const status: MedicationStatus = stock <= 5 ? 'critical' : stock <= 20 ? 'warning' : 'safe';
+        return {
+          slug: row.obatId.toLowerCase(),
+          name: row.obat?.nama ?? row.obatId,
+          stock,
+          unit: row.obat?.satuan ?? 'unit',
+          estimatedEmpty: days == null ? 'No usage data' : `${Math.max(1, Math.round(days))} days`,
+          status,
+          lastUpdated: new Date(row.periode).toLocaleDateString('id-ID'),
+        };
+      });
+      setRows(mappedRows);
+      setSelectedMedication((current) => current ?? mappedRows[0] ?? null);
+      setSelectedObatId((current) => current || medicines[0]?.id || '');
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Gagal memuat stok obat');
+    }
+  }
 
-            return {
-              slug: `${name.toLowerCase()}-${row?.id ?? index}`,
-              name,
-              stock,
-              unit: 'unit',
-              estimatedEmpty: row?.daysOfStock ? `${Math.round(row.daysOfStock)} days` : 'Needs review',
-              status: stock > 20 ? 'critical' as const : stock > 0 ? 'warning' as const : 'safe' as const,
-              lastUpdated: row?.periode ? new Date(row.periode).toLocaleDateString('id-ID') : 'Unknown',
-            };
-          })
-          .filter(isMedicationRow);
-        if (!mappedRows.length) return;
-        setRows(mappedRows);
-        setSelectedMedication(mappedRows[0]);
-      })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat LPLPO'));
+  useEffect(() => {
+    void refreshRows();
   }, []);
 
+  const selectedObat = useMemo(() => obatRows.find((item) => item.id === selectedObatId), [obatRows, selectedObatId]);
   const closeModal = () => setActiveModal(null);
   const safeRows = rows.filter(isMedicationRow);
+
+  async function saveStock() {
+    if (!selectedObatId) {
+      setError('Pilih obat terlebih dahulu.');
+      return;
+    }
+    const value = Number(quantity);
+    if (!Number.isFinite(value) || value < 0) {
+      setError('Jumlah stok harus angka valid.');
+      return;
+    }
+    try {
+      await upsertStok({ puskesmasId: DEFAULT_PUSKESMAS_ID, obatId: selectedObatId, periode: DEFAULT_PERIOD, stokAwal: value, konsumsiPeriode: 0, stokSaatIni: value });
+      setQuantity('0');
+      await refreshRows();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan stok');
+    }
+  }
 
   return (
     <PageContainer size="wide" className={styles.page}>
@@ -86,13 +105,13 @@ export function MedicineNeedsContent() {
           <p>Monitor and update maternal medication availability in real-time</p>
         </div>
         <div className={styles.headerActions}>
-          <button type="button" className={styles.secondaryButton} onClick={() => showNextPhaseNotice('History Log')}>
+          <button type="button" className={styles.secondaryButton} onClick={() => void refreshRows()}>
             <AppIcon name="clock" width={18} height={18} />
-            History Log
+            Refresh
           </button>
-          <button type="button" className={styles.secondaryButton} onClick={() => showNextPhaseNotice('Download Report')}>
+          <button type="button" className={styles.secondaryButton} onClick={() => window.print()}>
             <AppIcon name="upload" width={18} height={18} />
-            Download Report
+            Print Report
           </button>
         </div>
       </header>
@@ -108,25 +127,22 @@ export function MedicineNeedsContent() {
         <div className={styles.formGrid}>
           <label className={styles.fieldGroup}>
             <span>Medication Name</span>
-            <select defaultValue="">
+            <select value={selectedObatId} onChange={(event) => setSelectedObatId(event.target.value)}>
               <option value="" disabled>Select Medication...</option>
-              {safeRows.map((item) => <option key={item.slug}>{item.name}</option>)}
+              {obatRows.map((item) => <option value={item.id} key={item.id}>{item.nama}</option>)}
             </select>
           </label>
           <label className={styles.fieldGroup}>
             <span>Quantity</span>
-            <input defaultValue="0" inputMode="numeric" />
+            <input value={quantity} inputMode="numeric" onChange={(event) => setQuantity(event.target.value)} />
           </label>
           <label className={styles.fieldGroup}>
             <span>Unit</span>
-            <select defaultValue="Ampul">
-              <option>Ampul</option>
-              <option>Vial</option>
-              <option>Strip</option>
-              <option>Tab</option>
+            <select value={selectedObat?.satuan ?? 'unit'} disabled>
+              <option>{selectedObat?.satuan ?? 'unit'}</option>
             </select>
           </label>
-          <button type="button" className={styles.addButton} onClick={() => showNextPhaseNotice('Manual stock add')}>
+          <button type="button" className={styles.addButton} onClick={() => void saveStock()}>
             <AppIcon name="plus" width={18} height={18} />
             Add
           </button>
@@ -148,6 +164,7 @@ export function MedicineNeedsContent() {
               </tr>
             </thead>
             <tbody>
+              {safeRows.length === 0 ? <tr><td colSpan={7}>Belum ada stok tersimpan.</td></tr> : null}
               {safeRows.map((item) => (
                 <tr key={item.slug}>
                   <td data-label="Medication Name"><strong>{item.name}</strong></td>
@@ -199,15 +216,15 @@ export function MedicineNeedsContent() {
         </footer>
       </section>
 
-      <button type="button" className={styles.saveButton} onClick={() => showNextPhaseNotice('Persist stock update')}>
+      <button type="button" className={styles.saveButton} onClick={() => void saveStock()}>
         <AppIcon name="fileText" width={18} height={18} />
         Save Stock Update
       </button>
 
       {error ? <p className={styles.medicineError}>{error}</p> : null}
 
-      {activeModal === 'edit' ? <EditStockModal item={selectedMedication} onClose={closeModal} /> : null}
-      {activeModal === 'shipment' ? <RequestShipmentModal item={selectedMedication} onClose={closeModal} /> : null}
+      {activeModal === 'edit' && selectedMedication ? <EditStockModal item={selectedMedication} onClose={closeModal} /> : null}
+      {activeModal === 'shipment' && selectedMedication ? <RequestShipmentModal item={selectedMedication} onClose={closeModal} /> : null}
       {activeModal === 'upload' ? <UploadMedicationModal onClose={closeModal} /> : null}
     </PageContainer>
   );

@@ -1,20 +1,51 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
+import { getObat, getStokRows, type ObatRecord, type StokRow } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
-const historyRows = [
-  { date: '31 Oct 2023, 14:20', activity: 'Usage (Delivery #442)', amount: '- 2 ampul', person: 'Bdn. Siti Aminah', type: 'out' },
-  { date: '30 Oct 2023, 09:15', activity: 'Restock (PO-9912)', amount: '+ 20 ampul', person: 'Apt. Sarah Wijaya', type: 'in' },
-  { date: '29 Oct 2023, 11:05', activity: 'Usage (Delivery #441)', amount: '- 1 ampul', person: 'Bdn. Maria Ulfa', type: 'out' },
-];
+const DEFAULT_PUSKESMAS_ID = 'PKM-001';
 
-const bars = [48, 58, 84, 128, 68, 96, 120, 76, 52, 128, 96];
+function slugify(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 export function MedicationDetailContent() {
+  const params = useParams<{ medicine?: string }>();
+  const [medicine, setMedicine] = useState<ObatRecord | null>(null);
+  const [stockRows, setStockRows] = useState<StokRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([getObat(), getStokRows({ puskesmasId: DEFAULT_PUSKESMAS_ID })])
+      .then(([medicines, stocks]) => {
+        const slug = params.medicine ?? '';
+        const selected = medicines.find((item) => slugify(item.id) === slug || slugify(item.nama) === slug || item.id.toLowerCase() === slug) ?? medicines[0] ?? null;
+        setMedicine(selected);
+        setStockRows(selected ? stocks.filter((row) => row.obatId === selected.id) : stocks);
+      })
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat detail obat'));
+  }, [params.medicine]);
+
+  const latestStock = stockRows[0];
+  const currentStock = latestStock?.stokSaatIni ?? 0;
+  const usage = latestStock?.konsumsiPeriode ?? 0;
+  const dailyUse = usage > 0 ? usage / 30 : 0;
+  const emptyDays = dailyUse > 0 ? Math.max(1, Math.round(currentStock / dailyUse)) : 0;
+  const bars = useMemo(() => Array.from({ length: 11 }, (_, index) => Math.max(24, Math.min(128, usage * (0.35 + ((index % 4) + 1) * 0.08)))), [usage]);
+  const historyRows = stockRows.slice(0, 5).map((row) => ({
+    date: new Date(row.periode).toLocaleDateString('id-ID'),
+    activity: 'Stock update',
+    amount: `${row.stokSaatIni} ${row.obat?.satuan ?? medicine?.satuan ?? 'unit'}`,
+    person: row.puskesmas?.nama ?? row.puskesmasId,
+    type: 'in',
+  }));
+
   return (
     <PageContainer size="wide" className={styles.detailPage}>
       <header className={styles.detailHeader}>
@@ -22,9 +53,9 @@ export function MedicationDetailContent() {
           <nav className={styles.detailBreadcrumb} aria-label="Breadcrumb">
             <Link href={routes.medicineNeeds}>Medicine Needs</Link>
             <AppIcon name="chevronRight" width={14} height={14} />
-            <span>Oxytocin 10IU</span>
+            <span>{medicine?.nama ?? 'Medication'}</span>
           </nav>
-          <h1>Medication Detail: Oxytocin 10IU</h1>
+          <h1>Medication Detail: {medicine?.nama ?? 'Loading...'}</h1>
         </div>
         <button type="button" className={styles.printButton}>
           <AppIcon name="printer" width={18} height={18} />
@@ -33,27 +64,29 @@ export function MedicationDetailContent() {
       </header>
 
       <section className={styles.statsGrid} aria-label="Medication stats">
-        <StatCard title="Current Stock" value="50" unit="ampul" tone="safe" icon="package" note="Safe" />
-        <StatCard title="Usage (Last 7 Days)" value="12" unit="ampul" tone="usage" icon="activity" note="+5% compared to last week" />
-        <StatCard title="Estimated Stock Empty" value="8" unit="Days" tone="warning" icon="clock" note="Warning" />
+        <StatCard title="Current Stock" value={String(currentStock)} unit={medicine?.satuan ?? 'unit'} tone={currentStock <= 5 ? 'warning' : 'safe'} icon="package" note={currentStock <= 5 ? 'Critical' : 'Safe'} />
+        <StatCard title="Usage (Current Period)" value={String(usage)} unit={medicine?.satuan ?? 'unit'} tone="usage" icon="activity" note="From stock input" />
+        <StatCard title="Estimated Stock Empty" value={emptyDays ? String(emptyDays) : '-'} unit="Days" tone="warning" icon="clock" note="Forecast" />
       </section>
+
+      {error ? <p className={styles.medicineError}>{error}</p> : null}
 
       <section className={styles.detailGrid}>
         <div className={styles.infoStack}>
           <section className={styles.detailCard}>
             <header><h2>General Information</h2><AppIcon name="info" width={18} height={18} /></header>
             <dl className={styles.infoGrid}>
-              <div><dt>Medication Name</dt><dd>Oxytocin 10IU</dd></div>
-              <div><dt>Type</dt><dd>Injection (Hormone)</dd></div>
-              <div><dt>Unit</dt><dd>Ampule (1ml)</dd></div>
-              <div><dt>Storage Location</dt><dd>Cooler A-12</dd></div>
-              <div><dt>Last Batch</dt><dd>B-99827 / EXP-12/2025</dd></div>
+              <div><dt>Medication Name</dt><dd>{medicine?.nama ?? '-'}</dd></div>
+              <div><dt>Type</dt><dd>{medicine?.tipe ?? '-'}</dd></div>
+              <div><dt>Unit</dt><dd>{medicine?.satuan ?? '-'}</dd></div>
+              <div><dt>Category</dt><dd>{medicine?.kategori ?? '-'}</dd></div>
+              <div><dt>Cold Chain</dt><dd>{medicine?.perluColdChain ? 'Required' : 'Not required'}</dd></div>
             </dl>
           </section>
 
           <section className={styles.predictionCard}>
             <div className={styles.predictionTitle}><span>AI Analysis</span><h2>Stock Prediction</h2></div>
-            <p>Prediction: Oxytocin usage tends to be stable. However, anticipate a 15% surge in demand next week due to a busy delivery schedule in the Cangkringan area.</p>
+            <p>Prediction: current stock is {currentStock} {medicine?.satuan ?? 'unit'} with period usage {usage}. {emptyDays ? `Estimated stock coverage is ${emptyDays} days.` : 'Usage trend is not available yet.'}</p>
             <footer><span>Updated 2 hours ago</span><button type="button">View Detailed Analytics <AppIcon name="chevronRight" width={14} height={14} /></button></footer>
           </section>
         </div>
@@ -74,6 +107,7 @@ export function MedicationDetailContent() {
           <table className={styles.historyTable}>
             <thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Personnel</th><th>Status</th></tr></thead>
             <tbody>
+              {historyRows.length === 0 ? <tr><td colSpan={5}>Belum ada riwayat stok.</td></tr> : null}
               {historyRows.map((row) => (
                 <tr key={`${row.date}-${row.activity}`}>
                   <td>{row.date}</td>

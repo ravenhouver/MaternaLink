@@ -26,65 +26,6 @@ type ClinicRow = {
   weatherIcon: AppIconName;
 };
 
-const clinicRows: ClinicRow[] = [
-  {
-    id: 'MD-0019',
-    name: 'Klinik Pratama Daruba',
-    location: 'Kecamatan Cangkringan, Kab. Sleman',
-    logisticDate: '12 - OCT - 2023',
-    stockout: '02 Days',
-    stockItem: 'Oxytocin 10IU',
-    deliveries: '18',
-    risk: 'critical',
-    riskLabel: 'Critical',
-    weather: 'High Surge',
-    weatherTone: 'danger',
-    weatherIcon: 'alert',
-  },
-  {
-    id: 'HU-0241',
-    name: 'Puskesmas Tobelo Central',
-    location: 'Kecamatan Cangkringan, Kab. Sleman',
-    logisticDate: '28 - OCT - 2023',
-    stockout: '11 Days',
-    stockItem: 'Oxytocin 10IU',
-    deliveries: '42',
-    risk: 'warning',
-    riskLabel: 'Warning',
-    weather: 'Stable',
-    weatherTone: 'neutral',
-    weatherIcon: 'sun',
-  },
-  {
-    id: 'HT-0082',
-    name: 'Klinik Apung Weda',
-    location: 'Kecamatan Cangkringan, Kab. Sleman',
-    logisticDate: '01 - NOV - 2023',
-    stockout: '24 Days',
-    stockItem: 'Oxytocin 10IU',
-    deliveries: '05',
-    risk: 'routine',
-    riskLabel: 'Routine',
-    weather: 'Moderate Rain',
-    weatherTone: 'neutral',
-    weatherIcon: 'cloudRain',
-  },
-  {
-    id: 'KS-1102',
-    name: 'RSUD Sanana Sector 4',
-    location: 'Kecamatan Cangkringan, Kab. Sleman',
-    logisticDate: '25 - OCT - 2023',
-    stockout: '19 Days',
-    stockItem: 'Oxytocin 10IU',
-    deliveries: '31',
-    risk: 'routine',
-    riskLabel: 'Routine',
-    weather: 'Strong Wind',
-    weatherTone: 'danger',
-    weatherIcon: 'alert',
-  },
-];
-
 function mapPuskesmasToClinic(row: PuskesmasRecord, index: number): ClinicRow {
   const risk: ClinicRisk = row.rainyAccess === 'TERGANGGU' ? 'critical' : row.rainyAccess === 'TERBATAS' ? 'warning' : 'routine';
   return {
@@ -102,18 +43,6 @@ function mapPuskesmasToClinic(row: PuskesmasRecord, index: number): ClinicRow {
     weatherIcon: risk === 'critical' ? 'alert' : 'sun',
   };
 }
-
-const stats = [
-  { label: 'Total Facilities', value: '142', tone: 'clinicStatBlue' },
-  { label: 'Critical (Stockout)', value: '08', tone: 'clinicStatRed', delta: '+2%' },
-  { label: 'In Transit', value: '24', tone: 'clinicStatGreen' },
-];
-
-const medicationRows = [
-  { name: 'Oxytocin 10IU', stock: '5 ampules', stockTone: 'danger', needs: '45', days: '2 Days', status: 'Critical' },
-  { name: 'MgSO4 40%', stock: '18 vial', stockTone: 'danger', needs: '20', days: '6 Days', status: 'Warning' },
-  { name: 'Tablet Fe 60mg', stock: '120 strip', stockTone: 'safe', needs: '300', days: '28 Days', status: 'Safe' },
-];
 
 function splitName(name: string) {
   const words = name.split(' ');
@@ -225,6 +154,11 @@ function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
 }
 
 function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+  const stats: Array<{ label: string; value: string; tone: string; delta?: string }> = [
+    { label: 'Total Facilities', value: String(rows.length), tone: 'clinicStatBlue' },
+    { label: 'Critical (Stockout)', value: String(rows.filter((row) => row.risk === 'critical').length), tone: 'clinicStatRed' },
+    { label: 'Safe Facilities', value: String(rows.filter((row) => row.risk === 'routine').length), tone: 'clinicStatGreen' },
+  ];
   return (
     <main className={styles.clinicsPage}>
       <section className={styles.clinicsHeader} aria-labelledby="clinics-title">
@@ -305,15 +239,13 @@ function ClinicDetail({ clinic, onBack }: { clinic: ClinicRow; onBack: () => voi
                   <tr><th>Medication Name</th><th>Stock</th><th>Needs</th><th>Days Remaining</th><th>Status</th></tr>
                 </thead>
                 <tbody>
-                  {medicationRows.map((item) => (
-                    <tr key={item.name}>
-                      <td>{item.name}</td>
-                      <td className={styles[item.stockTone]}>{item.stock}</td>
-                      <td>{item.needs}</td>
-                      <td><span>{item.days}</span></td>
-                      <td><b className={styles[item.status.toLowerCase()]}>{item.status}</b></td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td>Cold chain facility</td>
+                    <td className={clinic.risk === 'critical' ? styles.danger : styles.safe}>{clinic.stockItem}</td>
+                    <td>{clinic.deliveries}</td>
+                    <td><span>{clinic.stockout}</span></td>
+                    <td><b className={styles[clinic.risk === 'critical' ? 'critical' : clinic.risk === 'warning' ? 'warning' : 'safe']}>{clinic.riskLabel}</b></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -371,14 +303,14 @@ function ClinicDetail({ clinic, onBack }: { clinic: ClinicRow; onBack: () => voi
 
 export function MedicineSenderClinicsContent() {
   const [selectedClinic, setSelectedClinic] = useState<ClinicRow | null>(null);
-  const [rows, setRows] = useState<ClinicRow[]>(clinicRows);
+  const [rows, setRows] = useState<ClinicRow[]>([]);
 
   useEffect(() => {
     getPuskesmas()
       .then((records) => {
         if (records.length) setRows(records.map(mapPuskesmasToClinic));
       })
-      .catch(() => setRows(clinicRows));
+      .catch(() => setRows([]));
   }, []);
 
   return (

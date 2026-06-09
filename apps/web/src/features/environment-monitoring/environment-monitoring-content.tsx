@@ -3,12 +3,12 @@
 import dynamic from 'next/dynamic';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
-import { getAlerts, type AlertRecord } from '@/lib/api';
+import { getAlerts, getPuskesmas, type AlertRecord, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { getNextAlertFeedState } from './alert-feed-state';
-import { environmentalPoints, forecasts, routeVulnerabilities, type ForecastRisk, type RouteVulnerability } from './environment-monitoring-data';
+import type { EnvironmentalPoint } from './environment-monitoring-data';
 import styles from './environment-monitoring.module.css';
 
 const EnvironmentMap = dynamic(() => import('./components/environment-map').then((module) => module.EnvironmentMap), {
@@ -16,13 +16,19 @@ const EnvironmentMap = dynamic(() => import('./components/environment-map').then
   loading: () => <div className={styles.mapLoading}>Memuat peta lingkungan...</div>,
 });
 
+type ForecastRisk = 'stable' | 'warning' | 'blocked';
+type ForecastItem = { location: string; risk: ForecastRisk; status: string; temperature: string; metric: string; bars: Array<'low' | 'medium' | 'high' | 'critical'> };
+type RouteRow = { id: string; route: string; clinics: string; risk: number; status: 'critical' | 'operational' | 'elevated'; blockedAt: string; confidence: string };
+
+const basePositions: Array<[number, number]> = [[-7.8122, 110.3892], [-7.7162, 110.3554], [-7.7765, 110.3689], [-7.7906, 110.377]];
+
 const riskIcon: Record<ForecastRisk, 'activity' | 'alert'> = {
   stable: 'activity',
   warning: 'alert',
   blocked: 'alert',
 };
 
-const statusLabel: Record<RouteVulnerability['status'], string> = {
+const statusLabel: Record<RouteRow['status'], string> = {
   critical: 'Critical',
   operational: 'Operational',
   elevated: 'Elevated',
@@ -83,7 +89,7 @@ function Topbar() {
   );
 }
 
-function ForecastCard({ item }: { item: (typeof forecasts)[number] }) {
+function ForecastCard({ item }: { item: ForecastItem }) {
   return (
     <article className={styles.forecastCard} data-risk={item.risk}>
       <div className={styles.forecastHeader}>
@@ -141,7 +147,7 @@ function AlertFeed() {
   );
 }
 
-function RiskTable() {
+function RiskTable({ rows }: { rows: RouteRow[] }) {
   return (
     <section id="clinic-routes" className={styles.routePanel} aria-label="Route vulnerability table">
       <div className={styles.tableWrap}>
@@ -157,7 +163,8 @@ function RiskTable() {
             </tr>
           </thead>
           <tbody>
-            {routeVulnerabilities.map((item) => (
+            {rows.length === 0 ? <tr><td colSpan={6}>Belum ada data rute.</td></tr> : null}
+            {rows.map((item) => (
               <tr key={item.id}>
                 <td><a href={`#${item.id}`}>{item.id}<br />({item.route})</a></td>
                 <td>{item.clinics}</td>
@@ -180,6 +187,36 @@ function RiskTable() {
 }
 
 export function EnvironmentMonitoringContent() {
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
+
+  useEffect(() => {
+    Promise.all([getAlerts(), getPuskesmas()])
+      .then(([nextAlerts, nextPuskesmas]) => {
+        setAlerts(nextAlerts);
+        setPuskesmas(nextPuskesmas);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const environmentalPoints = useMemo<EnvironmentalPoint[]>(() => puskesmas.map((item, index) => {
+    const alert = alerts.find((row) => row.puskesmasId === item.id);
+    const risk = alert?.severity === 'CRITICAL' ? 'critical' : alert?.severity === 'HIGH' ? 'high' : item.rainyAccess === 'TERBATAS' ? 'medium' : 'low';
+    return { id: item.id, name: item.nama, position: basePositions[index % basePositions.length], risk, metric: alert?.message ?? item.rainyAccess };
+  }), [alerts, puskesmas]);
+
+  const forecasts = useMemo<ForecastItem[]>(() => puskesmas.slice(0, 3).map((item) => {
+    const alert = alerts.find((row) => row.puskesmasId === item.id);
+    const risk: ForecastRisk = alert?.severity === 'CRITICAL' || item.rainyAccess === 'TERGANGGU' ? 'blocked' : alert ? 'warning' : 'stable';
+    return { location: item.nama, risk, status: risk === 'blocked' ? 'Blocked risk' : risk === 'warning' ? 'Elevated' : 'Stable', temperature: `${item.leadTimeHari ?? 0}d`, metric: `Lead time - ${item.rainyAccess}`, bars: risk === 'blocked' ? ['high', 'critical', 'critical', 'high', 'medium', 'medium', 'high'] : risk === 'warning' ? ['medium', 'medium', 'high', 'medium', 'low', 'medium', 'high'] : ['low', 'low', 'medium', 'low', 'low', 'medium', 'low'] };
+  }), [alerts, puskesmas]);
+
+  const routeRows = useMemo<RouteRow[]>(() => puskesmas.map((item) => {
+    const alert = alerts.find((row) => row.puskesmasId === item.id);
+    const risk = alert?.severity === 'CRITICAL' ? 95 : alert?.severity === 'HIGH' ? 82 : item.rainyAccess === 'TERBATAS' ? 58 : 25;
+    return { id: item.id, route: `IFK-${item.id}`, clinics: item.nama, risk, status: risk >= 80 ? 'critical' : risk >= 50 ? 'elevated' : 'operational', blockedAt: alert ? new Date(alert.createdAt).toLocaleDateString('id-ID') : '-', confidence: alert ? alert.severity : 'LOW' };
+  }), [alerts, puskesmas]);
+
   return (
     <div className={styles.shell}>
       <RoleSidebar />
@@ -191,8 +228,8 @@ export function EnvironmentMonitoringContent() {
               <Typography.Text className={styles.eyebrow}>Intelligence Hub / Regional Sector 04</Typography.Text>
               <Typography.Title id="environment-title" level={1}>Environment Monitoring</Typography.Title>
             </div>
-            <Button type="primary" className={styles.exportButton} icon={<AppIcon name="upload" width={14} height={14} />}>
-              Export PDF Report
+            <Button type="primary" className={styles.exportButton} icon={<AppIcon name="upload" width={14} height={14} />} onClick={() => window.print()}>
+              Print PDF Report
             </Button>
           </section>
 
@@ -216,14 +253,14 @@ export function EnvironmentMonitoringContent() {
               <Typography.Title id="forecast-title" level={2}><AppIcon name="calendar" width={18} height={18} />14-Day Strategic Forecast</Typography.Title>
               <Typography.Text>Intelligence nodes tracking</Typography.Text>
             </div>
-            <div className={styles.forecastGrid}>{forecasts.map((item) => <ForecastCard key={item.location} item={item} />)}</div>
+            <div className={styles.forecastGrid}>{forecasts.length === 0 ? <article className={styles.forecastCard}><Typography.Title level={3}>No monitored facility</Typography.Title></article> : forecasts.map((item) => <ForecastCard key={item.location} item={item} />)}</div>
           </section>
 
           <section className={styles.routeSection} aria-labelledby="route-title">
             <div className={styles.sectionTitle}>
               <Typography.Title id="route-title" level={2}><AppIcon name="activity" width={18} height={18} />Supply Chain Route Vulnerability</Typography.Title>
             </div>
-            <RiskTable />
+            <RiskTable rows={routeRows} />
           </section>
           <AlertFeed />
         </main>

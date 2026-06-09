@@ -1,13 +1,11 @@
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../calendar.module.css';
 
-function showNextPhaseNotice(label: string) {
-  window.alert(`${label} akan tersedia pada fase berikutnya.`);
-}
-
 export function CalendarToolbar({ isRunning, monthLabel, onNextMonth, onPrevMonth, onRunWorkflow }: { isRunning: boolean; monthLabel: string; onNextMonth: () => void; onPrevMonth: () => void; onRunWorkflow: () => void }) {
+  const [view, setView] = useState<'month' | 'week'>('month');
   return (
     <section className={styles.toolbar} aria-label="Kontrol kalender">
       <div className={styles.monthControl}>
@@ -23,10 +21,10 @@ export function CalendarToolbar({ isRunning, monthLabel, onNextMonth, onPrevMont
       </div>
 
       <div className={styles.viewToggle} role="tablist" aria-label="Mode kalender">
-        <button type="button" className={styles.activeView} role="tab" aria-selected="true">
+        <button type="button" className={view === 'month' ? styles.activeView : undefined} role="tab" aria-selected={view === 'month'} onClick={() => setView('month')}>
           Bulanan
         </button>
-        <button type="button" role="tab" aria-selected="false" onClick={() => showNextPhaseNotice('Mode kalender mingguan')}>
+        <button type="button" className={view === 'week' ? styles.activeView : undefined} role="tab" aria-selected={view === 'week'} onClick={() => setView('week')}>
           Mingguan
         </button>
         <button type="button" disabled={isRunning} onClick={onRunWorkflow}>

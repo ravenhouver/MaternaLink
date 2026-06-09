@@ -1,12 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { AppIcon } from '@/components/ui/app-icon';
+import { getAlerts, getDashboardSummary, getPuskesmas, getRecommendations, type AlertRecord, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
-import { dashboardActions, dashboardApprovalLogs, dashboardKpis, dashboardMapPoints } from './medicine-sender-data';
+import type { DashboardAction, DashboardKpi, TacticalPoint } from './medicine-sender-data';
 import styles from './medicine-sender.module.css';
 
 const SenderMap = dynamic(() => import('./components/sender-map').then((module) => module.SenderMap), {
@@ -22,6 +23,53 @@ const statusLabels = {
 
 export function MedicineSenderContent() {
   const [mapMode, setMapMode] = useState<'map' | 'satellite'>('map');
+  const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof getDashboardSummary>> | null>(null);
+
+  useEffect(() => {
+    Promise.all([getRecommendations(), getAlerts(), getPuskesmas(), getDashboardSummary()])
+      .then(([nextRecommendations, nextAlerts, nextPuskesmas, nextSummary]) => {
+        setRecommendations(nextRecommendations);
+        setAlerts(nextAlerts);
+        setPuskesmas(nextPuskesmas);
+        setSummary(nextSummary);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const dashboardKpis = useMemo<DashboardKpi[]>(() => [
+    { label: 'Critical clinics', value: String(summary?.recommendations?.critical ?? recommendations.filter((item) => item.urgency === 'CRITICAL').length), delta: 'live DB', tone: 'critical', progress: 45 },
+    { label: 'Warning clinics', value: String(recommendations.filter((item) => item.urgency === 'WARNING').length), delta: 'live DB', tone: 'warning', progress: 30 },
+    { label: 'Safe clinics', value: String(Math.max(0, puskesmas.length - recommendations.length)), delta: 'registered', tone: 'safe', progress: 85 },
+    { label: 'Pending approval', value: String(summary?.recommendations?.pending ?? recommendations.filter((item) => item.status === 'PENDING').length), delta: 'review queue', tone: 'primary', progress: 54, icon: 'clipboardCheck' },
+  ], [puskesmas.length, recommendations, summary]);
+
+  const dashboardActions = useMemo<DashboardAction[]>(() => recommendations.slice(0, 3).map((item, index) => {
+    const alert = alerts.find((row) => row.puskesmasId === item.puskesmasId);
+    return {
+      id: item.id,
+      name: item.puskesmas?.nama ?? item.puskesmasId,
+      status: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'warning' : 'safe',
+      statusLabel: item.urgency,
+      updatedAt: new Date(item.periode).toLocaleDateString('id-ID'),
+      weather: alert?.type.replaceAll('_', ' ') ?? 'No active alert',
+      supply: item.items.map((row) => `${row.obat?.nama ?? row.obatId} ${row.finalQuantity}`).join(', '),
+      pointStatus: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'anticipatory' : 'regular',
+      position: [[-7.8122, 110.3892], [-7.7162, 110.3554], [-7.7765, 110.3689]][index] as [number, number],
+    };
+  }), [alerts, recommendations]);
+
+  const dashboardMapPoints = useMemo<TacticalPoint[]>(() => dashboardActions.map((item) => ({ id: item.id, name: item.name, status: item.pointStatus, position: item.position })), [dashboardActions]);
+
+  const dashboardApprovalLogs = useMemo(() => recommendations.slice(0, 5).map((item) => ({
+    timestamp: item.trackingEvents?.[0] ? new Date(item.trackingEvents[0].createdAt).toLocaleString('id-ID') : new Date(item.periode).toLocaleDateString('id-ID'),
+    entity: item.puskesmas?.nama ?? item.puskesmasId,
+    action: item.items.map((row) => row.obat?.nama ?? row.obatId).join(', ') || item.source,
+    operator: item.trackingEvents?.[0]?.actor?.username ?? 'SYSTEM',
+    status: item.status === 'APPROVED' || item.status === 'DISPATCHED' || item.status === 'RECEIVED' ? 'approved' as const : item.status === 'REJECTED' ? 'rejected' as const : 'pending' as const,
+  })), [recommendations]);
 
   return (
     <div className={styles.senderShell}>
@@ -124,8 +172,8 @@ export function MedicineSenderContent() {
                     <span />
                   </div>
                   <div>
-                    <span><AppIcon name="cloudRain" width={18} height={18} /> 85% Prec.</span>
-                    <span><AppIcon name="zap" width={18} height={18} /> 22 Knots</span>
+                    <span><AppIcon name="cloudRain" width={18} height={18} /> {alerts.length} Alerts</span>
+                    <span><AppIcon name="zap" width={18} height={18} /> {recommendations.length} Routes</span>
                   </div>
                 </aside>
                 <strong className={styles.mapCaption}>District Sallo Map</strong>
@@ -137,6 +185,7 @@ export function MedicineSenderContent() {
                 <Typography.Title id="urgent-actions-title" level={2}>Urgent actions required</Typography.Title>
               </div>
               <div className={styles.actionList}>
+                {dashboardActions.length === 0 ? <section className={styles.actionItem}><Typography.Title level={3}>No urgent actions</Typography.Title><div className={styles.actionFacts}><span><AppIcon name="package" width={18} height={18} /><small>Supply</small>All clear</span></div></section> : null}
                 {dashboardActions.map((clinic) => (
                   <section className={styles.actionItem} key={clinic.id}>
                     <div className={styles.actionTopline}>
@@ -165,6 +214,7 @@ export function MedicineSenderContent() {
                   <tr><th>Timestamp</th><th>Entity</th><th>Action type</th><th>Operator</th><th>Status</th></tr>
                 </thead>
                 <tbody>
+                  {dashboardApprovalLogs.length === 0 ? <tr><td colSpan={5}>Belum ada aktivitas approval.</td></tr> : null}
                   {dashboardApprovalLogs.map((log) => (
                     <tr key={`${log.timestamp}-${log.entity}`}>
                       <td>{log.timestamp}</td><td>{log.entity}</td><td>{log.action}</td><td>{log.operator}</td>
