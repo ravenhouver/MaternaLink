@@ -3,7 +3,9 @@
 import dynamic from 'next/dynamic';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
+import { getNextAlertFeedState } from './alert-feed-state';
 import { environmentalPoints, forecasts, routeVulnerabilities, type ForecastRisk, type RouteVulnerability } from './environment-monitoring-data';
 import styles from './environment-monitoring.module.css';
 
@@ -102,24 +104,34 @@ function ForecastCard({ item }: { item: (typeof forecasts)[number] }) {
 }
 
 function AlertFeed() {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <aside className={styles.alertFeed} aria-label="Live environmental alert feed">
-      <div className={styles.alertFeedHeader}>
+    <aside className={[styles.alertFeed, isCollapsed ? styles.alertFeedCollapsed : ''].filter(Boolean).join(' ')} aria-label="Live environmental alert feed">
+      <button
+        type="button"
+        className={styles.alertFeedHeader}
+        aria-controls="environment-alert-feed-body"
+        aria-expanded={!isCollapsed}
+        onClick={() => setIsCollapsed((current) => getNextAlertFeedState(current))}
+      >
         <span>Live alert feed</span>
         <AppIcon name="alert" width={14} height={14} />
-      </div>
-      <div className={styles.alertFeedBody}>
-        <article>
-          <strong>Flash flood warning</strong>
-          <p>Maybrat district expected 150mm rainfall in 6 hours.</p>
-          <small><i />METEO-G1 - 14:22 WIT</small>
-        </article>
-        <article>
-          <strong className={styles.primaryAlert}>Sea swell advisory</strong>
-          <p>3.5m waves predicted for Misool-Sorong crossing.</p>
-          <small><i className={styles.primaryDot} />NAV-MAR - 15:05 WIT</small>
-        </article>
-      </div>
+      </button>
+      {!isCollapsed ? (
+        <div id="environment-alert-feed-body" className={styles.alertFeedBody}>
+          <article>
+            <strong>Flash flood warning</strong>
+            <p>Maybrat district expected 150mm rainfall in 6 hours.</p>
+            <small><i />METEO-G1 - 14:22 WIT</small>
+          </article>
+          <article>
+            <strong className={styles.primaryAlert}>Sea swell advisory</strong>
+            <p>3.5m waves predicted for Misool-Sorong crossing.</p>
+            <small><i className={styles.primaryDot} />NAV-MAR - 15:05 WIT</small>
+          </article>
+        </div>
+      ) : null}
     </aside>
   );
 }
