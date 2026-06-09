@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
+import { routes } from '@/lib/routes';
 import styles from './patient-registration.module.css';
 
 const methods = [
@@ -48,12 +49,12 @@ export function AddPatientMethodContent() {
             </div>
 
             {method.featured ? (
-              <Link href="/master/add-patient/upload" className={styles.methodAction}>
+              <Link href={routes.kiaUpload} className={styles.methodAction}>
                 <AppIcon name="camera" width={20} height={20} />
                 {method.action}
               </Link>
             ) : (
-              <Link href="/master/add-patient/manual" className={styles.methodAction}>
+              <Link href={routes.manualPatient} className={styles.methodAction}>
                 {method.action}
                 <AppIcon name="arrowRight" width={14} height={14} />
               </Link>

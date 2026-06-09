@@ -1,6 +1,7 @@
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { AppIcon } from '@/components/ui/app-icon';
+import { routes } from '@/lib/routes';
 import styles from '../patients.module.css';
 
 export function PatientsHeader() {
@@ -14,7 +15,7 @@ export function PatientsHeader() {
           Kelola data ibu hamil, pantau status risiko, dan jadwal persalinan dalam satu pandangan terpadu.
         </Typography.Paragraph>
       </div>
-      <Button type="primary" className={styles.addPatientButton} href="/master/add-patient">
+      <Button type="primary" className={styles.addPatientButton} href={routes.newPatient}>
         <AppIcon name="userPlus" width={20} height={20} />
         Tambah Pasien Baru
       </Button>

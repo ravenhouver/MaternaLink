@@ -9,10 +9,6 @@ export class DashboardService {
 
   async getSummary(user: CurrentUser) {
     if (user.role === UserRole.IFK_ADMIN) return this.getIfkSummary(user.role);
-    if (user.role === UserRole.SUPER_ADMIN) {
-      const [bidan, ifk] = await Promise.all([this.getBidanSummary(user), this.getIfkSummary(user.role)]);
-      return { role: user.role, bidan, ifk };
-    }
     return this.getBidanSummary(user);
   }
 

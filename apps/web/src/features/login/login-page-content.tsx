@@ -28,7 +28,7 @@ export function LoginPageContent() {
 
     try {
       const user = await login(username.trim(), password);
-      router.replace(user.role === 'IFK_ADMIN' ? routes.ifkRecommendations : routes.queue);
+      router.replace(user.role === 'IFK_ADMIN' ? routes.ifk : routes.dashboard);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'Login gagal');
     } finally {

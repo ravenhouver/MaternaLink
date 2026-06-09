@@ -17,7 +17,7 @@ Full-stack maternal health supply-chain planning app for puskesmas medicine need
 MaternaLink models a puskesmas medicine planning workflow from master data to prediction and delivery decisions. The repository contains:
 
 - NestJS REST API with Prisma and PostgreSQL.
-- Next.js dashboard for bidan/admin workflows.
+- Next.js dashboard for bidan and IFK workflows.
 - Docker Compose stack for local API, web, and database.
 - Demo seed data and e2e tests for presentation-ready flows.
 
@@ -37,9 +37,8 @@ Seeded users all use password `password123`.
 
 | Username | Role | Landing route |
 |---|---|---|
-| `bidan` | `BIDAN_PUSKESMAS` | `/queue` |
-| `ifk` | `IFK_ADMIN` | `/ifk/recommendations` |
-| `admin` | `SUPER_ADMIN` | `/queue` |
+| `bidan` | `BIDAN_PUSKESMAS` | `/dashboard` |
+| `ifk` | `IFK_ADMIN` | `/ifk` |
 
 ## Features
 
@@ -48,7 +47,7 @@ Seeded users all use password `password123`.
 - Deterministic demand forecast per puskesmas and period.
 - Predictive LPLPO generation from forecast output.
 - Allocation plan simulation with route disruption and cold-chain alerts.
-- Responsive dashboard pages for overview, patients/master data, forecast calendar, medicine needs, and medicine sender flows.
+- Responsive dashboard pages for overview, patients/master data, forecast calendar, medicine needs, and IFK flows.
 
 ## Tech Stack
 
@@ -221,7 +220,7 @@ Do not commit real production credentials or secrets.
 | `/ifk/environment` | Environment/risk context view. |
 | `/ifk/decision-history` | Decision history view. |
 
-Old routes such as `/master`, `/inputs`, `/forecast`, `/lplpo`, `/distribution`, and `/medicine-sender/*` redirect to the matching new route names.
+Role entry routes are `/dashboard` for bidan and `/ifk` for IFK.
 
 ## FastAPI AI Stub
 

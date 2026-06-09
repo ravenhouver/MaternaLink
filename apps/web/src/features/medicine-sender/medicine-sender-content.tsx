@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { AppIcon } from '@/components/ui/app-icon';
+import { routes } from '@/lib/routes';
 import { dashboardActions, dashboardApprovalLogs, dashboardKpis, dashboardMapPoints } from './medicine-sender-data';
 import styles from './medicine-sender.module.css';
 
@@ -34,19 +35,19 @@ export function MedicineSenderContent() {
         </div>
 
         <nav className={styles.roleNav}>
-          <a className={styles.roleNavActive} href="/medicine-sender">
+          <a className={styles.roleNavActive} href={routes.ifk}>
             <AppIcon name="home" width={18} height={18} />
             Dashboard
           </a>
-          <a href="/medicine-sender/recommendations">
+          <a href={routes.ifkRecommendations}>
             <AppIcon name="userPlus" width={18} height={18} />
             Distribution
           </a>
-          <a href="/medicine-sender/clinics">
+          <a href={routes.ifkClinics}>
             <AppIcon name="users" width={18} height={18} />
             Clinic List
           </a>
-          <a href="/medicine-sender/environment">
+          <a href={routes.ifkEnvironment}>
             <AppIcon name="calendar" width={18} height={18} />
             Environment Monitoring
           </a>
@@ -67,7 +68,7 @@ export function MedicineSenderContent() {
           <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
             <a href="/">Home</a>
             <AppIcon name="chevronRight" width={14} height={14} />
-            <a href="/medicine-sender/clinics">Clinic List</a>
+            <a href={routes.ifkClinics}>Clinic List</a>
             <AppIcon name="chevronRight" width={14} height={14} />
             <span>Medicine Sender</span>
           </nav>
@@ -98,7 +99,7 @@ export function MedicineSenderContent() {
                   {item.icon ? <AppIcon name={item.icon} width={24} height={24} /> : null}
                 </div>
                 {item.tone === 'primary' ? (
-                  <Button className={styles.reviewQueueButton} href="/medicine-sender/recommendations">Review queue</Button>
+                  <Button className={styles.reviewQueueButton} href={routes.ifkRecommendations}>Review queue</Button>
                 ) : (
                   <div className={styles.progressTrack} aria-hidden="true"><span style={{ width: `${item.progress}%` }} /></div>
                 )}

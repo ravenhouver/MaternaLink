@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
+import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
 type ClinicRisk = 'critical' | 'warning' | 'routine';
@@ -112,10 +113,10 @@ function ClinicsSidebar({ detail }: { detail: boolean }) {
         </div>
       </div>
       <nav className={styles.clinicsNav} aria-label="Navigasi medicine sender">
-        <a href="/medicine-sender"><AppIcon name="home" width={20} height={20} />Dashboard</a>
-        <a className={detail ? styles.clinicsNavActive : undefined} href="/medicine-sender/recommendations"><AppIcon name="userPlus" width={20} height={20} />Distribution</a>
-        <a className={!detail ? styles.clinicsNavActive : undefined} href="/medicine-sender/clinics"><AppIcon name="users" width={20} height={20} />Clinic List</a>
-        <a href="/medicine-sender/environment"><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
+        <a href={routes.ifk}><AppIcon name="home" width={20} height={20} />Dashboard</a>
+        <a className={detail ? styles.clinicsNavActive : undefined} href={routes.ifkRecommendations}><AppIcon name="userPlus" width={20} height={20} />Distribution</a>
+        <a className={!detail ? styles.clinicsNavActive : undefined} href={routes.ifkClinics}><AppIcon name="users" width={20} height={20} />Clinic List</a>
+        <a href={routes.ifkEnvironment}><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
       </nav>
     </aside>
   );

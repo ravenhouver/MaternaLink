@@ -15,7 +15,7 @@ export class WorkflowController {
 
   @ApiOperation({ summary: 'Run deterministic end-to-end demo workflow' })
   @ApiResponse({ status: 201, description: 'Demo workflow completed' })
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('demo/run')
   runDemo(@Req() request: { user: CurrentUser }) {
     return this.service.runDemo(request.user);
@@ -23,7 +23,7 @@ export class WorkflowController {
 
   @ApiOperation({ summary: 'Get deterministic demo workflow state' })
   @ApiResponse({ status: 200, description: 'Demo workflow state returned' })
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN)
   @Get('demo/state')
   getDemoState() {
     return this.service.getDemoState();

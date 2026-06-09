@@ -5,6 +5,7 @@ import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
+import { routes } from '@/lib/routes';
 import { getNextAlertFeedState } from './alert-feed-state';
 import { environmentalPoints, forecasts, routeVulnerabilities, type ForecastRisk, type RouteVulnerability } from './environment-monitoring-data';
 import styles from './environment-monitoring.module.css';
@@ -38,10 +39,10 @@ function RoleSidebar() {
       </div>
 
       <nav className={styles.nav} aria-label="Navigasi medicine sender">
-        <a href="/medicine-sender"><AppIcon name="home" width={18} height={18} />Dashboard</a>
-        <a href="/medicine-sender/recommendations"><AppIcon name="userPlus" width={18} height={18} />Distribution</a>
-        <a href="/medicine-sender/clinics"><AppIcon name="users" width={18} height={18} />Clinic List</a>
-        <a className={styles.navActive} href="/medicine-sender/environment"><AppIcon name="calendar" width={18} height={18} />Environment Monitoring</a>
+        <a href={routes.ifk}><AppIcon name="home" width={18} height={18} />Dashboard</a>
+        <a href={routes.ifkRecommendations}><AppIcon name="userPlus" width={18} height={18} />Distribution</a>
+        <a href={routes.ifkClinics}><AppIcon name="users" width={18} height={18} />Clinic List</a>
+        <a className={styles.navActive} href={routes.ifkEnvironment}><AppIcon name="calendar" width={18} height={18} />Environment Monitoring</a>
       </nav>
 
       <div className={styles.supportNav}>
@@ -62,7 +63,7 @@ function Topbar() {
       <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
         <a href="/">Home</a>
         <AppIcon name="chevronRight" width={14} height={14} />
-        <a href="/medicine-sender/clinics">Clinic List</a>
+        <a href={routes.ifkClinics}>Clinic List</a>
         <AppIcon name="chevronRight" width={14} height={14} />
         <span>Environment Monitoring</span>
       </nav>

@@ -12,7 +12,7 @@ import { ExaminationsService } from './examinations.service';
 export class ExaminationsController {
   constructor(private readonly service: ExaminationsService) {}
 
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post()
   create(@Body() body: CreateExaminationDto, @Req() request: { user: CurrentUser }) {
     return this.service.create(body, request.user);

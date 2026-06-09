@@ -55,8 +55,9 @@ async function main() {
   const demoUsers = [
     { username: 'bidan', displayName: 'Bidan Sari', role: 'BIDAN_PUSKESMAS' as const, puskesmasId: 'PKM-001' },
     { username: 'ifk', displayName: 'Admin IFK Sleman', role: 'IFK_ADMIN' as const, puskesmasId: null },
-    { username: 'admin', displayName: 'Super Admin MaternaLink', role: 'SUPER_ADMIN' as const, puskesmasId: null },
   ];
+
+  await prisma.user.deleteMany({ where: { username: 'admin' } });
 
   for (const user of demoUsers) {
     await prisma.user.upsert({

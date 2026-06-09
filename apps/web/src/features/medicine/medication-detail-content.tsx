@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
+import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
 const historyRows = [
@@ -19,7 +20,7 @@ export function MedicationDetailContent() {
       <header className={styles.detailHeader}>
         <div>
           <nav className={styles.detailBreadcrumb} aria-label="Breadcrumb">
-            <Link href="/lplpo">Medicine Needs</Link>
+            <Link href={routes.medicineNeeds}>Medicine Needs</Link>
             <AppIcon name="chevronRight" width={14} height={14} />
             <span>Oxytocin 10IU</span>
           </nav>
@@ -90,7 +91,7 @@ export function MedicationDetailContent() {
       <footer className={styles.detailFooter}>
         <button type="button" className={styles.removeButton}><AppIcon name="trash" width={18} height={18} />Remove from Inventory</button>
         <div>
-          <Link href="/lplpo" className={styles.backButton}>Back</Link>
+          <Link href={routes.medicineNeeds} className={styles.backButton}>Back</Link>
           <button type="button" className={styles.detailSaveButton}><AppIcon name="save" width={18} height={18} />Save Changes</button>
         </div>
       </footer>

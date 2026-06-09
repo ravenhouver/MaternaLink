@@ -2,6 +2,7 @@ import Typography from 'antd/es/typography';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
+import { routes } from '@/lib/routes';
 import { inputMethods } from '../registration-data';
 import { InputMethodCard } from './input-method-card';
 import styles from '../patient-registration.module.css';
@@ -14,7 +15,7 @@ export function AddPatientMethodSelector({ onSelectManual }: AddPatientMethodSel
   return (
     <PageContainer size="wide" className={styles.page}>
       <Breadcrumbs
-        items={[{ label: 'Beranda', href: '/' }, { label: 'Daftar Pasien', href: '/master' }, { label: 'Tambah Pasien Baru' }]}
+        items={[{ label: 'Beranda', href: routes.dashboard }, { label: 'Daftar Pasien', href: routes.patients }, { label: 'Tambah Pasien Baru' }]}
       />
 
       <section className={styles.header}>

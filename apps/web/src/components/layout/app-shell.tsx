@@ -25,7 +25,6 @@ export function AppShell({ children }: AppShellProps) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const isLogin = pathname === routes.login;
-  const isMedicineSender = pathname.startsWith('/medicine-sender');
   const isEmbeddedIfkPage =
     pathname === routes.ifk ||
     pathname === routes.ifkRecommendations ||
@@ -44,7 +43,7 @@ export function AppShell({ children }: AppShellProps) {
 
       if (!currentUser && !isLogin) router.replace(routes.login);
       if (currentUser && isLogin) {
-        router.replace(currentUser.role === 'IFK_ADMIN' ? routes.ifkRecommendations : routes.queue);
+        router.replace(currentUser.role === 'IFK_ADMIN' ? routes.ifk : routes.dashboard);
       }
     });
 
@@ -69,7 +68,7 @@ export function AppShell({ children }: AppShellProps) {
     },
   };
 
-  if (isLogin || isMedicineSender) {
+  if (isLogin) {
     return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
   }
 

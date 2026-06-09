@@ -12,7 +12,7 @@ import { QueueService } from './queue.service';
 export class QueueController {
   constructor(private readonly service: QueueService) {}
 
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post()
   create(@Body() body: CreateQueueDto, @Req() request: { user: CurrentUser }) {
     return this.service.create(body, request.user);
@@ -23,7 +23,7 @@ export class QueueController {
     return this.service.today(request.user, puskesmasId);
   }
 
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.SUPER_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Patch(':id/status')
   updateStatus(@Param('id') id: string, @Body() body: UpdateQueueStatusDto) {
     return this.service.updateStatus(id, body);
