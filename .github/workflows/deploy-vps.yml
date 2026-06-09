@@ -20,24 +20,37 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_DEPLOY_PATH: ${{ secrets.VPS_DEPLOY_PATH }}
         run: |
           set -euo pipefail
 
-          if [ -z "${VPS_HOST}" ] || [ -z "${VPS_USER}" ] || [ -z "${VPS_PASSWORD}" ] || [ -z "${VPS_DEPLOY_PATH}" ]; then
-            echo "Missing one or more required secrets: VPS_HOST, VPS_USER, VPS_PASSWORD, VPS_DEPLOY_PATH" >&2
+          if [ -z "${VPS_HOST}" ] || [ -z "${VPS_USER}" ] || [ -z "${VPS_DEPLOY_PATH}" ]; then
+            echo "Missing one or more required secrets: VPS_HOST, VPS_USER, VPS_DEPLOY_PATH" >&2
+            exit 1
+          fi
+
+          if [ -z "${VPS_PASSWORD}" ] && [ -z "${VPS_SSH_KEY}" ]; then
+            echo "Set VPS_SSH_KEY for key auth or VPS_PASSWORD for password auth" >&2
             exit 1
           fi
 
           sudo apt-get update
           sudo apt-get install -y sshpass
 
-          sshpass -p "${VPS_PASSWORD}" ssh \
-            -o StrictHostKeyChecking=accept-new \
-            -o PreferredAuthentications=password \
-            -o PubkeyAuthentication=no \
-            -o KbdInteractiveAuthentication=no \
-            "${VPS_USER}@${VPS_HOST}" \
+          SSH_OPTS="-o StrictHostKeyChecking=accept-new"
+          SSH_KEY_FILE=""
+
+          if [ -n "${VPS_SSH_KEY}" ]; then
+            SSH_KEY_FILE="${RUNNER_TEMP}/maternalink_vps_key"
+            printf '%s\n' "${VPS_SSH_KEY}" > "${SSH_KEY_FILE}"
+            chmod 600 "${SSH_KEY_FILE}"
+            SSH_COMMAND=(ssh ${SSH_OPTS} -i "${SSH_KEY_FILE}")
+          else
+            SSH_COMMAND=(sshpass -p "${VPS_PASSWORD}" ssh ${SSH_OPTS} -o PreferredAuthentications=password -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no)
+          fi
+
+          "${SSH_COMMAND[@]}" "${VPS_USER}@${VPS_HOST}" \
             "VPS_DEPLOY_PATH='${VPS_DEPLOY_PATH}' bash -s" <<'REMOTE'
           set -euo pipefail
 
