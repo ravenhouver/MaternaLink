@@ -25,6 +25,12 @@ export function AppShell({ children }: AppShellProps) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const isLogin = pathname === routes.login;
   const isMedicineSender = pathname.startsWith('/medicine-sender');
+  const isEmbeddedIfkPage =
+    pathname === routes.ifk ||
+    pathname === routes.ifkRecommendations ||
+    pathname === routes.ifkClinics ||
+    pathname === routes.ifkEnvironment ||
+    pathname === routes.ifkDecisionHistory;
   const hasTopbar = pathname !== routes.dashboard;
 
   useEffect(() => {
@@ -63,6 +69,11 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   if (isLogin || isMedicineSender) {
+    return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
+  }
+
+  if (isEmbeddedIfkPage) {
+    if (isAuthLoading || !user) return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
     return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
   }
 

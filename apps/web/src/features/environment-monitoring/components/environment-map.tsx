@@ -36,6 +36,9 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
 
   useEffect(() => {
     if (!mapRef.current) return undefined;
+    let disposed = false;
+    let frameId: number | null = null;
+    let initTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const desktopView: L.LatLngExpression = [-2.2, 122.5];
     const mobileView: L.LatLngExpression = [-1.25, 131.05];
@@ -54,9 +57,11 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
 
     const canvas = L.DomUtil.create('canvas', styles.heatmapCanvas, map.getPanes().overlayPane);
     const context = canvas.getContext('2d');
+    const canUseMap = () => !disposed && Boolean(mapRef.current?.isConnected && map.getPane('mapPane'));
     const syncResponsiveView = () => {
-      if (!mapRef.current) return;
-      if (mapRef.current.clientWidth < 560) {
+      const container = mapRef.current;
+      if (!container || !canUseMap()) return;
+      if (container.clientWidth < 560) {
         map.setView(mobileView, 6, { animate: false });
       } else {
         map.setView(desktopView, 5, { animate: false });
@@ -64,6 +69,7 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
     };
 
     const drawHeatmap = () => {
+      if (!canUseMap()) return;
       const size = map.getSize();
       const ratio = window.devicePixelRatio || 1;
       canvas.width = size.x * ratio;
@@ -90,10 +96,19 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
     };
 
     map.on('move zoom resize', drawHeatmap);
+    const scheduleMapSync = () => {
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        if (!canUseMap()) return;
+        map.invalidateSize();
+        syncResponsiveView();
+        drawHeatmap();
+      });
+    };
+
     const resizeObserver = new ResizeObserver(() => {
-      syncResponsiveView();
-      map.invalidateSize();
-      drawHeatmap();
+      scheduleMapSync();
     });
     resizeObserver.observe(mapRef.current);
 
@@ -114,13 +129,14 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
         .addTo(map);
     });
 
-    setTimeout(() => {
-      syncResponsiveView();
-      map.invalidateSize();
-      drawHeatmap();
+    initTimeoutId = setTimeout(() => {
+      scheduleMapSync();
     }, 0);
 
     return () => {
+      disposed = true;
+      if (initTimeoutId) clearTimeout(initTimeoutId);
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
       map.off('move zoom resize', drawHeatmap);
       canvas.remove();

@@ -34,6 +34,10 @@ const statusLabel: Record<MedicationStatus, string> = {
   critical: 'CRITICAL',
 };
 
+function isMedicationRow(row: MedicationRow | null | undefined): row is MedicationRow {
+  return Boolean(row?.slug && row.name && row.status);
+}
+
 function showNextPhaseNotice(label: string) {
   window.alert(`${label} akan tersedia pada fase berikutnya.`);
 }
@@ -47,16 +51,24 @@ export function MedicineNeedsContent() {
   useEffect(() => {
     getLplpoRows({ puskesmasId: 'PKM-001', periode: '2026-06-01' })
       .then((lplpoRows) => {
-        if (!lplpoRows.length) return;
-        const mappedRows = lplpoRows.map((row) => ({
-          slug: row.obatId.toLowerCase(),
-          name: row.obatId,
-          stock: row.jumlahDiminta,
-          unit: 'unit',
-          estimatedEmpty: row.daysOfStock ? `${Math.round(row.daysOfStock)} days` : 'Needs review',
-          status: row.jumlahDiminta > 20 ? 'critical' as const : row.jumlahDiminta > 0 ? 'warning' as const : 'safe' as const,
-          lastUpdated: new Date(row.periode).toLocaleDateString('id-ID'),
-        }));
+        if (!Array.isArray(lplpoRows) || !lplpoRows.length) return;
+        const mappedRows = lplpoRows
+          .map((row, index) => {
+            const name = row?.obatId || 'Unknown medication';
+            const stock = row?.jumlahDiminta ?? 0;
+
+            return {
+              slug: `${name.toLowerCase()}-${row?.id ?? index}`,
+              name,
+              stock,
+              unit: 'unit',
+              estimatedEmpty: row?.daysOfStock ? `${Math.round(row.daysOfStock)} days` : 'Needs review',
+              status: stock > 20 ? 'critical' as const : stock > 0 ? 'warning' as const : 'safe' as const,
+              lastUpdated: row?.periode ? new Date(row.periode).toLocaleDateString('id-ID') : 'Unknown',
+            };
+          })
+          .filter(isMedicationRow);
+        if (!mappedRows.length) return;
         setRows(mappedRows);
         setSelectedMedication(mappedRows[0]);
       })
@@ -64,6 +76,7 @@ export function MedicineNeedsContent() {
   }, []);
 
   const closeModal = () => setActiveModal(null);
+  const safeRows = rows.filter(isMedicationRow);
 
   return (
     <PageContainer size="wide" className={styles.page}>
@@ -97,7 +110,7 @@ export function MedicineNeedsContent() {
             <span>Medication Name</span>
             <select defaultValue="">
               <option value="" disabled>Select Medication...</option>
-              {rows.map((item) => <option key={item.name}>{item.name}</option>)}
+              {safeRows.map((item) => <option key={item.slug}>{item.name}</option>)}
             </select>
           </label>
           <label className={styles.fieldGroup}>
@@ -135,8 +148,8 @@ export function MedicineNeedsContent() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((item) => (
-                <tr key={item.name}>
+              {safeRows.map((item) => (
+                <tr key={item.slug}>
                   <td data-label="Medication Name"><strong>{item.name}</strong></td>
                   <td data-label="Stock">{item.stock}</td>
                   <td data-label="Unit">{item.unit}</td>

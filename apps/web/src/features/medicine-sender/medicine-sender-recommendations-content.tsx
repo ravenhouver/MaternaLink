@@ -29,6 +29,44 @@ function StatusBadge({ urgency }: { urgency: RecommendationUrgency }) {
   return <span className={[styles.recoBadge, styles[urgencyLabel[urgency]]].join(' ')}>{urgency}</span>;
 }
 
+function RecommendationsSidebar() {
+  return (
+    <aside className={styles.recoSidebar} aria-label="Medicine sender navigation">
+      <div className={styles.recoBrand}>
+        <span><AppIcon name="briefcase" width={20} height={20} /></span>
+        <div><strong>IFK</strong><small>District Monitoring</small></div>
+      </div>
+      <nav className={styles.recoNav} aria-label="Navigasi IFK">
+        <a href={routes.ifk}><AppIcon name="home" width={20} height={20} />Dashboard</a>
+        <a className={styles.recoNavActive} href={routes.ifkRecommendations}><AppIcon name="userPlus" width={20} height={20} />Distribution</a>
+        <a href={routes.ifkClinics}><AppIcon name="users" width={20} height={20} />Clinic List</a>
+        <a href={routes.ifkEnvironment}><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
+      </nav>
+    </aside>
+  );
+}
+
+function RecommendationsTopbar() {
+  return (
+    <header className={styles.recoTopbar}>
+      <div className={styles.recoCrumbs}>
+        <span>Home</span>
+        <AppIcon name="chevronRight" width={14} height={14} />
+        <span>IFK</span>
+        <AppIcon name="chevronRight" width={14} height={14} />
+        <strong>Distribution Recommendations</strong>
+      </div>
+      <div className={styles.recoTopActions}>
+        <button type="button" aria-label="Notifikasi"><AppIcon name="bell" width={18} height={18} /><i /></button>
+        <button type="button" aria-label="Pengaturan"><AppIcon name="settings" width={18} height={18} /></button>
+        <span />
+        <div><strong>Pharmacy Management</strong><small>Administrator</small></div>
+        <b>PM</b>
+      </div>
+    </header>
+  );
+}
+
 export function MedicineSenderRecommendationsContent() {
   const [rows, setRows] = useState<DistributionRecommendation[]>([]);
   const [modal, setModal] = useState<ModalKind>(null);
@@ -113,31 +151,37 @@ export function MedicineSenderRecommendationsContent() {
   }
 
   return (
-    <main className={styles.recoPage}>
-      <section className={styles.recoTitleRow}>
-        <div><p>Logistics Intelligence</p><h1>Distribution Recommendations</h1></div>
-        <a href={routes.ifkDecisionHistory}>Decision History</a>
-      </section>
-      <section className={styles.recoStats}>{stats.map((stat) => <article className={styles[stat.tone]} key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></article>)}</section>
-      <section className={styles.recoToolbar}>
-        <button type="button" onClick={() => setModal('filter')}><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
-        <button type="button" onClick={() => void refreshRows()}><AppIcon name="rotateCcw" width={18} height={18} />Refresh</button>
-      </section>
-      {error ? <p className={styles.recoError}>{error}</p> : null}
-      <RecommendationTable
-        isLoading={isLoading}
-        rows={rows}
-        onDragStart={setDraggingId}
-        onDrop={dropOn}
-        onMove={moveRow}
-        onOpen={(kind, row) => { setSelected(row); setModal(kind); }}
-      />
-      {modal === 'edit' && selected ? <EditModal row={selected} onClose={() => setModal(null)} onSaved={refreshRows} /> : null}
-      {modal === 'track' && selected ? <TrackModal row={selected} onClose={() => setModal(null)} /> : null}
-      {modal === 'filter' ? <FilterModal statusFilter={statusFilter} onApply={(next) => { setStatusFilter(next); setModal(null); }} onClose={() => setModal(null)} /> : null}
-      {modal === 'approve' && selected ? <ConfirmModal kind="approve" row={selected} onClose={() => setModal(null)} onConfirm={() => void decide('approve')} /> : null}
-      {modal === 'reject' && selected ? <ConfirmModal kind="reject" row={selected} onClose={() => setModal(null)} onConfirm={(note) => void decide('reject', note)} /> : null}
-    </main>
+    <div className={styles.recoShell}>
+      <RecommendationsSidebar />
+      <div className={styles.recoWorkspace}>
+        <RecommendationsTopbar />
+        <main className={styles.recoPage}>
+          <section className={styles.recoTitleRow}>
+            <div><p>Logistics Intelligence</p><h1>Distribution Recommendations</h1></div>
+            <a href={routes.ifkDecisionHistory}>Decision History</a>
+          </section>
+          <section className={styles.recoStats}>{stats.map((stat) => <article className={styles[stat.tone]} key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></article>)}</section>
+          <section className={styles.recoToolbar}>
+            <button type="button" onClick={() => setModal('filter')}><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
+            <button type="button" onClick={() => void refreshRows()}><AppIcon name="rotateCcw" width={18} height={18} />Refresh</button>
+          </section>
+          {error ? <p className={styles.recoError}>{error}</p> : null}
+          <RecommendationTable
+            isLoading={isLoading}
+            rows={rows}
+            onDragStart={setDraggingId}
+            onDrop={dropOn}
+            onMove={moveRow}
+            onOpen={(kind, row) => { setSelected(row); setModal(kind); }}
+          />
+          {modal === 'edit' && selected ? <EditModal row={selected} onClose={() => setModal(null)} onSaved={refreshRows} /> : null}
+          {modal === 'track' && selected ? <TrackModal row={selected} onClose={() => setModal(null)} /> : null}
+          {modal === 'filter' ? <FilterModal statusFilter={statusFilter} onApply={(next) => { setStatusFilter(next); setModal(null); }} onClose={() => setModal(null)} /> : null}
+          {modal === 'approve' && selected ? <ConfirmModal kind="approve" row={selected} onClose={() => setModal(null)} onConfirm={() => void decide('approve')} /> : null}
+          {modal === 'reject' && selected ? <ConfirmModal kind="reject" row={selected} onClose={() => setModal(null)} onConfirm={(note) => void decide('reject', note)} /> : null}
+        </main>
+      </div>
+    </div>
   );
 }
 
