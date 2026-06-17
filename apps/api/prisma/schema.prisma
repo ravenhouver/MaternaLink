@@ -81,6 +81,7 @@ enum AllocationStatus {
 enum UserRole {
   BIDAN_PUSKESMAS
   IFK_ADMIN
+  SUPER_ADMIN
 }
 
 enum QueueStatus {

@@ -11,6 +11,11 @@ type NavItem = {
 };
 
 export const navItems = [
+  { key: routes.admin, href: routes.admin, icon: 'grid', label: 'Dashboard', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminHealthCenters, href: routes.adminHealthCenters, icon: 'briefcase', label: 'Health Centers', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminUsers, href: routes.adminUsers, icon: 'users', label: 'User Accounts', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminMedicines, href: routes.adminMedicines, icon: 'clipboard', label: 'Medicine List', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminFacilityProfiles, href: routes.adminFacilityProfiles, icon: 'archive', label: 'Facility Profiles', roles: ['SUPER_ADMIN'] },
   { key: routes.dashboard, href: routes.dashboard, icon: 'home', label: 'Dashboard', roles: ['BIDAN_PUSKESMAS'] },
   { key: routes.queue, href: routes.queue, icon: 'userPlus', label: 'Patient Queue', roles: ['BIDAN_PUSKESMAS'] },
   { key: routes.patients, href: routes.patients, icon: 'users', label: 'Patient List', roles: ['BIDAN_PUSKESMAS'] },
@@ -39,17 +44,23 @@ export function resolveSelectedKey(pathname: string) {
   if (pathname.startsWith(routes.ifkClinics)) return routes.ifkClinics;
   if (pathname.startsWith(routes.ifkRecommendations)) return routes.ifkRecommendations;
   if (pathname.startsWith(routes.ifk)) return routes.ifk;
+  if (pathname.startsWith(routes.adminHealthCenters)) return routes.adminHealthCenters;
+  if (pathname.startsWith(routes.adminUsers)) return routes.adminUsers;
+  if (pathname.startsWith(routes.adminMedicines)) return routes.adminMedicines;
+  if (pathname.startsWith(routes.adminFacilityProfiles)) return routes.adminFacilityProfiles;
+  if (pathname.startsWith(routes.admin)) return routes.admin;
   return routes.dashboard;
 }
 
 export function getProfile(user: CurrentUser) {
   return {
     name: user.username,
-    role: user.role === 'IFK_ADMIN' ? 'Admin IFK' : user.puskesmasId ?? 'Bidan Puskesmas',
+    role: user.role === 'SUPER_ADMIN' ? 'Superadmin' : user.role === 'IFK_ADMIN' ? 'Admin IFK' : user.puskesmasId ?? 'Bidan Puskesmas',
     photo: user.role === 'IFK_ADMIN' ? '/figma-medicine/bidan-sarah.png' : '/figma-patients/doctor-siti.png',
   };
 }
 
 export function getBrandHref(role: UserRole) {
+  if (role === 'SUPER_ADMIN') return routes.admin;
   return role === 'IFK_ADMIN' ? routes.ifk : routes.dashboard;
 }

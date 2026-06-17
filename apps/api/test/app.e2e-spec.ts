@@ -224,6 +224,27 @@ describe('MaternaLink API', () => {
     );
   });
 
+  it('exposes super admin master-data dashboard metrics', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'password123' })
+      .expect(201);
+    const cookie = login.headers['set-cookie'];
+
+    const summary = await request(app.getHttpServer()).get('/api/dashboard/summary').set('Cookie', cookie).expect(200);
+    expect(summary.body).toEqual(
+      expect.objectContaining({
+        role: 'SUPER_ADMIN',
+        masterData: expect.objectContaining({
+          healthCenters: expect.any(Number),
+          users: expect.any(Number),
+          medicines: expect.any(Number),
+          inactiveAccounts: expect.any(Number),
+        }),
+      }),
+    );
+  });
+
   it('lists medicine master data', async () => {
     const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));

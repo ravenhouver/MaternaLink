@@ -31,6 +31,7 @@ export function AppShell({ children }: AppShellProps) {
     pathname === routes.ifkClinics ||
     pathname === routes.ifkEnvironment ||
     pathname === routes.ifkDecisionHistory;
+  const isEmbeddedSuperAdminPage = pathname.startsWith(routes.admin);
   const hasTopbar = pathname !== routes.dashboard;
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function AppShell({ children }: AppShellProps) {
 
       if (!currentUser && !isLogin) router.replace(routes.login);
       if (currentUser && isLogin) {
-        router.replace(currentUser.role === 'IFK_ADMIN' ? routes.ifk : routes.dashboard);
+        router.replace(currentUser.role === 'SUPER_ADMIN' ? routes.admin : currentUser.role === 'IFK_ADMIN' ? routes.ifk : routes.dashboard);
       }
     });
 
@@ -72,7 +73,7 @@ export function AppShell({ children }: AppShellProps) {
     return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
   }
 
-  if (isEmbeddedIfkPage) {
+  if (isEmbeddedIfkPage || isEmbeddedSuperAdminPage) {
     if (isAuthLoading || !user) return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
     return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
   }

@@ -1,6 +1,6 @@
 export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api';
 
-export type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN';
+export type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN' | 'SUPER_ADMIN';
 
 export type CurrentUser = {
   id: string;
@@ -50,6 +50,7 @@ export type DashboardSummary = {
   medicine?: { criticalCount: number };
   recommendations?: { pending: number; approved: number; rejected: number; critical: number };
   deliveries?: { active: number };
+  masterData?: { healthCenters: number; users: number; medicines: number; inactiveAccounts: number };
 };
 
 export type QueueRecord = {
