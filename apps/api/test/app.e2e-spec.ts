@@ -40,7 +40,8 @@ describe('MaternaLink API', () => {
   });
 
   it('lists puskesmas master data', async () => {
-    const response = await request(app.getHttpServer()).get('/api/master/puskesmas').expect(200);
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const response = await request(app.getHttpServer()).get('/api/master/puskesmas').set('Cookie', login.headers['set-cookie']).expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'PKM-001' })]));
   });
 
@@ -57,9 +58,43 @@ describe('MaternaLink API', () => {
     expect(me.body).toEqual(expect.objectContaining({ username: 'bidan', role: 'BIDAN_PUSKESMAS', puskesmasId: 'PKM-001' }));
   });
 
+  it('accepts bearer tokens for authenticated API clients', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+
+    expect(login.body).toEqual(expect.objectContaining({ token: expect.any(String), user: expect.objectContaining({ username: 'bidan' }) }));
+
+    const me = await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .expect(200);
+    expect(me.body).toEqual(expect.objectContaining({ username: 'bidan', role: 'BIDAN_PUSKESMAS' }));
+  });
+
   it('rejects invalid login and missing session', async () => {
     await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'wrong123' }).expect(401);
     await request(app.getHttpServer()).get('/api/auth/me').expect(401);
+  });
+
+  it('requires authentication for operational data and enforces role authorization', async () => {
+    await request(app.getHttpServer()).get('/api/master/puskesmas').expect(401);
+    await request(app.getHttpServer()).post('/api/master/obat').send({}).expect(401);
+    await request(app.getHttpServer()).get('/api/forecast/runs').expect(401);
+    await request(app.getHttpServer()).get('/api/inputs/stok').expect(401);
+    await request(app.getHttpServer()).get('/api/lplpo').expect(401);
+    await request(app.getHttpServer()).get('/api/distribution/alerts').expect(401);
+    await request(app.getHttpServer()).get('/api/distribution/plans').expect(401);
+
+    const bidanLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+    const bidanCookie = bidanLogin.headers['set-cookie'];
+
+    await request(app.getHttpServer()).get('/api/master/puskesmas').set('Cookie', bidanCookie).expect(200);
+    await request(app.getHttpServer()).post('/api/master/obat').set('Cookie', bidanCookie).send({}).expect(403);
   });
 
   it('returns fallback AI gateway health', async () => {
@@ -362,13 +397,17 @@ describe('MaternaLink API', () => {
   });
 
   it('lists medicine master data', async () => {
-    const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const response = await request(app.getHttpServer()).get('/api/master/obat').set('Cookie', login.headers['set-cookie']).expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));
   });
 
   it('runs deterministic forecast and lists runs', async () => {
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const cookie = login.headers['set-cookie'];
     const runResponse = await request(app.getHttpServer())
       .post('/api/forecast/run')
+      .set('Cookie', cookie)
       .send({ puskesmasId: 'PKM-001', periode: '2025-03-01' })
       .expect(201);
 
@@ -381,12 +420,13 @@ describe('MaternaLink API', () => {
       }),
     );
 
-    const listResponse = await request(app.getHttpServer()).get('/api/forecast/runs').expect(200);
+    const listResponse = await request(app.getHttpServer()).get('/api/forecast/runs').set('Cookie', cookie).expect(200);
     expect(listResponse.body.length).toBeGreaterThan(0);
   });
 
   it('exposes remote puskesmas logistics metadata from master data', async () => {
-    const response = await request(app.getHttpServer()).get('/api/master/puskesmas').expect(200);
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const response = await request(app.getHttpServer()).get('/api/master/puskesmas').set('Cookie', login.headers['set-cookie']).expect(200);
 
     expect(response.body).toEqual(
       expect.arrayContaining([
@@ -405,8 +445,10 @@ describe('MaternaLink API', () => {
   });
 
   it('stores maternal context fields used by forecast and logistics reasoning', async () => {
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
     const response = await request(app.getHttpServer())
       .post('/api/inputs/konteks')
+      .set('Cookie', login.headers['set-cookie'])
       .send({
         puskesmasId: 'PKM-REMOTE-001',
         periode: '2025-04-01',
@@ -435,8 +477,11 @@ describe('MaternaLink API', () => {
   });
 
   it('simulates route and cold-chain alerts for remote allocation plan', async () => {
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'ifk', password: 'password123' }).expect(201);
+    const cookie = login.headers['set-cookie'];
     const planResponse = await request(app.getHttpServer())
       .post('/api/distribution/plans')
+      .set('Cookie', cookie)
       .send({
         puskesmasId: 'PKM-REMOTE-001',
         periode: '2025-04-01',
@@ -446,6 +491,7 @@ describe('MaternaLink API', () => {
 
     const simulationResponse = await request(app.getHttpServer())
       .post(`/api/distribution/plans/${planResponse.body.id}/simulate`)
+      .set('Cookie', cookie)
       .expect(201);
 
     expect(simulationResponse.body.alerts).toEqual(

@@ -1,10 +1,16 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { AuthGuard } from '../../common/auth/auth.guard';
+import { Roles } from '../../common/auth/roles.decorator';
+import { RolesGuard } from '../../common/auth/roles.guard';
 import { AnamnesisInputDto, DiagnosisInputDto, GejalaInputDto, KonteksInputDto, StokInputDto } from './inputs.dto';
 import { InputsService } from './inputs.service';
 
 @ApiTags('inputs')
 @Controller('inputs')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
 export class InputsController {
   constructor(private readonly service: InputsService) {}
 

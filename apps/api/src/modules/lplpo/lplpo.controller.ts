@@ -1,10 +1,16 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { AuthGuard } from '../../common/auth/auth.guard';
+import { Roles } from '../../common/auth/roles.decorator';
+import { RolesGuard } from '../../common/auth/roles.guard';
 import { GenerateLplpoDto } from './lplpo.dto';
 import { LplpoService } from './lplpo.service';
 
 @ApiTags('lplpo')
 @Controller('lplpo')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
 export class LplpoController {
   constructor(private readonly service: LplpoService) {}
 

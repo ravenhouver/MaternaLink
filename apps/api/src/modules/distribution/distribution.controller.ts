@@ -18,6 +18,8 @@ import { DistributionService } from './distribution.service';
 
 @ApiTags('distribution')
 @Controller('distribution')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
 export class DistributionController {
   constructor(private readonly service: DistributionService) {}
 
@@ -90,6 +92,7 @@ export class DistributionController {
   @Get('alerts') listAlerts() { return this.service.listAlerts(); }
   @ApiOperation({ summary: 'Create allocation plan' })
   @ApiResponse({ status: 201, description: 'Allocation plan created' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Post('plans') createPlan(@Body() body: CreateAllocationPlanDto) { return this.service.createPlan(body); }
   @ApiOperation({ summary: 'List allocation plans' })
   @ApiResponse({ status: 200, description: 'Allocation plans returned' })
@@ -99,9 +102,11 @@ export class DistributionController {
   @Get('plans/:id') getPlan(@Param('id', ParseIntPipe) id: number) { return this.service.getPlan(id); }
   @ApiOperation({ summary: 'Update allocation plan' })
   @ApiResponse({ status: 200, description: 'Allocation plan updated' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Patch('plans/:id') updatePlan(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateAllocationPlanDto) { return this.service.updatePlan(id, body); }
   @ApiOperation({ summary: 'Delete allocation plan' })
   @ApiResponse({ status: 200, description: 'Allocation plan deleted' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Delete('plans/:id') removePlan(@Param('id', ParseIntPipe) id: number) { return this.service.removePlan(id); }
   @ApiOperation({ summary: 'Simulate allocation route and cold-chain risk' })
   @ApiResponse({ status: 201, description: 'Simulation result returned with alerts' })

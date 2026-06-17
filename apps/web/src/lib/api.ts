@@ -10,6 +10,11 @@ export type CurrentUser = {
   puskesmasId: string | null;
 };
 
+export type LoginResponse = {
+  user: CurrentUser;
+  token: string;
+};
+
 export type AdminUserRecord = CurrentUser & {
   active: boolean;
   createdAt: string;
@@ -259,7 +264,7 @@ export type ApiReachability = {
 
 export async function checkApiReachability(): Promise<ApiReachability> {
   try {
-    const response = await fetch(`${apiBaseUrl}/master/puskesmas`, {
+    const response = await fetch(`${apiBaseUrl}/ai/health`, {
       cache: 'no-store',
     });
 
@@ -313,7 +318,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 }
 
 export async function login(username: string, password: string): Promise<CurrentUser> {
-  return apiFetch<CurrentUser>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+  const result = await apiFetch<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+  return result.user;
 }
 
 export async function logout(): Promise<void> {

@@ -17,7 +17,7 @@ export class AuthController {
   async login(@Body() body: LoginDto, @Res({ passthrough: true }) response: Response) {
     const result = await this.service.login(body.username, body.password);
     response.setHeader('Set-Cookie', buildSessionCookie(result.token));
-    return result.user;
+    return result;
   }
 
   @Post('logout')
