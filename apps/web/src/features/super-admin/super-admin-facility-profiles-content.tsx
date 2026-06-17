@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import { getCurrentUser, type CurrentUser } from '@/lib/api';
+import { getCurrentUser, getPuskesmas, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './super-admin-dashboard.module.css';
 
@@ -37,59 +37,55 @@ const navItems: NavItem[] = [
   { label: 'Facility Profiles', icon: 'archive', href: routes.adminFacilityProfiles, active: true },
 ];
 
-const profileRows: ProfileRow[] = [
-  {
-    name: 'Pkm. Cangkringan',
-    leadTime: '7 days',
-    access: 'Medium',
-    score: '0.6',
-    accessTone: 'medium',
-    coldChain: true,
-    distance: '24 km',
-    mmr: '490/100k',
-    capacity: '500 units',
-    statusTone: 'green',
-    action: 'Edit',
-  },
-  {
-    name: 'Pkm. Berbah',
-    leadTime: '3 days',
-    access: 'Easy',
-    score: '0.9',
-    accessTone: 'easy',
-    coldChain: true,
-    distance: '12 km',
-    mmr: '320/100k',
-    capacity: '800 units',
-    statusTone: 'green',
-    action: 'Edit',
-  },
-  {
-    name: 'Pkm. Pakem',
-    leadTime: '-',
-    access: 'Not filled',
-    accessTone: 'missing',
-    distance: '-',
-    mmr: '-',
-    capacity: '-',
-    statusTone: 'neutral',
-    action: 'Complete now',
-    highlighted: true,
-  },
-];
+function mapAccess(score: number): Pick<ProfileRow, 'access' | 'accessTone' | 'score'> {
+  if (score >= 3) return { access: 'Easy', accessTone: 'easy', score: String(score) };
+  if (score >= 2) return { access: 'Medium', accessTone: 'medium', score: String(score) };
+  return { access: 'Difficult', accessTone: 'missing', score: String(score) };
+}
+
+function isIncomplete(row: PuskesmasRecord) {
+  return row.leadTimeHari == null || row.jarakKeIfkKm == null || row.kapasitasSimpanObat == null;
+}
+
+function mapProfileRows(rows: PuskesmasRecord[]): ProfileRow[] {
+  return rows.map((row) => {
+    const access = mapAccess(row.skorAksesibilitas);
+    const incomplete = isIncomplete(row);
+    return {
+      name: row.nama,
+      leadTime: row.leadTimeHari == null ? '-' : `${row.leadTimeHari} days`,
+      access: incomplete ? 'Not filled' : access.access,
+      score: incomplete ? undefined : access.score,
+      accessTone: incomplete ? 'missing' : access.accessTone,
+      coldChain: row.coldChainReady,
+      distance: row.jarakKeIfkKm == null ? '-' : `${row.jarakKeIfkKm} km`,
+      mmr: row.statusEndemisMalaria ? 'Endemic area' : 'Non-endemic',
+      capacity: row.kapasitasSimpanObat == null ? '-' : `${row.kapasitasSimpanObat} units`,
+      statusTone: incomplete ? 'neutral' : 'green',
+      action: incomplete ? 'Complete now' : 'Edit',
+      highlighted: incomplete,
+    };
+  });
+}
 
 export function SuperAdminFacilityProfilesContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [rows, setRows] = useState<ProfileRow[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    getCurrentUser()
-      .then((nextUser) => {
+    Promise.all([getCurrentUser(), getPuskesmas()])
+      .then(([nextUser, puskesmasRows]) => {
         if (!mounted) return;
         setUser(nextUser);
+        setRows(mapProfileRows(puskesmasRows));
       })
-      .catch(() => undefined);
+      .catch((loadError) => {
+        if (!mounted) return;
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load facility profiles');
+      });
 
     return () => {
       mounted = false;
@@ -97,6 +93,7 @@ export function SuperAdminFacilityProfilesContent() {
   }, []);
 
   const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
+  const incompleteCount = useMemo(() => rows.filter((row) => row.highlighted).length, [rows]);
 
   function explainUnavailable(feature: string) {
     setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
@@ -152,11 +149,12 @@ export function SuperAdminFacilityProfilesContent() {
             </div>
             <span className={styles.incompletePill}>
               <AppIcon name="alert" width={14} height={14} />
-              2 profiles incomplete
+              {incompleteCount} profiles incomplete
             </span>
           </section>
 
           {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
+          {error ? <p className={styles.error}>{error}. Facility profile list unavailable.</p> : null}
 
           <section className={styles.registryCard} aria-label="Facility profile configuration table">
             <div className={styles.tableScroller}>
@@ -174,7 +172,7 @@ export function SuperAdminFacilityProfilesContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {profileRows.map((row) => (
+                  {rows.map((row) => (
                     <tr className={row.highlighted ? styles.highlightedProfileRow : undefined} key={row.name}>
                       <td>
                         <span className={styles.facilityNameCell}>
@@ -202,12 +200,13 @@ export function SuperAdminFacilityProfilesContent() {
                       </td>
                     </tr>
                   ))}
+                  {rows.length === 0 ? <tr><td colSpan={8}>Belum ada profil fasilitas dari database.</td></tr> : null}
                 </tbody>
               </table>
             </div>
 
             <footer className={styles.registryPagination}>
-              <p>Showing 3 of 42 health centers</p>
+              <p>Showing {rows.length} health centers</p>
               <div className={styles.pages}>
                 <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
                 <button type="button" className={styles.currentPage}>1</button>

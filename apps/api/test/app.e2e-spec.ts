@@ -245,6 +245,29 @@ describe('MaternaLink API', () => {
     );
   });
 
+  it('lets super admin list user accounts and blocks non-admin roles', async () => {
+    const adminLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'password123' })
+      .expect(201);
+    const adminCookie = adminLogin.headers['set-cookie'];
+
+    const users = await request(app.getHttpServer()).get('/api/auth/users').set('Cookie', adminCookie).expect(200);
+    expect(users.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ username: 'admin', role: 'SUPER_ADMIN', active: true }),
+        expect.objectContaining({ username: 'bidan', role: 'BIDAN_PUSKESMAS', puskesmas: expect.objectContaining({ id: 'PKM-001' }) }),
+      ]),
+    );
+    expect(users.body[0]).not.toHaveProperty('passwordHash');
+
+    const bidanLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+    await request(app.getHttpServer()).get('/api/auth/users').set('Cookie', bidanLogin.headers['set-cookie']).expect(403);
+  });
+
   it('lists medicine master data', async () => {
     const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));

@@ -21,4 +21,21 @@ export class AuthService {
 
     return { user: currentUser, token };
   }
+
+  listUsers() {
+    return this.prisma.user.findMany({
+      orderBy: { displayName: 'asc' },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        role: true,
+        puskesmasId: true,
+        active: true,
+        createdAt: true,
+        updatedAt: true,
+        puskesmas: { select: { id: true, nama: true, kecamatan: true } },
+      },
+    });
+  }
 }

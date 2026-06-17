@@ -32,17 +32,8 @@ const navItems: NavItem[] = [
   { label: 'Facility Profiles', icon: 'archive', href: routes.adminFacilityProfiles },
 ];
 
-const fallbackRows: RegistryRow[] = [
-  { id: 'PKM-001', name: 'Cangkringan Health Center', district: 'Cangkringan', active: true, users: 4, actions: 'text' },
-  { id: 'PKM-002', name: 'Berbah Health Center', district: 'Berbah', active: true, users: 3, actions: 'icons' },
-  { id: 'PKM-015', name: 'Health Center X', district: 'Kec. Y', active: false, users: 0, actions: 'text' },
-  { id: 'PKM-022', name: 'Mlati I Health Center', district: 'Mlati', active: true, users: 5, actions: 'single', muted: true },
-  { id: 'PKM-030', name: 'Godean II Health Center', district: 'Godean', active: true, users: 2, actions: 'single', muted: true },
-];
-
 function mapPuskesmasRows(rows: PuskesmasRecord[]): RegistryRow[] {
-  if (!rows.length) return fallbackRows;
-  return rows.slice(0, 5).map((row, index) => ({
+  return rows.map((row, index) => ({
     id: row.id,
     name: row.nama,
     district: row.kecamatan,
@@ -54,7 +45,7 @@ function mapPuskesmasRows(rows: PuskesmasRecord[]): RegistryRow[] {
 }
 
 export function SuperAdminHealthCentersContent() {
-  const [rows, setRows] = useState<RegistryRow[]>(fallbackRows);
+  const [rows, setRows] = useState<RegistryRow[]>([]);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +141,7 @@ export function SuperAdminHealthCentersContent() {
 
           {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
 
-          {error ? <p className={styles.error}>{error}. Showing design fallback data.</p> : null}
+          {error ? <p className={styles.error}>{error}. Health center list unavailable.</p> : null}
 
           <section className={styles.registryCard} aria-label="Health center registry table">
             <div className={styles.tableScroller}>
@@ -169,6 +160,7 @@ export function SuperAdminHealthCentersContent() {
                       <td>{renderActions(row, explainUnavailable)}</td>
                     </tr>
                   ))}
+                  {filteredRows.length === 0 ? <tr><td colSpan={6}>Belum ada puskesmas dari database untuk filter ini.</td></tr> : null}
                 </tbody>
               </table>
             </div>

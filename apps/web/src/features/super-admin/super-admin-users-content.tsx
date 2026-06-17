@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import { getCurrentUser, type CurrentUser } from '@/lib/api';
+import { getCurrentUser, getUsers, type AdminUserRecord, type CurrentUser } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './super-admin-dashboard.module.css';
 
-type UserRoleFilter = 'All' | 'Doctor' | 'Midwife' | 'Staff' | 'IFK Officer';
+type UserRoleFilter = 'All' | 'Super Admin' | 'Midwife' | 'IFK Officer';
 
 type AccountRow = {
   initials: string;
@@ -34,24 +34,56 @@ const navItems: NavItem[] = [
   { label: 'Facility Profiles', icon: 'archive', href: routes.adminFacilityProfiles },
 ];
 
-const roleFilters: UserRoleFilter[] = ['All', 'Doctor', 'Midwife', 'Staff', 'IFK Officer'];
+const roleFilters: UserRoleFilter[] = ['All', 'Super Admin', 'Midwife', 'IFK Officer'];
 
-const accountRows: AccountRow[] = [
-  { initials: 'SA', name: 'dr. Siti Aminah', role: 'Doctor', facility: 'Pkm. Cangkringan', email: 'siti@pkm-cgk.id', active: true, tone: 'blue' },
-  { initials: 'MU', name: 'Bd. Maria Ulfa', role: 'Midwife', facility: 'Pkm. Berbah', email: 'maria@pkm-brb.id', active: true, tone: 'indigo' },
-  { initials: 'SW', name: 'Apt. Sarah W.', role: 'IFK Officer', facility: 'IFK Kab. Sleman', email: 'sarah@ifk-slm.id', active: true, tone: 'green' },
-];
+function mapRole(role: AdminUserRecord['role']): AccountRow['role'] {
+  if (role === 'SUPER_ADMIN') return 'Super Admin';
+  if (role === 'IFK_ADMIN') return 'IFK Officer';
+  return 'Midwife';
+}
+
+function userTone(role: AccountRow['role']): AccountRow['tone'] {
+  if (role === 'Super Admin') return 'blue';
+  if (role === 'IFK Officer') return 'green';
+  return 'indigo';
+}
+
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U';
+}
+
+function mapAccountRows(rows: AdminUserRecord[]): AccountRow[] {
+  return rows.map((row) => {
+    const role = mapRole(row.role);
+    const name = row.displayName || row.username;
+    return {
+      initials: initials(name),
+      name,
+      role,
+      facility: row.puskesmas?.nama ?? (row.role === 'IFK_ADMIN' ? 'IFK' : 'System'),
+      email: row.username,
+      active: row.active,
+      tone: userTone(role),
+    };
+  });
+}
 
 export function SuperAdminUsersContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [rows, setRows] = useState<AccountRow[]>([]);
   const [activeFilter, setActiveFilter] = useState<UserRoleFilter>('All');
   const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    getCurrentUser().then((nextUser) => {
+    Promise.all([getCurrentUser(), getUsers()]).then(([nextUser, userRows]) => {
       if (!mounted) return;
       setUser(nextUser);
+      setRows(mapAccountRows(userRows));
+    }).catch((loadError) => {
+      if (!mounted) return;
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load users');
     });
     return () => {
       mounted = false;
@@ -59,9 +91,9 @@ export function SuperAdminUsersContent() {
   }, []);
 
   const filteredRows = useMemo(() => {
-    if (activeFilter === 'All') return accountRows;
-    return accountRows.filter((row) => row.role === activeFilter);
-  }, [activeFilter]);
+    if (activeFilter === 'All') return rows;
+    return rows.filter((row) => row.role === activeFilter);
+  }, [activeFilter, rows]);
 
   const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
 
@@ -122,6 +154,7 @@ export function SuperAdminUsersContent() {
           </section>
 
           {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
+          {error ? <p className={styles.error}>{error}. User list unavailable.</p> : null}
 
           <section className={styles.userCard} aria-label="User account table">
             <div className={styles.roleTabs} role="tablist" aria-label="User role filters">
@@ -165,12 +198,13 @@ export function SuperAdminUsersContent() {
                       </td>
                     </tr>
                   ))}
+                  {filteredRows.length === 0 ? <tr><td colSpan={6}>Belum ada user dari database untuk filter ini.</td></tr> : null}
                 </tbody>
               </table>
             </div>
 
             <footer className={styles.registryPagination}>
-              <p>Showing {filteredRows.length} of {accountRows.length} users</p>
+              <p>Showing {filteredRows.length} of {rows.length} users</p>
               <div className={styles.pages}>
                 <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
                 <button type="button" className={styles.currentPage}>1</button>

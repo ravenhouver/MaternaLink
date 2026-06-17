@@ -31,20 +31,12 @@ const navItems: NavItem[] = [
   { label: 'Facility Profiles', icon: 'archive', href: routes.adminFacilityProfiles },
 ];
 
-const fallbackRows: MedicineRow[] = [
-  { id: 'OBT-001', name: 'Oxytocin 10IU', unit: 'ampul', category: 'Emergency', dailyDosage: '2.5 unit/day', coldChain: true },
-  { id: 'OBT-002', name: 'MgSO4 40%', unit: 'vial', category: 'Emergency', dailyDosage: '1.2 unit/day', coldChain: true },
-  { id: 'OBT-003', name: 'Tablet Fe 60mg', unit: 'strip', category: 'Essential', dailyDosage: '2.5 unit/day', coldChain: false },
-  { id: 'OBT-010', name: 'Folic Acid', unit: 'tablet', category: 'Routine', dailyDosage: '1 unit/day', coldChain: false },
-];
-
 function formatDailyDosage(row: ObatRecord) {
   if (!row.dosisStandarHarian) return '-';
   return `${row.dosisStandarHarian} ${row.satuan}/day`;
 }
 
 function mapMedicineRows(rows: ObatRecord[]): MedicineRow[] {
-  if (!rows.length) return fallbackRows;
   return rows.map((row) => ({
     id: row.id,
     name: row.nama,
@@ -83,7 +75,7 @@ function downloadCsv(filename: string, rows: MedicineRow[]) {
 }
 
 export function SuperAdminMedicinesContent() {
-  const [rows, setRows] = useState<MedicineRow[]>(fallbackRows);
+  const [rows, setRows] = useState<MedicineRow[]>([]);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
@@ -198,7 +190,7 @@ export function SuperAdminMedicinesContent() {
             </div>
           </section>
 
-          {error ? <p className={styles.error}>{error}. Showing design fallback data.</p> : null}
+          {error ? <p className={styles.error}>{error}. Medicine list unavailable.</p> : null}
 
           <section className={[styles.registryCard, styles.medicineCard].join(' ')} aria-label="Medicine registry table">
             <div className={styles.tableScroller}>
@@ -223,6 +215,7 @@ export function SuperAdminMedicinesContent() {
                       <td><div className={styles.textActions}><button type="button" onClick={() => explainUnavailable(`Edit ${row.name}`)}>Edit</button></div></td>
                     </tr>
                   ))}
+                  {filteredRows.length === 0 ? <tr><td colSpan={7}>Belum ada obat dari database untuk filter ini.</td></tr> : null}
                 </tbody>
               </table>
             </div>

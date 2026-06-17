@@ -10,6 +10,13 @@ export type CurrentUser = {
   puskesmasId: string | null;
 };
 
+export type AdminUserRecord = CurrentUser & {
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  puskesmas?: { id: string; nama: string; kecamatan?: string } | null;
+};
+
 export type PregnancyRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 export type QueueStatus = 'WAITING' | 'EXAMINING' | 'COMPLETED' | 'CANCELLED';
 export type ExaminationSource = 'MANUAL' | 'VOICE_TRANSCRIPT_FALLBACK' | 'VOICE_TRANSCRIPT_AI';
@@ -291,6 +298,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   } catch {
     return null;
   }
+}
+
+export async function getUsers(): Promise<AdminUserRecord[]> {
+  return apiFetch('/auth/users');
 }
 
 export async function createPatient(payload: CreatePatientPayload): Promise<{ patient: PatientRecord; pregnancy: PregnancyRecord }> {
