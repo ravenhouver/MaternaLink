@@ -1,0 +1,22 @@
+# MaternaLink Functionality Audit - 2026-06-17
+
+## Priority
+
+1. Batch A: no dead UI.
+2. Batch B: no dummy data.
+3. Batch C: all-role end-to-end workflow.
+
+## Matrix
+
+| Route | Component | Issue type | Severity | Current behavior | Expected behavior | Backend needed | Fix batch | Status | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| /admin/users | SuperAdminUsersContent | dummy_data, dead_ui | blocker | local account rows and add/edit/delete buttons without persistence | users are loaded from API; add/edit/delete are real or disabled with reason | yes | A, B | open | Start with honest disabled/modal behavior, then API users in Batch B. |
+| /admin/medicines | SuperAdminMedicinesContent | dummy_data, dead_ui | blocker | fallback medicine rows and edit/add/filter/download gaps | medicine data uses master API; controls act predictably | partial | A, B | open | Master medicine API exists. |
+| /admin/health-centers | SuperAdminHealthCentersContent | dummy_data, dead_ui | blocker | fallback puskesmas rows and action buttons without durable effect | puskesmas data uses master API; actions persist or are disabled | partial | A, B | open | Master puskesmas API exists. |
+| /admin/facility-profiles | SuperAdminFacilityProfilesContent | dummy_data, api_gap | major | profile rows are static | profile data loads from DB or route explains unavailable fields | yes | A, B | open | Likely needs backend endpoint later. |
+| /medicine-needs | MedicineNeedsContent | dead_ui | major | edit, shipment, upload, pagination, and modal submit actions are partly local or close-only | actions save, request, import, paginate, or show disabled reason | partial | A | open | Avoid fake close-only success. |
+| /medicine-needs/[medicine] | MedicationDetailContent | dead_ui, hardcoded_state | major | analytics, remove, save, and timestamp are presentation-only | actions update/remove or are disabled with reason; timestamps reflect DB | partial | A, B | open | Detail route already reads API stock/medicine. |
+| /ifk/clinics | MedicineSenderClinicsContent | dead_ui, dummy_data | major | clinic list has page buttons, export, add, filter, and menu gaps | list uses API, view/filter/export behave consistently | partial | A, B | open | View detail already works locally. |
+| /ifk/environment | EnvironmentMonitoringContent | dummy_data | major | environmental forecast and map context include static data | risk context is derived from DB/API or clearly marked unavailable | yes | B | open | Batch A only handles visible dead controls. |
+| /ifk | MedicineSenderContent | hardcoded_state | major | dashboard action/log data includes static module data | IFK dashboard is derived from recommendation, alert, and tracking APIs | partial | B | open | Batch A handles controls. |
+| /forecast-calendar | CalendarPredictionContent | workflow_gap | major | demo workflow runner exists but needs route smoke and data refresh proof | workflow runner updates forecast/LPLPO/recommendation state visibly | existing | C | open | Batch A verifies visible feedback. |
