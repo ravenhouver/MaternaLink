@@ -1,5 +1,5 @@
 import type { AppIconName } from '@/components/ui/app-icon';
-import type { DistributionRecommendation, QueueRecord } from '@/lib/api';
+import type { DashboardSummary, DistributionRecommendation, QueueRecord } from '@/lib/api';
 
 export type DashboardActivity = {
   key: string;
@@ -32,4 +32,15 @@ export function buildDashboardActivities(
       tone: row.urgency === 'CRITICAL' ? 'red' : 'green',
     })),
   ];
+}
+
+export function getDashboardAttentionCount(summary: DashboardSummary | null): number {
+  if (!summary) return 0;
+  if (summary.role === 'IFK_ADMIN') return summary.recommendations?.pending ?? 0;
+
+  return (
+    (summary.queue?.waiting ?? 0) +
+    (summary.queue?.examining ?? 0) +
+    (summary.medicine?.criticalCount ?? 0)
+  );
 }

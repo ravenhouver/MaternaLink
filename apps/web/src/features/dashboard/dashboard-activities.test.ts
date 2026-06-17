@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildDashboardActivities } from './dashboard-activities';
+import { buildDashboardActivities, getDashboardAttentionCount } from './dashboard-activities';
 import type { DistributionRecommendation, QueueRecord } from '@/lib/api';
 
 const queueRows = [
@@ -53,3 +53,22 @@ assert.deepEqual(
   ['queue-queue-1', 'queue-queue-2', 'recommendation-recommendation-1', 'recommendation-recommendation-2'],
 );
 assert.equal(new Set(activities.map((activity) => activity.key)).size, activities.length);
+
+assert.equal(
+  getDashboardAttentionCount({
+    role: 'BIDAN_PUSKESMAS',
+    queue: { waiting: 2, examining: 1, completed: 4 },
+    patients: { total: 9 },
+    medicine: { criticalCount: 3 },
+  }),
+  6,
+);
+
+assert.equal(
+  getDashboardAttentionCount({
+    role: 'IFK_ADMIN',
+    recommendations: { pending: 5, approved: 2, rejected: 1, critical: 4 },
+    deliveries: { active: 3 },
+  }),
+  5,
+);

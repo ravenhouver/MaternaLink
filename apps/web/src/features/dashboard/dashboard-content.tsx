@@ -7,7 +7,7 @@ import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { getCurrentUser, getDashboardSummary, getQueue, getRecommendations, type CurrentUser, type DashboardSummary } from '@/lib/api';
 import { routes } from '@/lib/routes';
-import { buildDashboardActivities, type DashboardActivity } from './dashboard-activities';
+import { buildDashboardActivities, getDashboardAttentionCount, type DashboardActivity } from './dashboard-activities';
 import styles from './dashboard.module.css';
 
 type StatCard = {
@@ -70,6 +70,8 @@ export function DashboardContent() {
     ];
   }, [summary]);
 
+  const attentionCount = getDashboardAttentionCount(summary);
+
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.header}>
@@ -96,7 +98,7 @@ export function DashboardContent() {
             <AppIcon name="alert" width={28} height={28} />
           </span>
           <div>
-            <h2>{summary?.queue?.waiting ?? summary?.recommendations?.pending ?? 0} items need attention</h2>
+            <h2>{attentionCount} items need attention</h2>
             <p>{summary?.role === 'IFK_ADMIN' ? 'Review pending distribution recommendations.' : 'Check queue and medication availability now.'}</p>
           </div>
         </div>

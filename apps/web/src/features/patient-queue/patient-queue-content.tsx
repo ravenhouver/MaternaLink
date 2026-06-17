@@ -25,6 +25,13 @@ type QueueFilters = {
 
 const defaultFilters: QueueFilters = { doctor: 'ALL', risk: 'ALL', status: 'ALL' };
 
+function formatDueDate(value?: string | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('id-ID');
+}
+
 export function PatientQueueContent() {
   const router = useRouter();
   const [rows, setRows] = useState<QueueRecord[]>([]);
@@ -82,16 +89,6 @@ export function PatientQueueContent() {
       router.push(`${routes.examination}?queueId=${row.id}`);
     } catch (callError) {
       setError(callError instanceof Error ? callError.message : 'Gagal memanggil pasien');
-    }
-  }
-
-  async function handleComplete(row: QueueRecord) {
-    setError(null);
-    try {
-      await updateQueueStatus(row.id, 'COMPLETED');
-      await refreshRows();
-    } catch (completeError) {
-      setError(completeError instanceof Error ? completeError.message : 'Gagal menyelesaikan antrian');
     }
   }
 
@@ -169,8 +166,8 @@ export function PatientQueueContent() {
                       <span className={styles.patientMeta}>NIK: {row.patient.nik}</span>
                     </td>
                     <td data-label="Pregnancy Info">
-                      <strong>{row.pregnancy.gestationalAge ?? '-'} weeks</strong>
-                      <span>ANC: {row.pregnancy.ancVisit ?? '-'}</span>
+                      <strong>Age: {row.pregnancy.gestationalAge ?? '-'} weeks</strong>
+                      <span>Due Date: {formatDueDate(row.pregnancy.edd)}</span>
                     </td>
                     <td data-label="Status & Doctor">
                       <span className={isHighRisk ? styles.highRiskBadge : styles.normalBadge}>{isHighRisk ? 'HIGH RISK' : 'NORMAL'}</span>
@@ -179,8 +176,8 @@ export function PatientQueueContent() {
                     <td data-label="Action">
                       <div className={styles.actionGroup}>
                         {row.status === 'WAITING' ? <button type="button" className={styles.callButton} onClick={() => void handleCall(row)}>Call</button> : null}
-                        {row.status === 'EXAMINING' ? <button type="button" className={styles.completeButton} onClick={() => void handleComplete(row)}>Complete</button> : null}
-                        <Link href={`${routes.examination}?queueId=${row.id}`} className={styles.secondaryButton}>View Details</Link>
+                        {row.status === 'COMPLETED' ? <span className={styles.completeButton}>Complete</span> : null}
+                        {row.status === 'COMPLETED' ? <Link href={`${routes.examination}?queueId=${row.id}`} className={styles.secondaryButton}>View Details</Link> : null}
                       </div>
                     </td>
                   </tr>
