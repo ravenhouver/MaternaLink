@@ -457,6 +457,25 @@ describe('MaternaLink API', () => {
   });
 
   it('runs a super admin, bidan, and IFK handoff workflow end to end', async () => {
+    process.env.AI_MODE = 'remote';
+    mockFetch(async (url, init) => {
+      if (url.endsWith('/api/v1/layer0/extract')) return jsonResponse({ extraction_results: [], condition_estimates: [] });
+      if (url.endsWith('/api/v1/layer1/forecast')) {
+        const body = JSON.parse(String(init?.body));
+        return jsonResponse({ facility_id: body.facility_id, drug_id: body.drug_id, period: body.period, forecast_demand: 18, buffer_pct: 0.2, buffer_units: 4, total_requirement: 22, current_stock: body.closing_stock });
+      }
+      if (url.endsWith('/api/v1/layer2/allocate')) {
+        return jsonResponse({
+          run_id: 'REC-DEMO-001',
+          forecast_period: '2026-06-01',
+          summary: { total_allocated_units: 20, facilities_served: 1 },
+          allocations: [{ facility_id: 'PKM-001', facility_name: 'Puskesmas Demo', drug_id: 'OBT-010', drug_name: 'MgSO4', category: 'OBAT', requirement: 22, allocated: 20, coverage_ratio: 0.91, unmet: 2, priority_score: 0.9, factors: [], justification: 'AI allocation prioritizes PKM-001 due to low stock.' }],
+          redistribution: [],
+        });
+      }
+      return jsonResponse({ status: 'ok' });
+    });
+
     await prisma.distributionRecommendation.update({
       where: { id: 'REC-DEMO-001' },
       data: { status: 'PENDING', priorityRank: 1 },
@@ -479,7 +498,13 @@ describe('MaternaLink API', () => {
     const bidanCookie = bidanLogin.headers['set-cookie'];
 
     const workflow = await request(app.getHttpServer()).post('/api/workflow/demo/run').set('Cookie', bidanCookie).expect(201);
-    expect(workflow.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', status: 'PENDING' }));
+    expect(workflow.body).toEqual(expect.objectContaining({ jobId: expect.any(String), status: expect.stringMatching(/PENDING|RUNNING/) }));
+    let workflowState = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', bidanCookie).expect(200);
+    for (let attempt = 0; attempt < 10 && workflowState.body.job?.status !== 'COMPLETED'; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      workflowState = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', bidanCookie).expect(200);
+    }
+    expect(workflowState.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', source: 'HF_AI_LAYER2', status: 'PENDING' }));
     await request(app.getHttpServer()).get('/api/dashboard/summary').set('Cookie', bidanCookie).expect(200);
 
     const ifkLogin = await request(app.getHttpServer())
