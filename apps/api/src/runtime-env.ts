@@ -8,6 +8,7 @@ const API_ENV_KEYS = new Set([
   'AI_MODE',
   'AI_SERVICE_BASE_URL',
   'AI_SERVICE_TIMEOUT_MS',
+  'AI_LAYER2_TIMEOUT_MS',
   'PORT',
   'SESSION_COOKIE_SECURE',
 ]);
@@ -18,6 +19,7 @@ const ROOT_ENV_KEYS = new Set([
   'AI_MODE',
   'AI_SERVICE_BASE_URL',
   'AI_SERVICE_TIMEOUT_MS',
+  'AI_LAYER2_TIMEOUT_MS',
   'SESSION_COOKIE_SECURE',
 ]);
 
@@ -53,4 +55,8 @@ export function loadRuntimeEnv() {
   applyEnv(resolve(appRoot, 'apps/api/.env'), API_ENV_KEYS);
 
   process.env.DATABASE_URL ??= 'postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public';
+  process.env.AI_MODE ??= 'remote';
+  process.env.AI_SERVICE_BASE_URL ??= 'https://azrilfahmiardi-maternalink-ai.hf.space';
+  process.env.AI_SERVICE_TIMEOUT_MS ??= '30000';
+  process.env.AI_LAYER2_TIMEOUT_MS ??= '600000';
 }

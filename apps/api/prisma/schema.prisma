@@ -123,6 +123,7 @@ enum RecommendationSource {
   RULE_BASED_FALLBACK
   FASTAPI_STUB
   FASTAPI_AI
+  HF_AI_LAYER2
 }
 
 enum TrackingStatus {
@@ -132,6 +133,18 @@ enum TrackingStatus {
   DISPATCHED
   RECEIVED
   ISSUE_REPORTED
+}
+
+enum AiWorkflowKind {
+  DEMO_AI_WORKFLOW
+}
+
+enum AiWorkflowStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  FAILED_PARTIAL
 }
 
 model Puskesmas {
@@ -455,6 +468,25 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id])
 
   @@map("audit_log")
+}
+
+model AiWorkflowJob {
+  id               String           @id @default(cuid()) @map("id")
+  kind             AiWorkflowKind   @default(DEMO_AI_WORKFLOW) @map("kind")
+  status           AiWorkflowStatus @default(PENDING) @map("status")
+  puskesmasId      String           @map("puskesmas_id")
+  periode          DateTime         @map("periode") @db.Date
+  startedAt        DateTime?        @map("started_at")
+  finishedAt       DateTime?        @map("finished_at")
+  errorMessage     String?          @map("error_message")
+  warnings         Json?            @map("warnings")
+  forecastRunId    Int?             @map("forecast_run_id")
+  recommendationId String?          @map("recommendation_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  @@index([kind, puskesmasId, periode, createdAt])
+  @@map("ai_workflow_job")
 }
 
 model Patient {
