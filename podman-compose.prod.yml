@@ -14,10 +14,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  ai-service:
-    image: ${AI_SERVICE_IMAGE:-ghcr.io/0xsyam/maternalink-ai-service:latest}
-    restart: unless-stopped
-
   api:
     image: ${API_IMAGE:-ghcr.io/0xsyam/maternalink-api:latest}
     environment:
@@ -28,9 +24,10 @@ services:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://172.93.186.62:41873}
-      AI_SERVICE_BASE_URL: http://ai-service:8000
-      AI_MODE: ${AI_MODE:-fallback}
+      AI_SERVICE_BASE_URL: ${AI_SERVICE_BASE_URL:-https://azrilfahmiardi-maternalink-ai.hf.space}
+      AI_MODE: ${AI_MODE:-remote}
       AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-30000}
+      AI_LAYER2_TIMEOUT_MS: ${AI_LAYER2_TIMEOUT_MS:-600000}
       RUN_SEED: ${RUN_SEED:-true}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     ports:
@@ -38,8 +35,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      ai-service:
-        condition: service_started
     restart: unless-stopped
 
   web:
