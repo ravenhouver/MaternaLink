@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { AppIcon } from '@/components/ui/app-icon';
-import { getAlerts, getDashboardSummary, getPuskesmas, getRecommendations, type AlertRecord, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
+import { getAlerts, getCurrentUser, getDashboardSummary, getPuskesmas, getRecommendations, type AlertRecord, type CurrentUser, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import type { DashboardAction, DashboardKpi, TacticalPoint } from './medicine-sender-data';
 import styles from './medicine-sender.module.css';
@@ -27,15 +27,17 @@ export function MedicineSenderContent() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof getDashboardSummary>> | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getRecommendations(), getAlerts(), getPuskesmas(), getDashboardSummary()])
-      .then(([nextRecommendations, nextAlerts, nextPuskesmas, nextSummary]) => {
+    Promise.all([getRecommendations(), getAlerts(), getPuskesmas(), getDashboardSummary(), getCurrentUser()])
+      .then(([nextRecommendations, nextAlerts, nextPuskesmas, nextSummary, nextUser]) => {
         setRecommendations(nextRecommendations);
         setAlerts(nextAlerts);
         setPuskesmas(nextPuskesmas);
         setSummary(nextSummary);
+        setUser(nextUser);
       })
       .catch(() => undefined);
   }, []);
@@ -58,11 +60,10 @@ export function MedicineSenderContent() {
       weather: alert?.type.replaceAll('_', ' ') ?? 'No active alert',
       supply: item.items.map((row) => `${row.obat?.nama ?? row.obatId} ${row.finalQuantity}`).join(', '),
       pointStatus: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'anticipatory' : 'regular',
-      position: [[-7.8122, 110.3892], [-7.7162, 110.3554], [-7.7765, 110.3689]][index] as [number, number],
     };
   }), [alerts, recommendations]);
 
-  const dashboardMapPoints = useMemo<TacticalPoint[]>(() => dashboardActions.map((item) => ({ id: item.id, name: item.name, status: item.pointStatus, position: item.position })), [dashboardActions]);
+  const dashboardMapPoints = useMemo<TacticalPoint[]>(() => dashboardActions.flatMap((item) => item.position ? [{ id: item.id, name: item.name, status: item.pointStatus, position: item.position }] : []), [dashboardActions]);
 
   const dashboardApprovalLogs = useMemo(() => recommendations.slice(0, 5).map((item) => ({
     timestamp: item.trackingEvents?.[0] ? new Date(item.trackingEvents[0].createdAt).toLocaleString('id-ID') : new Date(item.periode).toLocaleDateString('id-ID'),
@@ -110,8 +111,8 @@ export function MedicineSenderContent() {
           <a href={routes.ifk} onClick={(event) => { event.preventDefault(); explainUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
           <div>
             <span><AppIcon name="user" width={18} height={18} /></span>
-            <strong>Officer 042</strong>
-            <small>District Health Officer</small>
+            <strong>{user?.displayName ?? user?.username ?? 'IFK Officer'}</strong>
+            <small>{user?.role ?? 'IFK_ADMIN'}</small>
           </div>
         </div>
       </aside>
@@ -133,8 +134,8 @@ export function MedicineSenderContent() {
             <button type="button" aria-label="Pengaturan" onClick={() => explainUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.topbarProfile}>
               <div>
-                <strong>Pharmacy Management</strong>
-                <small>Administrator</small>
+                <strong>{user?.displayName ?? user?.username ?? 'Pharmacy Management'}</strong>
+                <small>{user?.role ?? 'Administrator'}</small>
               </div>
               <img src="/figma-dashboard/profil-bidan.png" alt="Pharmacy administrator" />
             </div>
@@ -164,7 +165,7 @@ export function MedicineSenderContent() {
           <section className={styles.mainGrid}>
             <article className={styles.panel}>
               <div className={styles.panelHeader}>
-                <Typography.Title id="sender-map-title" level={2}>Yogyakarta sector geospatial</Typography.Title>
+                <Typography.Title id="sender-map-title" level={2}>Facility route map</Typography.Title>
                 <div className={styles.segmented} aria-label="Mode peta">
                   <button type="button" className={mapMode === 'map' ? styles.activeSegment : ''} onClick={() => setMapMode('map')}>Map</button>
                   <button type="button" className={mapMode === 'satellite' ? styles.activeSegment : ''} onClick={() => setMapMode('satellite')}>Satellite</button>
@@ -174,7 +175,7 @@ export function MedicineSenderContent() {
                 <SenderMap points={dashboardMapPoints} mode={mapMode} center={[-7.7906, 110.377]} zoom={12} />
                 <aside className={styles.mapOverlay} aria-label="Cuaca dan rute">
                   <div className={styles.overlayHeader}>
-                    <Typography.Text>Weather overlay</Typography.Text>
+                    <Typography.Text>Route overlay</Typography.Text>
                     <span />
                   </div>
                   <div>
@@ -182,7 +183,7 @@ export function MedicineSenderContent() {
                     <span><AppIcon name="zap" width={18} height={18} /> {recommendations.length} Routes</span>
                   </div>
                 </aside>
-                <strong className={styles.mapCaption}>District Sallo Map</strong>
+                <strong className={styles.mapCaption}>{dashboardMapPoints.length ? 'Facility coordinates loaded' : 'Koordinat fasilitas belum tersedia di database'}</strong>
               </div>
             </article>
 

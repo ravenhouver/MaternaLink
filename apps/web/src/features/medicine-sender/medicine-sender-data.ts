@@ -44,7 +44,7 @@ export type DashboardAction = {
   weather: string;
   supply: string;
   pointStatus: TacticalPoint['status'];
-  position: TacticalPoint['position'];
+  position?: TacticalPoint['position'];
 };
 
 export type ApprovalLog = {
@@ -150,12 +150,12 @@ export const dashboardActions: DashboardAction[] = [
   },
 ];
 
-export const dashboardMapPoints: TacticalPoint[] = dashboardActions.map((item) => ({
+export const dashboardMapPoints: TacticalPoint[] = dashboardActions.flatMap((item) => item.position ? [{
   id: item.id,
   name: item.name,
   status: item.pointStatus,
   position: item.position,
-}));
+}] : []);
 
 export const dashboardApprovalLogs: ApprovalLog[] = [
   { timestamp: '2026-06-07 14:22:01', entity: 'Klinik Kotagede', action: 'VACCINE_RESUPPLY_A12', operator: 'A. Ramadhan', status: 'approved' },

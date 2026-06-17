@@ -5,7 +5,7 @@ import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { useEffect, useMemo, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
-import { getAlerts, getPuskesmas, type AlertRecord, type PuskesmasRecord } from '@/lib/api';
+import { getAlerts, getCurrentUser, getPuskesmas, type AlertRecord, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { getNextAlertFeedState } from './alert-feed-state';
 import type { EnvironmentalPoint } from './environment-monitoring-data';
@@ -20,8 +20,6 @@ type ForecastRisk = 'stable' | 'warning' | 'blocked';
 type ForecastItem = { location: string; risk: ForecastRisk; status: string; temperature: string; metric: string; bars: Array<'low' | 'medium' | 'high' | 'critical'> };
 type RouteRow = { id: string; route: string; clinics: string; risk: number; status: 'critical' | 'operational' | 'elevated'; blockedAt: string; confidence: string };
 
-const basePositions: Array<[number, number]> = [[-7.8122, 110.3892], [-7.7162, 110.3554], [-7.7765, 110.3689], [-7.7906, 110.377]];
-
 const riskIcon: Record<ForecastRisk, 'activity' | 'alert'> = {
   stable: 'activity',
   warning: 'alert',
@@ -34,7 +32,7 @@ const statusLabel: Record<RouteRow['status'], string> = {
   elevated: 'Elevated',
 };
 
-function RoleSidebar({ onUnavailable }: { onUnavailable: (feature: string) => void }) {
+function RoleSidebar({ onUnavailable, user }: { onUnavailable: (feature: string) => void; user: CurrentUser | null }) {
   return (
     <aside className={styles.sidebar} aria-label="Medicine sender navigation">
       <div className={styles.roleBrand}>
@@ -56,15 +54,15 @@ function RoleSidebar({ onUnavailable }: { onUnavailable: (feature: string) => vo
         <a href={routes.ifkEnvironment} onClick={(event) => { event.preventDefault(); onUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
         <div className={styles.officerCard}>
           <span><AppIcon name="user" width={18} height={18} /></span>
-          <strong>Officer 042</strong>
-          <small>District Health Officer</small>
+          <strong>{user?.displayName ?? user?.username ?? 'IFK Officer'}</strong>
+          <small>{user?.role ?? 'IFK_ADMIN'}</small>
         </div>
       </div>
     </aside>
   );
 }
 
-function Topbar({ onUnavailable }: { onUnavailable: (feature: string) => void }) {
+function Topbar({ onUnavailable, user }: { onUnavailable: (feature: string) => void; user: CurrentUser | null }) {
   return (
     <header className={styles.topbar}>
       <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
@@ -79,8 +77,8 @@ function Topbar({ onUnavailable }: { onUnavailable: (feature: string) => void })
         <button type="button" aria-label="Pengaturan" onClick={() => onUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
         <div className={styles.topbarProfile}>
           <div>
-            <strong>Pharmacy Management</strong>
-            <small>Administrator</small>
+            <strong>{user?.displayName ?? user?.username ?? 'Pharmacy Management'}</strong>
+            <small>{user?.role ?? 'Administrator'}</small>
           </div>
           <img src="/figma-dashboard/profil-bidan.png" alt="Pharmacy administrator" />
         </div>
@@ -189,6 +187,7 @@ function RiskTable({ rows }: { rows: RouteRow[] }) {
 export function EnvironmentMonitoringContent() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   function explainUnavailable(feature: string) {
@@ -196,19 +195,16 @@ export function EnvironmentMonitoringContent() {
   }
 
   useEffect(() => {
-    Promise.all([getAlerts(), getPuskesmas()])
-      .then(([nextAlerts, nextPuskesmas]) => {
+    Promise.all([getAlerts(), getPuskesmas(), getCurrentUser()])
+      .then(([nextAlerts, nextPuskesmas, nextUser]) => {
         setAlerts(nextAlerts);
         setPuskesmas(nextPuskesmas);
+        setUser(nextUser);
       })
       .catch(() => undefined);
   }, []);
 
-  const environmentalPoints = useMemo<EnvironmentalPoint[]>(() => puskesmas.map((item, index) => {
-    const alert = alerts.find((row) => row.puskesmasId === item.id);
-    const risk = alert?.severity === 'CRITICAL' ? 'critical' : alert?.severity === 'HIGH' ? 'high' : item.rainyAccess === 'TERBATAS' ? 'medium' : 'low';
-    return { id: item.id, name: item.nama, position: basePositions[index % basePositions.length], risk, metric: alert?.message ?? item.rainyAccess };
-  }), [alerts, puskesmas]);
+  const environmentalPoints = useMemo<EnvironmentalPoint[]>(() => [], []);
 
   const forecasts = useMemo<ForecastItem[]>(() => puskesmas.slice(0, 3).map((item) => {
     const alert = alerts.find((row) => row.puskesmasId === item.id);
@@ -224,9 +220,9 @@ export function EnvironmentMonitoringContent() {
 
   return (
     <div className={styles.shell}>
-      <RoleSidebar onUnavailable={explainUnavailable} />
+      <RoleSidebar onUnavailable={explainUnavailable} user={user} />
       <div className={styles.workspace}>
-        <Topbar onUnavailable={explainUnavailable} />
+        <Topbar onUnavailable={explainUnavailable} user={user} />
         <main className={styles.page}>
           {notice ? <p role="status" className={styles.environmentNotice}>{notice}</p> : null}
           <section className={styles.pageHeader} aria-labelledby="environment-title">
@@ -251,6 +247,7 @@ export function EnvironmentMonitoringContent() {
             </div>
             <div className={styles.mapCanvas}>
               <EnvironmentMap points={environmentalPoints} />
+              <p role="status" className={styles.environmentNotice}>Koordinat fasilitas belum tersedia di database; risiko rute ditampilkan lewat tabel dan feed alert.</p>
             </div>
           </section>
 
