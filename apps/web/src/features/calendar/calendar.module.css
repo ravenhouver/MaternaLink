@@ -97,6 +97,18 @@
   line-height: 20px;
 }
 
+.workflowMessage[data-state='running'] {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.workflowMessage[data-state='error'] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
 .monthControl {
   gap: var(--space-4);
 }

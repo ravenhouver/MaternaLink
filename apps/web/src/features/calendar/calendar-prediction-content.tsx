@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
-import { getPatients, runDemoWorkflow, type PatientRecord } from '@/lib/api';
+import { getDemoWorkflowState, getPatients, runDemoWorkflow, type AiWorkflowStatus, type PatientRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { CalendarSummary } from './components/calendar-summary';
 import { CalendarToolbar } from './components/calendar-toolbar';
@@ -38,6 +38,12 @@ function buildCalendarDays(month: Date, patients: PatientRecord[]): CalendarDay[
   });
 }
 
+const terminalStatuses: AiWorkflowStatus[] = ['COMPLETED', 'FAILED', 'FAILED_PARTIAL'];
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function CalendarPredictionContent() {
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [patients, setPatients] = useState<PatientRecord[]>([]);
@@ -66,12 +72,30 @@ export function CalendarPredictionContent() {
 
   async function runWorkflow() {
     setIsRunning(true);
-    setMessage(null);
+    setMessage('AI workflow sedang berjalan. Forecast dan rekomendasi IFK akan diperbarui setelah selesai.');
     try {
-      await runDemoWorkflow();
-      const refreshedPatients = await getPatients();
-      setPatients(refreshedPatients);
-      setMessage(`Workflow selesai. Forecast, LPLPO, rekomendasi IFK, dan kalender pasien sudah diperbarui (${refreshedPatients.length} pasien).`);
+      const started = await runDemoWorkflow();
+      let finalState = await getDemoWorkflowState();
+
+      for (let attempt = 0; attempt < 120 && !terminalStatuses.includes(finalState.job?.status ?? started.status); attempt += 1) {
+        await wait(5000);
+        finalState = await getDemoWorkflowState();
+      }
+
+      const status = finalState.job?.status ?? started.status;
+      if (status === 'COMPLETED') {
+        const refreshedPatients = await getPatients();
+        setPatients(refreshedPatients);
+        setMessage(`AI workflow selesai. Forecast, LPLPO, dan rekomendasi IFK sudah diperbarui (${finalState.lplpoRows.length} LPLPO).`);
+        return;
+      }
+
+      if (status === 'FAILED_PARTIAL') {
+        setMessage(finalState.job?.errorMessage ? `AI workflow selesai sebagian: ${finalState.job.errorMessage}` : 'AI workflow selesai sebagian. Forecast dan LPLPO tersedia, rekomendasi IFK gagal dibuat.');
+        return;
+      }
+
+      setMessage(finalState.job?.errorMessage ?? 'AI workflow belum selesai. Coba refresh status beberapa saat lagi.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Workflow gagal dijalankan.');
     } finally {
@@ -92,7 +116,7 @@ export function CalendarPredictionContent() {
         onPrevMonth={() => setCurrentMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))}
         onRunWorkflow={() => void runWorkflow()}
       />
-      {message ? <p className={styles.workflowMessage}>{message}</p> : null}
+      {message ? <p className={styles.workflowMessage} data-state={isRunning ? 'running' : message.toLowerCase().includes('gagal') ? 'error' : undefined}>{message}</p> : null}
       <section className={styles.layout}>
         <MonthlyCalendar days={calendarDays} eventLabels={eventLabels} weekdays={weekdays} />
         <EventsPanel events={todayEvents} />

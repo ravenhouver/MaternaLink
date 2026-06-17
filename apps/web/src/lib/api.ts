@@ -211,6 +211,32 @@ export type ForecastRun = {
   }>;
 };
 
+export type AiWorkflowStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'FAILED_PARTIAL';
+
+export type AiWorkflowJob = {
+  id: string;
+  status: AiWorkflowStatus;
+  puskesmasId: string;
+  periode: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  errorMessage?: string | null;
+  warnings?: string[] | null;
+  forecastRunId?: number | null;
+  recommendationId?: string | null;
+};
+
+export type DemoWorkflowRunResponse = { jobId: string; status: AiWorkflowStatus; puskesmasId: string; periode: string };
+
+export type DemoWorkflowState = {
+  puskesmasId: string;
+  periode: string;
+  job?: AiWorkflowJob | null;
+  forecastRun?: ForecastRun | null;
+  lplpoRows: LplpoRow[];
+  recommendation?: DistributionRecommendation | null;
+};
+
 export type CreateExaminationPayload = {
   queueId?: string;
   patientId: string;
@@ -383,11 +409,11 @@ export async function createExamination(payload: CreateExaminationPayload) {
   return apiFetch('/examinations', { method: 'POST', body: JSON.stringify(payload) });
 }
 
-export async function runDemoWorkflow() {
+export async function runDemoWorkflow(): Promise<DemoWorkflowRunResponse> {
   return apiFetch('/workflow/demo/run', { method: 'POST' });
 }
 
-export async function getDemoWorkflowState() {
+export async function getDemoWorkflowState(): Promise<DemoWorkflowState> {
   return apiFetch('/workflow/demo/state');
 }
 
