@@ -1,5 +1,10 @@
 export const routes = {
   login: '/login',
+  admin: '/admin',
+  adminHealthCenters: '/admin/health-centers',
+  adminUsers: '/admin/users',
+  adminMedicines: '/admin/medicines',
+  adminFacilityProfiles: '/admin/facility-profiles',
   dashboard: '/dashboard',
   patients: '/patients',
   newPatient: '/patients/new',

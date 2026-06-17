@@ -224,6 +224,50 @@ describe('MaternaLink API', () => {
     );
   });
 
+  it('exposes super admin master-data dashboard metrics', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'password123' })
+      .expect(201);
+    const cookie = login.headers['set-cookie'];
+
+    const summary = await request(app.getHttpServer()).get('/api/dashboard/summary').set('Cookie', cookie).expect(200);
+    expect(summary.body).toEqual(
+      expect.objectContaining({
+        role: 'SUPER_ADMIN',
+        masterData: expect.objectContaining({
+          healthCenters: expect.any(Number),
+          users: expect.any(Number),
+          medicines: expect.any(Number),
+          inactiveAccounts: expect.any(Number),
+        }),
+      }),
+    );
+  });
+
+  it('lets super admin list user accounts and blocks non-admin roles', async () => {
+    const adminLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'password123' })
+      .expect(201);
+    const adminCookie = adminLogin.headers['set-cookie'];
+
+    const users = await request(app.getHttpServer()).get('/api/auth/users').set('Cookie', adminCookie).expect(200);
+    expect(users.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ username: 'admin', role: 'SUPER_ADMIN', active: true }),
+        expect.objectContaining({ username: 'bidan', role: 'BIDAN_PUSKESMAS', puskesmas: expect.objectContaining({ id: 'PKM-001' }) }),
+      ]),
+    );
+    expect(users.body[0]).not.toHaveProperty('passwordHash');
+
+    const bidanLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+    await request(app.getHttpServer()).get('/api/auth/users').set('Cookie', bidanLogin.headers['set-cookie']).expect(403);
+  });
+
   it('lists medicine master data', async () => {
     const response = await request(app.getHttpServer()).get('/api/master/obat').expect(200);
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));
@@ -315,5 +359,53 @@ describe('MaternaLink API', () => {
         expect.objectContaining({ type: 'COLD_CHAIN_MISMATCH', severity: 'CRITICAL' }),
       ]),
     );
+  });
+
+  it('runs a super admin, bidan, and IFK handoff workflow end to end', async () => {
+    await prisma.distributionRecommendation.update({
+      where: { id: 'REC-DEMO-001' },
+      data: { status: 'PENDING', priorityRank: 1 },
+    });
+
+    const adminLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'password123' })
+      .expect(201);
+    const adminCookie = adminLogin.headers['set-cookie'];
+
+    await request(app.getHttpServer()).get('/api/auth/users').set('Cookie', adminCookie).expect(200);
+    await request(app.getHttpServer()).get('/api/master/puskesmas').set('Cookie', adminCookie).expect(200);
+    await request(app.getHttpServer()).get('/api/master/obat').set('Cookie', adminCookie).expect(200);
+
+    const bidanLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'bidan', password: 'password123' })
+      .expect(201);
+    const bidanCookie = bidanLogin.headers['set-cookie'];
+
+    const workflow = await request(app.getHttpServer()).post('/api/workflow/demo/run').set('Cookie', bidanCookie).expect(201);
+    expect(workflow.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', status: 'PENDING' }));
+    await request(app.getHttpServer()).get('/api/dashboard/summary').set('Cookie', bidanCookie).expect(200);
+
+    const ifkLogin = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ username: 'ifk', password: 'password123' })
+      .expect(201);
+    const ifkCookie = ifkLogin.headers['set-cookie'];
+
+    const pending = await request(app.getHttpServer()).get('/api/distribution/recommendations?status=PENDING').set('Cookie', ifkCookie).expect(200);
+    expect(pending.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'REC-DEMO-001' })]));
+
+    const approved = await request(app.getHttpServer())
+      .patch('/api/distribution/recommendations/REC-DEMO-001/approve')
+      .set('Cookie', ifkCookie)
+      .expect(200);
+    expect(approved.body).toEqual(expect.objectContaining({ status: 'APPROVED' }));
+
+    const tracking = await request(app.getHttpServer())
+      .get('/api/distribution/recommendations/REC-DEMO-001/tracking')
+      .set('Cookie', bidanCookie)
+      .expect(200);
+    expect(tracking.body).toEqual(expect.arrayContaining([expect.objectContaining({ status: 'APPROVED' })]));
   });
 });

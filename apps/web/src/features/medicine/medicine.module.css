@@ -101,6 +101,18 @@
   line-height: 20px;
 }
 
+.medicineNotice {
+  margin: 0;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
 .uploadBox {
   width: 100%;
   min-height: 56px;

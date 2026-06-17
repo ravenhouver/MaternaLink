@@ -1,6 +1,6 @@
 export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api';
 
-export type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN';
+export type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN' | 'SUPER_ADMIN';
 
 export type CurrentUser = {
   id: string;
@@ -8,6 +8,13 @@ export type CurrentUser = {
   displayName?: string;
   role: UserRole;
   puskesmasId: string | null;
+};
+
+export type AdminUserRecord = CurrentUser & {
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  puskesmas?: { id: string; nama: string; kecamatan?: string } | null;
 };
 
 export type PregnancyRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -50,6 +57,7 @@ export type DashboardSummary = {
   medicine?: { criticalCount: number };
   recommendations?: { pending: number; approved: number; rejected: number; critical: number };
   deliveries?: { active: number };
+  masterData?: { healthCenters: number; users: number; medicines: number; inactiveAccounts: number };
 };
 
 export type QueueRecord = {
@@ -290,6 +298,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   } catch {
     return null;
   }
+}
+
+export async function getUsers(): Promise<AdminUserRecord[]> {
+  return apiFetch('/auth/users');
 }
 
 export async function createPatient(payload: CreatePatientPayload): Promise<{ patient: PatientRecord; pregnancy: PregnancyRecord }> {

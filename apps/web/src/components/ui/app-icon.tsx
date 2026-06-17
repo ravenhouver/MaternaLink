@@ -23,6 +23,7 @@ const iconNames = {
   clock: 'lucide:clock',
   cloudRain: 'lucide:cloud-rain',
   edit: 'lucide:square-pen',
+  download: 'lucide:download',
   eye: 'lucide:eye',
   fileText: 'lucide:file-text',
   filter: 'lucide:funnel',

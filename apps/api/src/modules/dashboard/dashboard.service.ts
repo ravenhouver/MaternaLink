@@ -8,8 +8,23 @@ export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getSummary(user: CurrentUser) {
+    if (user.role === UserRole.SUPER_ADMIN) return this.getSuperAdminSummary();
     if (user.role === UserRole.IFK_ADMIN) return this.getIfkSummary(user.role);
     return this.getBidanSummary(user);
+  }
+
+  private async getSuperAdminSummary() {
+    const [healthCenters, users, medicines, inactiveAccounts] = await Promise.all([
+      this.prisma.puskesmas.count(),
+      this.prisma.user.count(),
+      this.prisma.obat.count(),
+      this.prisma.user.count({ where: { active: false } }),
+    ]);
+
+    return {
+      role: UserRole.SUPER_ADMIN,
+      masterData: { healthCenters, users, medicines, inactiveAccounts },
+    };
   }
 
   private async getBidanSummary(user: CurrentUser) {
