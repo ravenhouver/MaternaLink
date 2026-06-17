@@ -21,6 +21,14 @@ export class MasterController {
     return this.service.listPuskesmas();
   }
 
+  @ApiOperation({ summary: 'Sync hosted AI master data into local tables' })
+  @ApiResponse({ status: 201, description: 'Hosted AI master data synced' })
+  @Roles(UserRole.SUPER_ADMIN)
+  @Post('ai/sync')
+  syncAiMasterData() {
+    return this.service.syncAiMasterData();
+  }
+
   @ApiOperation({ summary: 'Create puskesmas master data' })
   @ApiResponse({ status: 201, description: 'Puskesmas created' })
   @Roles(UserRole.SUPER_ADMIN)

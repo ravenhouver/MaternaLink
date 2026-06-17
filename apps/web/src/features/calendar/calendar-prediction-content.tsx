@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Breadcrumbs } from '@/components/layout/breadcrumbs';
 import { PageContainer } from '@/components/layout/page-container';
-import { getDemoWorkflowState, getPatients, runDemoWorkflow, type AiWorkflowStatus, type PatientRecord } from '@/lib/api';
+import { getAiWorkflowState, getPatients, runAiWorkflow, type AiWorkflowStatus, type PatientRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { CalendarSummary } from './components/calendar-summary';
 import { CalendarToolbar } from './components/calendar-toolbar';
@@ -44,6 +44,10 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function monthPeriod(month: Date) {
+  return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 export function CalendarPredictionContent() {
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [patients, setPatients] = useState<PatientRecord[]>([]);
@@ -72,14 +76,16 @@ export function CalendarPredictionContent() {
 
   async function runWorkflow() {
     setIsRunning(true);
-    setMessage('AI workflow sedang berjalan. Forecast dan rekomendasi IFK akan diperbarui setelah selesai.');
+    const periode = monthPeriod(currentMonth);
+    const payload = { periode };
+    setMessage(`AI workflow sedang berjalan untuk periode ${periode}. Forecast dan rekomendasi IFK akan diperbarui setelah selesai.`);
     try {
-      const started = await runDemoWorkflow();
-      let finalState = await getDemoWorkflowState();
+      const started = await runAiWorkflow(payload);
+      let finalState = await getAiWorkflowState(payload);
 
       for (let attempt = 0; attempt < 120 && !terminalStatuses.includes(finalState.job?.status ?? started.status); attempt += 1) {
         await wait(5000);
-        finalState = await getDemoWorkflowState();
+        finalState = await getAiWorkflowState(payload);
       }
 
       const status = finalState.job?.status ?? started.status;

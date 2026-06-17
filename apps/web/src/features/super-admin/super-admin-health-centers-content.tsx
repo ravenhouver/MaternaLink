@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import { getCurrentUser, getPuskesmas, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
+import { getCurrentUser, getPuskesmas, syncAiMasterData, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './super-admin-dashboard.module.css';
 
@@ -51,6 +51,7 @@ export function SuperAdminHealthCentersContent() {
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -81,6 +82,22 @@ export function SuperAdminHealthCentersContent() {
 
   function explainUnavailable(feature: string) {
     setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
+
+  async function syncMasterData() {
+    setIsSyncing(true);
+    setError(null);
+    setNotice('Sinkronisasi master data AI sedang berjalan.');
+    try {
+      const result = await syncAiMasterData();
+      const puskesmasRows = await getPuskesmas();
+      setRows(mapPuskesmasRows(puskesmasRows));
+      setNotice(`Master data AI tersinkron: ${result.puskesmas} puskesmas, ${result.obat} obat, ${result.kondisi} kondisi.`);
+    } catch (syncError) {
+      setError(syncError instanceof Error ? syncError.message : 'Gagal sinkronisasi master data AI');
+    } finally {
+      setIsSyncing(false);
+    }
   }
 
   return (
@@ -137,6 +154,7 @@ export function SuperAdminHealthCentersContent() {
                 <AppIcon name="search" width={18} height={18} />
                 <input aria-label="Search health center name" placeholder="Search health center name..." value={query} onChange={(event) => setQuery(event.target.value)} />
               </label>
+              <button type="button" className={styles.primaryButton} disabled={isSyncing} onClick={() => void syncMasterData()}><AppIcon name="download" width={16} height={16} /> {isSyncing ? 'Syncing AI Data' : 'Sync AI Master'}</button>
               <button type="button" className={styles.primaryButton} onClick={() => explainUnavailable('Add health center')}><AppIcon name="plus" width={16} height={16} /> Add Health Center</button>
             </div>
           </section>

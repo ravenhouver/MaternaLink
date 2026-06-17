@@ -45,7 +45,8 @@ export function UploadKiaBookContent() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (uploadState !== 'processing') {
@@ -95,8 +96,11 @@ export function UploadKiaBookContent() {
   }
 
   function resetUpload() {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
     }
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -139,7 +143,7 @@ export function UploadKiaBookContent() {
         </p>
       </header>
 
-      {uploadState === 'idle' ? <IdleUploadPanel onFileChange={handleFileChange} inputRef={fileInputRef} /> : null}
+      {uploadState === 'idle' ? <IdleUploadPanel onFileChange={handleFileChange} cameraInputRef={cameraInputRef} galleryInputRef={galleryInputRef} /> : null}
       {uploadState === 'processing' ? <ProcessingPanel progress={progressLabel} /> : null}
       {error ? <p className={styles.formError}>{error}</p> : null}
       {uploadState === 'success' ? <SuccessPanel isSubmitting={isSubmitting} previewUrl={previewUrl} selectedFileName={selectedFile?.name ?? 'KIA book photo'} onConfirm={confirmExtraction} onRetake={resetUpload} /> : null}
@@ -150,26 +154,28 @@ export function UploadKiaBookContent() {
 }
 
 type IdleUploadPanelProps = {
-  inputRef: React.RefObject<HTMLInputElement>;
+  cameraInputRef: React.RefObject<HTMLInputElement>;
+  galleryInputRef: React.RefObject<HTMLInputElement>;
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
-function IdleUploadPanel({ inputRef, onFileChange }: IdleUploadPanelProps) {
+function IdleUploadPanel({ cameraInputRef, galleryInputRef, onFileChange }: IdleUploadPanelProps) {
   return (
     <section className={styles.uploadCard} aria-label="KIA book upload">
       <label className={styles.dropZone}>
-        <input ref={inputRef} accept="image/png,image/jpeg" type="file" onChange={onFileChange} />
+        <input ref={galleryInputRef} accept="image/png,image/jpeg" type="file" onChange={onFileChange} />
         <span className={styles.dropIcon}><AppIcon name="camera" width={56} height={56} /></span>
         <strong>Drag photo here or Select File</strong>
         <small>Supported formats: JPG, PNG (Max. 5MB)</small>
       </label>
+      <input ref={cameraInputRef} accept="image/png,image/jpeg" capture="environment" type="file" onChange={onFileChange} hidden />
 
       <div className={styles.uploadActions}>
-        <button type="button" className={styles.takePhotoButton} onClick={() => inputRef.current?.click()}>
+        <button type="button" className={styles.takePhotoButton} onClick={() => cameraInputRef.current?.click()}>
           <AppIcon name="camera" width={22} height={22} />
           Take Photo
         </button>
-        <button type="button" className={styles.galleryButton} onClick={() => inputRef.current?.click()}>
+        <button type="button" className={styles.galleryButton} onClick={() => galleryInputRef.current?.click()}>
           <AppIcon name="upload" width={22} height={22} />
           Select from Gallery
         </button>

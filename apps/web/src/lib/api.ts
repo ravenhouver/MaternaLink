@@ -186,6 +186,12 @@ export type ObatRecord = {
   durasiPengobatanHari?: number | null;
 };
 
+export type AiMasterSyncResult = {
+  puskesmas: number;
+  obat: number;
+  kondisi: number;
+};
+
 export type StokRow = {
   id: number;
   puskesmasId: string;
@@ -232,6 +238,7 @@ export type AiWorkflowJob = {
 };
 
 export type DemoWorkflowRunResponse = { jobId: string; status: AiWorkflowStatus; puskesmasId: string; periode: string };
+export type AiWorkflowRunPayload = { puskesmasId?: string; periode: string };
 
 export type DemoWorkflowState = {
   puskesmasId: string;
@@ -366,6 +373,10 @@ export async function getObat(): Promise<ObatRecord[]> {
   return apiFetch('/master/obat');
 }
 
+export async function syncAiMasterData(): Promise<AiMasterSyncResult> {
+  return apiFetch('/master/ai/sync', { method: 'POST' });
+}
+
 export async function deleteObat(id: string): Promise<{ id: string; deleted: boolean }> {
   return apiFetch(`/master/obat/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
@@ -421,6 +432,16 @@ export async function runDemoWorkflow(): Promise<DemoWorkflowRunResponse> {
 
 export async function getDemoWorkflowState(): Promise<DemoWorkflowState> {
   return apiFetch('/workflow/demo/state');
+}
+
+export async function runAiWorkflow(payload: AiWorkflowRunPayload): Promise<DemoWorkflowRunResponse> {
+  return apiFetch('/workflow/ai/run', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function getAiWorkflowState(payload: AiWorkflowRunPayload): Promise<DemoWorkflowState> {
+  const query = new URLSearchParams({ periode: payload.periode });
+  if (payload.puskesmasId) query.set('puskesmasId', payload.puskesmasId);
+  return apiFetch(`/workflow/ai/state?${query.toString()}`);
 }
 
 export async function getForecastRuns(): Promise<ForecastRun[]> {

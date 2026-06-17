@@ -86,6 +86,36 @@ export type AiAllocateResponse = {
   redistribution: Array<Record<string, unknown>>;
 };
 
+export type AiFacility = {
+  facility_id: string;
+  name: string;
+  district: string;
+  province?: string | null;
+  remoteness?: string | null;
+  accessibility_score?: number | null;
+  has_cold_chain?: boolean | null;
+  has_lab?: boolean | null;
+  lead_time_days?: number | null;
+  regional_mmr?: number | null;
+  baseline_pregnancy_count?: number | null;
+};
+
+export type AiDrug = {
+  drug_id: string;
+  drug_name: string;
+  category?: string | null;
+  unit: string;
+  requires_cold_chain?: boolean | null;
+  standard_daily_dose?: number | null;
+  treatment_duration_days?: number | null;
+};
+
+export type AiCondition = {
+  condition_id: string;
+  condition_name: string;
+  prior_prevalence?: number | null;
+};
+
 @Injectable()
 export class AiService {
   async getHealth() {
@@ -112,6 +142,18 @@ export class AiService {
 
   allocate(payload: AiAllocateRequest): Promise<AiAllocateResponse> {
     return this.request('/api/v1/layer2/allocate', { method: 'POST', body: JSON.stringify(payload) }, 'layer2');
+  }
+
+  listFacilities(): Promise<AiFacility[]> {
+    return this.request('/api/v1/data/facilities', { method: 'GET' });
+  }
+
+  listDrugs(): Promise<AiDrug[]> {
+    return this.request('/api/v1/data/drugs', { method: 'GET' });
+  }
+
+  listConditions(): Promise<AiCondition[]> {
+    return this.request('/api/v1/data/conditions', { method: 'GET' });
   }
 
   private baseUrl() {

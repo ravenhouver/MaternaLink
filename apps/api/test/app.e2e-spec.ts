@@ -421,6 +421,107 @@ describe('MaternaLink API', () => {
     expect(response.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-001' })]));
   });
 
+  it('syncs hosted AI master data into local master tables', async () => {
+    process.env.AI_MODE = 'remote';
+    mockFetch(async (url) => {
+      if (url.endsWith('/api/v1/data/facilities')) {
+        return jsonResponse([
+          { facility_id: 'PKM-AI-999', name: 'Puskesmas AI Sync', district: 'Kotagede', province: 'DIY', remoteness: 'urban', accessibility_score: 3, has_cold_chain: true, has_lab: true, lead_time_days: 2, regional_mmr: 120, baseline_pregnancy_count: 90 },
+        ]);
+      }
+      if (url.endsWith('/api/v1/data/drugs')) {
+        return jsonResponse([
+          { drug_id: 'OBT-AI-999', drug_name: 'Obat AI Sync', category: 'OBAT', unit: 'tablet', requires_cold_chain: false, standard_daily_dose: 2, treatment_duration_days: 7 },
+        ]);
+      }
+      if (url.endsWith('/api/v1/data/conditions')) {
+        return jsonResponse([{ condition_id: 'KAI999', condition_name: 'Kondisi AI Sync', prior_prevalence: 0.12 }]);
+      }
+      return jsonResponse({ status: 'ok' });
+    });
+
+    const adminLogin = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'admin', password: 'password123' }).expect(201);
+    const adminCookie = adminLogin.headers['set-cookie'];
+    const bidanLogin = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+
+    await request(app.getHttpServer()).post('/api/master/ai/sync').set('Cookie', bidanLogin.headers['set-cookie']).expect(403);
+
+    const sync = await request(app.getHttpServer()).post('/api/master/ai/sync').set('Cookie', adminCookie).expect(201);
+    expect(sync.body).toEqual(expect.objectContaining({ puskesmas: 1, obat: 1, kondisi: 1 }));
+
+    const puskesmas = await request(app.getHttpServer()).get('/api/master/puskesmas').set('Cookie', adminCookie).expect(200);
+    expect(puskesmas.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'PKM-AI-999', nama: 'Puskesmas AI Sync', coldChainReady: true, ketersediaanLab: true, leadTimeHari: 2 })]));
+
+    const obat = await request(app.getHttpServer()).get('/api/master/obat').set('Cookie', adminCookie).expect(200);
+    expect(obat.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'OBT-AI-999', nama: 'Obat AI Sync', satuan: 'tablet', dosisStandarHarian: 2, durasiPengobatanHari: 7 })]));
+
+    const kondisi = await request(app.getHttpServer()).get('/api/master/kondisi').set('Cookie', adminCookie).expect(200);
+    expect(kondisi.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'KAI999', nama: 'Kondisi AI Sync' })]));
+  });
+
+  it('starts hosted AI workflow for the requested puskesmas and period', async () => {
+    process.env.AI_MODE = 'remote';
+    const calls: string[] = [];
+    mockFetch(async (url, init) => {
+      calls.push(url);
+      if (url.endsWith('/api/v1/layer0/extract')) {
+        const body = JSON.parse(String(init?.body));
+        expect(body).toEqual(expect.objectContaining({ period: '2025-03-01' }));
+        return jsonResponse({
+          extraction_results: [],
+          condition_estimates: [{ facility_id: 'PKM-001', period: '2025-03-01', condition_id: 'K01', manual_cases: 1, anamnesis_indicated_cases: 1, estimated_total_cases: 3, confidence_level: 'medium' }],
+        });
+      }
+      if (url.endsWith('/api/v1/layer1/forecast')) {
+        const body = JSON.parse(String(init?.body));
+        return jsonResponse({ facility_id: body.facility_id, drug_id: body.drug_id, period: body.period, forecast_demand: 24, buffer_pct: 0.2, buffer_units: 5, total_requirement: 29, current_stock: body.closing_stock });
+      }
+      if (url.endsWith('/api/v1/layer2/allocate')) {
+        const body = JSON.parse(String(init?.body));
+        expect(body.run_id).toBe('REC-AI-PKM-001-2025-03-01');
+        return jsonResponse({
+          run_id: body.run_id,
+          forecast_period: '2025-03-01',
+          summary: { total_allocated_units: 24, facilities_served: 1 },
+          allocations: [{ facility_id: 'PKM-001', facility_name: 'Puskesmas Demo', drug_id: 'OBT-001', drug_name: 'Obat Test', category: 'OBAT', requirement: 29, allocated: 24, coverage_ratio: 0.82, unmet: 5, priority_score: 0.88, factors: [], justification: 'AI allocation for requested period.' }],
+          redistribution: [],
+        });
+      }
+      return jsonResponse({ status: 'ok' });
+    });
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const cookie = login.headers['set-cookie'];
+
+    await request(app.getHttpServer())
+      .post('/api/inputs/anamnesis')
+      .set('Cookie', cookie)
+      .send({ puskesmasId: 'PKM-001', periode: '2025-03-01', transkrip: 'Pasien mual berat, pusing, dan nyeri perut atas.' })
+      .expect(201);
+
+    const run = await request(app.getHttpServer())
+      .post('/api/workflow/ai/run')
+      .set('Cookie', cookie)
+      .send({ puskesmasId: 'PKM-001', periode: '2025-03-01' })
+      .expect(201);
+    expect(run.body).toEqual(expect.objectContaining({ jobId: expect.any(String), puskesmasId: 'PKM-001', periode: '2025-03-01' }));
+
+    let state = await request(app.getHttpServer()).get('/api/workflow/ai/state?puskesmasId=PKM-001&periode=2025-03-01').set('Cookie', cookie).expect(200);
+    for (let attempt = 0; attempt < 10 && state.body.job?.status !== 'COMPLETED'; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      state = await request(app.getHttpServer()).get('/api/workflow/ai/state?puskesmasId=PKM-001&periode=2025-03-01').set('Cookie', cookie).expect(200);
+    }
+
+    expect(state.body).toEqual(expect.objectContaining({ puskesmasId: 'PKM-001', periode: '2025-03-01' }));
+    expect(state.body.job).toEqual(expect.objectContaining({ id: run.body.jobId, status: 'COMPLETED', errorMessage: null }));
+    expect(state.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-AI-PKM-001-2025-03-01', source: 'HF_AI_LAYER2', status: 'PENDING' }));
+    expect(calls).toEqual(expect.arrayContaining([
+      'https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer0/extract',
+      'https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer1/forecast',
+      'https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer2/allocate',
+    ]));
+  });
+
   it('runs deterministic forecast and lists runs', async () => {
     const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
     const cookie = login.headers['set-cookie'];

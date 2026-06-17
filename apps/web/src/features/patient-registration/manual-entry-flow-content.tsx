@@ -92,10 +92,6 @@ export function ManualEntryFlowContent() {
       setError('Lengkapi nama, NIK, nomor HP, dan alamat pasien.');
       return;
     }
-    if (stage === 'pregnancy' && (!form.gestationalAge.trim() || !form.ancVisit.trim())) {
-      setError('Lengkapi usia kehamilan dan kunjungan ANC.');
-      return;
-    }
     setStage((current) => stages[Math.min(stages.indexOf(current) + 1, stages.length - 1)]);
   }
 
@@ -145,7 +141,7 @@ export function ManualEntryFlowContent() {
 
       {stage === 'manual-personal' ? <ManualPersonalPanel form={form} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'autofill-personal' ? <AutofillPersonalPanel onBack={goBack} onNext={goNext} /> : null}
-      {stage === 'pregnancy' ? <PregnancyPanel form={form} onFieldChange={updateField} onBack={goBack} onNext={goNext} /> : null}
+      {stage === 'pregnancy' ? <PregnancyPanel onBack={goBack} onNext={goNext} /> : null}
       {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
   );
@@ -260,7 +256,7 @@ function AutofillPersonalPanel({ onBack, onNext }: { onBack: () => void; onNext:
   );
 }
 
-function PregnancyPanel({ form, onBack, onFieldChange, onNext }: { form: ManualRegistrationForm; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+function PregnancyPanel({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Pregnancy data form">
       <div className={styles.autoBanner}>
@@ -279,15 +275,14 @@ function PregnancyPanel({ form, onBack, onFieldChange, onNext }: { form: ManualR
               <div className={styles.gestationTrack}><span /></div>
               <div className={styles.gestationScale}><small>1 Week</small><small>20 Weeks</small><small>40 Weeks</small></div>
             </div>
-            <ManualField label="Current Gestational Age *" placeholder="28" value={form.gestationalAge} onChange={(value) => onFieldChange('gestationalAge', value)} />
-            <ManualField label="Last ANC Visit *" placeholder="K3" value={form.ancVisit} onChange={(value) => onFieldChange('ancVisit', value)} />
+            <AutoField label="Last ANC Visit" value="K3" fromKia />
           </div>
         </FormSection>
 
         <FormSection icon="clipboard" title="II. PREGNANCY HISTORY">
           <div className={styles.gpaGrid}>
             {['G (Gravida)', 'P (Para)', 'A (Abortus)'].map((label, index) => (
-              <label key={label}><span>{label}</span><input defaultValue={index === 0 ? '2' : index === 1 ? '1' : '0'} /></label>
+              <div key={label}><span>{label}</span><strong className={styles.gpaValue}>{index === 0 ? '2' : index === 1 ? '1' : '0'}</strong></div>
             ))}
           </div>
         </FormSection>
