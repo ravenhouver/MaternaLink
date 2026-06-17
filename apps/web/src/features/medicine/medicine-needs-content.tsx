@@ -11,6 +11,7 @@ import styles from './medicine.module.css';
 type MedicationStatus = 'safe' | 'warning' | 'critical';
 
 type MedicationRow = {
+  obatId: string;
   slug: string;
   name: string;
   stock: number;
@@ -41,6 +42,7 @@ export function MedicineNeedsContent() {
   const [selectedObatId, setSelectedObatId] = useState('');
   const [quantity, setQuantity] = useState('0');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function refreshRows() {
     setError(null);
@@ -53,6 +55,7 @@ export function MedicineNeedsContent() {
         const days = dailyUse > 0 ? stock / dailyUse : null;
         const status: MedicationStatus = stock <= 5 ? 'critical' : stock <= 20 ? 'warning' : 'safe';
         return {
+          obatId: row.obatId,
           slug: row.obatId.toLowerCase(),
           name: row.obat?.nama ?? row.obatId,
           stock,
@@ -95,6 +98,24 @@ export function MedicineNeedsContent() {
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan stok');
     }
+  }
+
+  async function saveMedicationStock(item: MedicationRow, nextQuantity: number) {
+    if (!Number.isFinite(nextQuantity) || nextQuantity < 0) {
+      setError('Jumlah stok harus angka valid.');
+      return;
+    }
+    try {
+      await upsertStok({ puskesmasId: DEFAULT_PUSKESMAS_ID, obatId: item.obatId, periode: DEFAULT_PERIOD, stokAwal: nextQuantity, konsumsiPeriode: 0, stokSaatIni: nextQuantity });
+      closeModal();
+      await refreshRows();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan stok');
+    }
+  }
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
   }
 
   return (
@@ -209,8 +230,6 @@ export function MedicineNeedsContent() {
           <div className={styles.paginationControls}>
             <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={16} height={16} /></button>
             <button type="button" aria-current="page">1</button>
-            <button type="button" disabled>2</button>
-            <button type="button" disabled>3</button>
             <button type="button" aria-label="Next page" disabled><AppIcon name="chevronRight" width={16} height={16} /></button>
           </div>
         </footer>
@@ -222,10 +241,11 @@ export function MedicineNeedsContent() {
       </button>
 
       {error ? <p className={styles.medicineError}>{error}</p> : null}
+      {notice ? <p role="status" className={styles.medicineNotice}>{notice}</p> : null}
 
-      {activeModal === 'edit' && selectedMedication ? <EditStockModal item={selectedMedication} onClose={closeModal} /> : null}
-      {activeModal === 'shipment' && selectedMedication ? <RequestShipmentModal item={selectedMedication} onClose={closeModal} /> : null}
-      {activeModal === 'upload' ? <UploadMedicationModal onClose={closeModal} /> : null}
+      {activeModal === 'edit' && selectedMedication ? <EditStockModal item={selectedMedication} onClose={closeModal} onSave={saveMedicationStock} /> : null}
+      {activeModal === 'shipment' && selectedMedication ? <RequestShipmentModal item={selectedMedication} onClose={closeModal} onUnavailable={explainUnavailable} /> : null}
+      {activeModal === 'upload' ? <UploadMedicationModal onClose={closeModal} onUnavailable={explainUnavailable} /> : null}
     </PageContainer>
   );
 }
@@ -242,7 +262,9 @@ function ModalCloseButton({ onClose }: { onClose: () => void }) {
   );
 }
 
-function EditStockModal({ item, onClose }: { item: MedicationRow; onClose: () => void }) {
+function EditStockModal({ item, onClose, onSave }: { item: MedicationRow; onClose: () => void; onSave: (item: MedicationRow, quantity: number) => void }) {
+  const [draft, setDraft] = useState(String(item.stock));
+
   return (
     <ModalShell>
       <section className={styles.editModal} role="dialog" aria-modal="true" aria-labelledby="edit-stock-title">
@@ -258,21 +280,21 @@ function EditStockModal({ item, onClose }: { item: MedicationRow; onClose: () =>
           <label className={styles.stockField}>
             <span>Amount</span>
             <span className={styles.stockInputRow}>
-              <input defaultValue={item.stock} inputMode="numeric" />
+              <input value={draft} inputMode="numeric" onChange={(event) => setDraft(event.target.value)} />
               <span>{item.unit === 'ampul' ? 'ampoule' : item.unit}</span>
             </span>
           </label>
         </div>
         <footer className={styles.modalFooter}>
           <button type="button" className={styles.modalGhostButton} onClick={onClose}>Cancel</button>
-          <button type="button" className={styles.modalPrimaryButton} onClick={onClose}>Save</button>
+          <button type="button" className={styles.modalPrimaryButton} onClick={() => onSave(item, Number(draft))}>Save</button>
         </footer>
       </section>
     </ModalShell>
   );
 }
 
-function RequestShipmentModal({ item, onClose }: { item: MedicationRow; onClose: () => void }) {
+function RequestShipmentModal({ item, onClose, onUnavailable }: { item: MedicationRow; onClose: () => void; onUnavailable: (feature: string) => void }) {
   const isCritical = item.status === 'critical';
 
   return (
@@ -314,14 +336,14 @@ function RequestShipmentModal({ item, onClose }: { item: MedicationRow; onClose:
         </div>
         <footer className={styles.shipmentFooter}>
           <button type="button" className={styles.shipmentCancel} onClick={onClose}>Cancel</button>
-          <button type="button" className={styles.shipmentSubmit} onClick={onClose}>Submit Request</button>
+          <button type="button" className={styles.shipmentSubmit} onClick={() => { onClose(); onUnavailable(`Shipment request for ${item.name}`); }}>Submit Request</button>
         </footer>
       </section>
     </ModalShell>
   );
 }
 
-function UploadMedicationModal({ onClose }: { onClose: () => void }) {
+function UploadMedicationModal({ onClose, onUnavailable }: { onClose: () => void; onUnavailable: (feature: string) => void }) {
   return (
     <ModalShell>
       <section className={styles.uploadModal} role="dialog" aria-modal="true" aria-labelledby="upload-title">
@@ -331,17 +353,17 @@ function UploadMedicationModal({ onClose }: { onClose: () => void }) {
         </header>
         <div className={styles.uploadModalBody}>
           <section className={styles.uploadStep}>
-            <h3>Step 1: Upload Successful</h3>
+            <h3>Step 1: Upload Integration</h3>
             <div className={styles.uploadSuccessCard}>
               <span><AppIcon name="fileText" width={24} height={24} /></span>
-              <div><strong>Laporan_Stok_Mei_2024.pdf</strong><small>1.2 MB</small></div>
-              <AppIcon name="checkCircle" width={24} height={24} />
+              <div><strong>Document upload belum tersambung backend</strong><small>Gunakan input stok manual untuk data tersimpan.</small></div>
+              <AppIcon name="info" width={24} height={24} />
             </div>
           </section>
           <section className={styles.uploadStep}>
-            <div className={styles.stepHeader}><h3>Step 2: AI Analysis</h3><strong>75%</strong></div>
-            <div className={styles.progressTrack}><span /></div>
-            <em>Extracting Data...</em>
+            <div className={styles.stepHeader}><h3>Step 2: Extraction</h3><strong>0%</strong></div>
+            <div className={styles.progressTrack}><span style={{ width: 0 }} /></div>
+            <em>Extraction service is not connected in this batch.</em>
           </section>
           <section className={styles.uploadStep}>
             <div className={styles.stepHeader}><h3>Step 3: Extraction Result</h3><b>AI Assisted</b></div>
@@ -359,7 +381,7 @@ function UploadMedicationModal({ onClose }: { onClose: () => void }) {
         </div>
         <footer className={styles.uploadFooter}>
           <button type="button" className={styles.modalGhostButton} onClick={onClose}>Cancel</button>
-          <button type="button" className={styles.modalPrimaryButton} onClick={onClose}>Confirm &amp; Enter into Form</button>
+          <button type="button" className={styles.modalPrimaryButton} onClick={() => { onClose(); onUnavailable('Document extraction'); }}>Confirm &amp; Enter into Form</button>
         </footer>
       </section>
     </ModalShell>

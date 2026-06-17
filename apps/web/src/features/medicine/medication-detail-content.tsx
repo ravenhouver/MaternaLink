@@ -20,6 +20,8 @@ export function MedicationDetailContent() {
   const [medicine, setMedicine] = useState<ObatRecord | null>(null);
   const [stockRows, setStockRows] = useState<StokRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   useEffect(() => {
     Promise.all([getObat(), getStokRows({ puskesmasId: DEFAULT_PUSKESMAS_ID })])
@@ -38,13 +40,19 @@ export function MedicationDetailContent() {
   const dailyUse = usage > 0 ? usage / 30 : 0;
   const emptyDays = dailyUse > 0 ? Math.max(1, Math.round(currentStock / dailyUse)) : 0;
   const bars = useMemo(() => Array.from({ length: 11 }, (_, index) => Math.max(24, Math.min(128, usage * (0.35 + ((index % 4) + 1) * 0.08)))), [usage]);
-  const historyRows = stockRows.slice(0, 5).map((row) => ({
+  const historyRows = (showAllHistory ? stockRows : stockRows.slice(0, 5)).map((row) => ({
     date: new Date(row.periode).toLocaleDateString('id-ID'),
     activity: 'Stock update',
     amount: `${row.stokSaatIni} ${row.obat?.satuan ?? medicine?.satuan ?? 'unit'}`,
     person: row.puskesmas?.nama ?? row.puskesmasId,
     type: 'in',
   }));
+
+  const updatedLabel = latestStock ? new Date(latestStock.periode).toLocaleDateString('id-ID') : 'Belum ada update stok';
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
 
   return (
     <PageContainer size="wide" className={styles.detailPage}>
@@ -57,7 +65,7 @@ export function MedicationDetailContent() {
           </nav>
           <h1>Medication Detail: {medicine?.nama ?? 'Loading...'}</h1>
         </div>
-        <button type="button" className={styles.printButton}>
+        <button type="button" className={styles.printButton} onClick={() => window.print()}>
           <AppIcon name="printer" width={18} height={18} />
           Print Report
         </button>
@@ -70,6 +78,7 @@ export function MedicationDetailContent() {
       </section>
 
       {error ? <p className={styles.medicineError}>{error}</p> : null}
+      {notice ? <p role="status" className={styles.medicineNotice}>{notice}</p> : null}
 
       <section className={styles.detailGrid}>
         <div className={styles.infoStack}>
@@ -87,12 +96,12 @@ export function MedicationDetailContent() {
           <section className={styles.predictionCard}>
             <div className={styles.predictionTitle}><span>AI Analysis</span><h2>Stock Prediction</h2></div>
             <p>Prediction: current stock is {currentStock} {medicine?.satuan ?? 'unit'} with period usage {usage}. {emptyDays ? `Estimated stock coverage is ${emptyDays} days.` : 'Usage trend is not available yet.'}</p>
-            <footer><span>Updated 2 hours ago</span><button type="button">View Detailed Analytics <AppIcon name="chevronRight" width={14} height={14} /></button></footer>
+            <footer><span>Updated {updatedLabel}</span><button type="button" onClick={() => explainUnavailable('Detailed analytics')}>View Detailed Analytics <AppIcon name="chevronRight" width={14} height={14} /></button></footer>
           </section>
         </div>
 
         <section className={styles.chartCard}>
-          <header><h2>Usage Chart (30 Days)</h2><button type="button">Daily <AppIcon name="chevronDown" width={14} height={14} /></button></header>
+          <header><h2>Usage Chart (30 Days)</h2><button type="button" onClick={() => explainUnavailable('Chart interval selector')}>Daily <AppIcon name="chevronDown" width={14} height={14} /></button></header>
           <div className={styles.chartPlot} aria-label="Usage bar chart">
             {bars.map((height, index) => <span key={index} className={index === 3 || index === 6 || index === 10 ? styles.highBar : ''} style={{ height }} />)}
           </div>
@@ -102,7 +111,7 @@ export function MedicationDetailContent() {
       </section>
 
       <section className={styles.historyCard}>
-        <header><h2>Stock Update History</h2><button type="button">View All History</button></header>
+        <header><h2>Stock Update History</h2><button type="button" onClick={() => setShowAllHistory((current) => !current)}>{showAllHistory ? 'Show Recent History' : 'View All History'}</button></header>
         <div className={styles.historyScroll}>
           <table className={styles.historyTable}>
             <thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Personnel</th><th>Status</th></tr></thead>
@@ -123,10 +132,10 @@ export function MedicationDetailContent() {
       </section>
 
       <footer className={styles.detailFooter}>
-        <button type="button" className={styles.removeButton}><AppIcon name="trash" width={18} height={18} />Remove from Inventory</button>
+        <button type="button" className={styles.removeButton} onClick={() => explainUnavailable(`Remove ${medicine?.nama ?? 'medicine'}`)}><AppIcon name="trash" width={18} height={18} />Remove from Inventory</button>
         <div>
           <Link href={routes.medicineNeeds} className={styles.backButton}>Back</Link>
-          <button type="button" className={styles.detailSaveButton}><AppIcon name="save" width={18} height={18} />Save Changes</button>
+          <button type="button" className={styles.detailSaveButton} onClick={() => explainUnavailable('Save medicine changes')}><AppIcon name="save" width={18} height={18} />Save Changes</button>
         </div>
       </footer>
     </PageContainer>
