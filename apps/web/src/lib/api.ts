@@ -14,7 +14,7 @@ export type AdminUserRecord = CurrentUser & {
   active: boolean;
   createdAt: string;
   updatedAt: string;
-  puskesmas?: { id: string; nama: string; kecamatan?: string } | null;
+  puskesmas?: { id: string; nama: string; kecamatan?: string; latitude?: number | null; longitude?: number | null } | null;
 };
 
 export type PregnancyRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -113,7 +113,7 @@ export type DistributionRecommendation = {
   priorityRank: number;
   justification?: string | null;
   routeSummary?: Record<string, unknown> | null;
-  puskesmas?: { id: string; nama: string; kecamatan?: string };
+  puskesmas?: { id: string; nama: string; kecamatan?: string; latitude?: number | null; longitude?: number | null };
   items: RecommendationItem[];
   trackingEvents?: TrackingEvent[];
 };
@@ -155,6 +155,8 @@ export type PuskesmasRecord = {
   kapasitasSimpanObat?: number | null;
   jarakKeIfkKm?: number | null;
   leadTimeHari?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   skorAksesibilitas: number;
 };
 

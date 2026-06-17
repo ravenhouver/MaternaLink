@@ -32,6 +32,8 @@ async function main() {
       kapasitasSimpanObat: 1200,
       jarakKeIfkKm: 8,
       leadTimeHari: 1,
+      latitude: -7.8014,
+      longitude: 110.3916,
       skorAksesibilitas: 3,
     },
     {
@@ -48,6 +50,8 @@ async function main() {
       kapasitasSimpanObat: 500,
       jarakKeIfkKm: 85.5,
       leadTimeHari: 7,
+      latitude: -8.6136,
+      longitude: 120.4721,
       skorAksesibilitas: 1,
     },
   ];

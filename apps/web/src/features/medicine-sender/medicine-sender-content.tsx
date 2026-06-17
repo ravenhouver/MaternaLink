@@ -60,6 +60,7 @@ export function MedicineSenderContent() {
       weather: alert?.type.replaceAll('_', ' ') ?? 'No active alert',
       supply: item.items.map((row) => `${row.obat?.nama ?? row.obatId} ${row.finalQuantity}`).join(', '),
       pointStatus: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'anticipatory' : 'regular',
+      position: item.puskesmas?.latitude != null && item.puskesmas.longitude != null ? [item.puskesmas.latitude, item.puskesmas.longitude] : undefined,
     };
   }), [alerts, recommendations]);
 

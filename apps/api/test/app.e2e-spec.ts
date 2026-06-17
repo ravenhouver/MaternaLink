@@ -304,6 +304,8 @@ describe('MaternaLink API', () => {
           skorAksesibilitas: 1,
           leadTimeHari: 7,
           coldChainReady: false,
+          latitude: expect.any(Number),
+          longitude: expect.any(Number),
         }),
       ]),
     );

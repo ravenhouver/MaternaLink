@@ -147,6 +147,8 @@ model Puskesmas {
   kapasitasSimpanObat  Int?                         @map("kapasitas_simpan_obat")
   jarakKeIfkKm         Float?                       @map("jarak_ke_ifk_km")
   leadTimeHari         Float?                       @map("lead_time_hari")
+  latitude             Float?                       @map("latitude")
+  longitude            Float?                       @map("longitude")
   skorAksesibilitas    Int                          @default(2) @map("skor_aksesibilitas")
   rainyAccess          RainyAccess                  @default(AMAN) @map("rainy_access")
   createdAt            DateTime                     @default(now()) @map("created_at")

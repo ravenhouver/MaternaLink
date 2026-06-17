@@ -1,0 +1,2 @@
+ALTER TABLE "puskesmas" ADD COLUMN "latitude" DOUBLE PRECISION;
+ALTER TABLE "puskesmas" ADD COLUMN "longitude" DOUBLE PRECISION;

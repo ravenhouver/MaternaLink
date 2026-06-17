@@ -204,7 +204,12 @@ export function EnvironmentMonitoringContent() {
       .catch(() => undefined);
   }, []);
 
-  const environmentalPoints = useMemo<EnvironmentalPoint[]>(() => [], []);
+  const environmentalPoints = useMemo<EnvironmentalPoint[]>(() => puskesmas.flatMap((item) => {
+    if (item.latitude == null || item.longitude == null) return [];
+    const alert = alerts.find((row) => row.puskesmasId === item.id);
+    const risk = alert?.severity === 'CRITICAL' ? 'critical' : alert?.severity === 'HIGH' ? 'high' : item.rainyAccess === 'TERBATAS' ? 'medium' : 'low';
+    return [{ id: item.id, name: item.nama, position: [item.latitude, item.longitude], risk, metric: alert?.message ?? item.rainyAccess }];
+  }), [alerts, puskesmas]);
 
   const forecasts = useMemo<ForecastItem[]>(() => puskesmas.slice(0, 3).map((item) => {
     const alert = alerts.find((row) => row.puskesmasId === item.id);
@@ -247,7 +252,7 @@ export function EnvironmentMonitoringContent() {
             </div>
             <div className={styles.mapCanvas}>
               <EnvironmentMap points={environmentalPoints} />
-              <p role="status" className={styles.environmentNotice}>Koordinat fasilitas belum tersedia di database; risiko rute ditampilkan lewat tabel dan feed alert.</p>
+              {environmentalPoints.length === 0 ? <p role="status" className={styles.environmentNotice}>Koordinat fasilitas belum tersedia di database; risiko rute ditampilkan lewat tabel dan feed alert.</p> : null}
             </div>
           </section>
 

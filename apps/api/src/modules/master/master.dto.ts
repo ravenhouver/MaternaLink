@@ -68,6 +68,20 @@ export class CreatePuskesmasDto {
   @Min(0)
   leadTimeHari?: number;
 
+  @ApiPropertyOptional({ example: -7.8014 })
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @ApiPropertyOptional({ example: 110.3916 })
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
+
   @ApiPropertyOptional({ example: 1, minimum: 1, maximum: 3 })
   @IsOptional()
   @IsInt()
