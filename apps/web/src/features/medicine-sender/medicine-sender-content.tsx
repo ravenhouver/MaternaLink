@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import { getAlerts, getCurrentUser, getDashboardSummary, getPuskesmas, getRecommendations, type AlertRecord, type CurrentUser, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
@@ -110,6 +111,7 @@ export function MedicineSenderContent() {
 
         <div className={styles.roleProfile}>
           <a href={routes.ifk} onClick={(event) => { event.preventDefault(); explainUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
+          <RoleLogoutButton className={styles.roleLogoutButton} />
           <div>
             <span><AppIcon name="user" width={18} height={18} /></span>
             <strong>{user?.displayName ?? user?.username ?? 'IFK Officer'}</strong>

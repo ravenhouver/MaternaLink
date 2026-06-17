@@ -59,16 +59,22 @@
 }
 
 .roleNav a,
-.roleProfile a {
+.roleProfile a,
+.roleLogoutButton {
   display: flex;
   min-height: 44px;
   align-items: center;
   gap: 12px;
+  border: 0;
   border-radius: 24px;
+  background: transparent;
   color: #697586;
+  cursor: pointer;
   padding: 12px 16px;
   font-size: 14px;
+  font: inherit;
   line-height: 20px;
+  text-align: left;
 }
 
 .roleNavActive {
@@ -1491,15 +1497,23 @@
 }
 
 .clinicsNav a,
-.clinicsSidebarBottom a {
+.clinicsSidebarBottom a,
+.clinicsLogoutButton {
+  display: flex;
+  align-items: center;
   gap: 12px;
   min-height: 44px;
+  border: 0;
   border-radius: 8px;
+  background: transparent;
   color: #5f6368;
+  cursor: pointer;
   padding: 12px 16px;
   font-size: 14px;
+  font: inherit;
   font-weight: 600;
   line-height: 20px;
+  text-align: left;
 }
 
 .clinicsNavActive {
@@ -2229,13 +2243,44 @@
   gap: 4px;
 }
 
-.clinicsNav a {
+.clinicsNav a,
+.clinicsLogoutButton {
+  display: flex;
+  align-items: center;
   min-height: 44px;
   gap: 12px;
+  border: 0;
   border-radius: 24px;
+  background: transparent;
   color: #697586;
+  cursor: pointer;
   padding: 12px 16px;
+  font: inherit;
   font-weight: 500;
+  text-align: left;
+}
+
+.recoSidebarFooter {
+  margin-top: auto;
+  border-top: 1px solid rgb(196 199 207 / 0.3);
+  padding-top: 16px;
+}
+
+.recoLogoutButton {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: #697586;
+  cursor: pointer;
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
 }
 
 .clinicsNavActive {

@@ -77,8 +77,11 @@ export class ExaminationsService {
     });
   }
 
-  get(id: string) {
-    return this.prisma.examination.findUniqueOrThrow({ where: { id }, include: { patient: true, pregnancy: true, queue: true } });
+  get(id: string, user: CurrentUser) {
+    return this.prisma.examination.findFirstOrThrow({
+      where: { id, ...(user.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
+      include: { patient: true, pregnancy: true, queue: true },
+    });
   }
 
   list(user: CurrentUser, filters: { patientId?: string; puskesmasId?: string }) {

@@ -97,6 +97,25 @@ describe('MaternaLink API', () => {
     await request(app.getHttpServer()).post('/api/master/obat').set('Cookie', bidanCookie).send({}).expect(403);
   });
 
+  it('blocks cross-role dashboard API access and privileged mutations', async () => {
+    const bidanLogin = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const bidanCookie = bidanLogin.headers['set-cookie'];
+    const ifkLogin = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'ifk', password: 'password123' }).expect(201);
+    const ifkCookie = ifkLogin.headers['set-cookie'];
+    const adminLogin = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'admin', password: 'password123' }).expect(201);
+    const adminCookie = adminLogin.headers['set-cookie'];
+
+    await request(app.getHttpServer()).get('/api/patients').set('Cookie', ifkCookie).expect(403);
+    await request(app.getHttpServer()).get('/api/queue').set('Cookie', ifkCookie).expect(403);
+    await request(app.getHttpServer()).get('/api/examinations').set('Cookie', ifkCookie).expect(403);
+    await request(app.getHttpServer()).post('/api/inputs/stok').set('Cookie', ifkCookie).send({}).expect(403);
+    await request(app.getHttpServer()).post('/api/lplpo/generate').set('Cookie', ifkCookie).send({}).expect(403);
+    await request(app.getHttpServer()).post('/api/forecast/run').set('Cookie', ifkCookie).send({}).expect(403);
+    await request(app.getHttpServer()).post('/api/distribution/plans/1/simulate').set('Cookie', bidanCookie).expect(403);
+    await request(app.getHttpServer()).get('/api/distribution/plans').set('Cookie', bidanCookie).expect(403);
+    await request(app.getHttpServer()).get('/api/distribution/plans').set('Cookie', adminCookie).expect(200);
+  });
+
   it('returns fallback AI gateway health', async () => {
     process.env.AI_MODE = 'fallback';
     const response = await request(app.getHttpServer()).get('/api/ai/health').expect(200);

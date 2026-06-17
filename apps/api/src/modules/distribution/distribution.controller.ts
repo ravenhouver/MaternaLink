@@ -89,6 +89,7 @@ export class DistributionController {
 
   @ApiOperation({ summary: 'List distribution alerts' })
   @ApiResponse({ status: 200, description: 'Alerts returned' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Get('alerts') listAlerts() { return this.service.listAlerts(); }
   @ApiOperation({ summary: 'Create allocation plan' })
   @ApiResponse({ status: 201, description: 'Allocation plan created' })
@@ -96,9 +97,11 @@ export class DistributionController {
   @Post('plans') createPlan(@Body() body: CreateAllocationPlanDto) { return this.service.createPlan(body); }
   @ApiOperation({ summary: 'List allocation plans' })
   @ApiResponse({ status: 200, description: 'Allocation plans returned' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Get('plans') listPlans(@Query('puskesmasId') puskesmasId?: string) { return this.service.listPlans(puskesmasId); }
   @ApiOperation({ summary: 'Get allocation plan by ID' })
   @ApiResponse({ status: 200, description: 'Allocation plan returned' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Get('plans/:id') getPlan(@Param('id', ParseIntPipe) id: number) { return this.service.getPlan(id); }
   @ApiOperation({ summary: 'Update allocation plan' })
   @ApiResponse({ status: 200, description: 'Allocation plan updated' })
@@ -110,5 +113,6 @@ export class DistributionController {
   @Delete('plans/:id') removePlan(@Param('id', ParseIntPipe) id: number) { return this.service.removePlan(id); }
   @ApiOperation({ summary: 'Simulate allocation route and cold-chain risk' })
   @ApiResponse({ status: 201, description: 'Simulation result returned with alerts' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Post('plans/:id/simulate') simulate(@Param('id', ParseIntPipe) id: number) { return this.service.simulate(id); }
 }

@@ -69,18 +69,24 @@
 }
 
 .nav a,
-.supportNav a {
+.supportNav a,
+.supportLogoutButton {
   display: flex;
   min-height: 44px;
   align-items: center;
   gap: 12px;
+  border: 0;
   border-radius: 24px;
+  background: transparent;
   color: #697586;
+  cursor: pointer;
   padding: 12px 16px;
   font-size: 14px;
+  font: inherit;
   font-weight: 500;
   line-height: 20px;
   text-transform: none;
+  text-align: left;
 }
 
 .navActive {

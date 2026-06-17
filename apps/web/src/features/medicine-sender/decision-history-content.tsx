@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getRecommendations } from '@/lib/api';
 import { routes } from '@/lib/routes';
@@ -31,6 +32,9 @@ function Sidebar() {
         <a href={routes.ifkClinics}><AppIcon name="users" width={20} height={20} />Clinic List</a>
         <a href={routes.ifkEnvironment}><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
       </nav>
+      <div className={styles.dhSidebarFooter}>
+        <RoleLogoutButton className={styles.dhLogoutButton} />
+      </div>
     </aside>
   );
 }

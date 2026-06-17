@@ -8,11 +8,11 @@ import { CreateQueueDto, UpdateQueueStatusDto } from './queue.dto';
 import { QueueService } from './queue.service';
 
 @UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.BIDAN_PUSKESMAS)
 @Controller('queue')
 export class QueueController {
   constructor(private readonly service: QueueService) {}
 
-  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post()
   create(@Body() body: CreateQueueDto, @Req() request: { user: CurrentUser }) {
     return this.service.create(body, request.user);
@@ -28,13 +28,11 @@ export class QueueController {
     return this.service.list(request.user, { puskesmasId, status });
   }
 
-  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Patch(':id/status')
   updateStatus(@Param('id') id: string, @Body() body: UpdateQueueStatusDto) {
     return this.service.updateStatus(id, body);
   }
 
-  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Delete(':id')
   remove(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
     return this.service.remove(id, request.user);

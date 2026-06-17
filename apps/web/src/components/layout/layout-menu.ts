@@ -26,11 +26,22 @@ export const navItems = [
   { key: routes.ifkClinics, href: routes.ifkClinics, icon: 'users', label: 'Clinics', roles: ['IFK_ADMIN'] },
   { key: routes.ifkEnvironment, href: routes.ifkEnvironment, icon: 'calendar', label: 'Environment', roles: ['IFK_ADMIN'] },
   { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'settings', label: 'Decision History', roles: ['IFK_ADMIN'] },
-  { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', roles: ['IFK_ADMIN'] },
+  { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', roles: ['BIDAN_PUSKESMAS'] },
 ] satisfies NavItem[];
 
 export function getVisibleNavItems(role: UserRole) {
   return navItems.filter((item) => item.roles.some((allowedRole) => allowedRole === role));
+}
+
+export function isRouteAllowedForRole(pathname: string, role: UserRole) {
+  if (pathname === routes.login) return true;
+  if (pathname === '/') return role === 'BIDAN_PUSKESMAS';
+
+  const matchedItem = [...navItems]
+    .sort((left, right) => right.href.length - left.href.length)
+    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+  return matchedItem ? (matchedItem.roles as UserRole[]).includes(role) : true;
 }
 
 export function resolveSelectedKey(pathname: string) {

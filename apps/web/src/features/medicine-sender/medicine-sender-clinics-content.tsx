@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getPuskesmas, getRecommendations, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
@@ -88,6 +89,9 @@ function ClinicsSidebar({ detail }: { detail: boolean }) {
         <a className={!detail ? styles.clinicsNavActive : undefined} href={routes.ifkClinics}><AppIcon name="users" width={20} height={20} />Clinic List</a>
         <a href={routes.ifkEnvironment}><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
       </nav>
+      <div className={styles.clinicsSidebarBottom}>
+        <RoleLogoutButton className={styles.clinicsLogoutButton} />
+      </div>
     </aside>
   );
 }

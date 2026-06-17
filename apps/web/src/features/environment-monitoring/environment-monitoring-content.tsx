@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { useEffect, useMemo, useState } from 'react';
+import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import { getAlerts, getCurrentUser, getPuskesmas, type AlertRecord, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
@@ -52,6 +53,7 @@ function RoleSidebar({ onUnavailable, user }: { onUnavailable: (feature: string)
 
       <div className={styles.supportNav}>
         <a href={routes.ifkEnvironment} onClick={(event) => { event.preventDefault(); onUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
+        <RoleLogoutButton className={styles.supportLogoutButton} />
         <div className={styles.officerCard}>
           <span><AppIcon name="user" width={18} height={18} /></span>
           <strong>{user?.displayName ?? user?.username ?? 'IFK Officer'}</strong>

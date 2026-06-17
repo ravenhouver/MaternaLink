@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { getCurrentUser, type CurrentUser } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { getBrandHref, isRouteAllowedForRole } from './layout-menu';
 import { MobileNavbar } from './mobile-navbar';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
@@ -44,14 +45,17 @@ export function AppShell({ children }: AppShellProps) {
 
       if (!currentUser && !isLogin) router.replace(routes.login);
       if (currentUser && isLogin) {
-        router.replace(currentUser.role === 'SUPER_ADMIN' ? routes.admin : currentUser.role === 'IFK_ADMIN' ? routes.ifk : routes.dashboard);
+        router.replace(getBrandHref(currentUser.role));
+      }
+      if (currentUser && !isLogin && !isRouteAllowedForRole(pathname, currentUser.role)) {
+        router.replace(getBrandHref(currentUser.role));
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [isLogin, router]);
+  }, [isLogin, pathname, router]);
 
   const themeConfig = {
     algorithm: theme.defaultAlgorithm,
@@ -75,10 +79,15 @@ export function AppShell({ children }: AppShellProps) {
 
   if (isEmbeddedIfkPage || isEmbeddedSuperAdminPage) {
     if (isAuthLoading || !user) return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
+    if (!isRouteAllowedForRole(pathname, user.role)) return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
     return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
   }
 
   if (isAuthLoading || !user) {
+    return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
+  }
+
+  if (!isRouteAllowedForRole(pathname, user.role)) {
     return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
   }
 

@@ -17,26 +17,36 @@ export class InputsController {
   @ApiOperation({ summary: 'Upsert monthly diagnosis input' })
   @ApiResponse({ status: 201, description: 'Diagnosis input saved' })
   @Get('diagnosis') listDiagnosis(@Query('puskesmasId') puskesmasId?: string, @Query('periode') periode?: string) { return this.service.listDiagnosis(puskesmasId, periode); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('diagnosis') createDiagnosis(@Body() body: DiagnosisInputDto) { return this.service.createDiagnosis(body); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Delete('diagnosis/:id') removeDiagnosis(@Param('id', ParseIntPipe) id: number) { return this.service.removeDiagnosis(id); }
   @ApiOperation({ summary: 'Upsert monthly symptom input' })
   @ApiResponse({ status: 201, description: 'Symptom input saved' })
   @Get('gejala') listGejala(@Query('puskesmasId') puskesmasId?: string, @Query('periode') periode?: string) { return this.service.listGejala(puskesmasId, periode); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('gejala') createGejala(@Body() body: GejalaInputDto) { return this.service.createGejala(body); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Delete('gejala/:id') removeGejala(@Param('id', ParseIntPipe) id: number) { return this.service.removeGejala(id); }
   @ApiOperation({ summary: 'Upsert monthly puskesmas context input' })
   @ApiResponse({ status: 201, description: 'Context input saved' })
   @Get('konteks') listKonteks(@Query('puskesmasId') puskesmasId?: string, @Query('periode') periode?: string) { return this.service.listKonteks(puskesmasId, periode); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('konteks') createKonteks(@Body() body: KonteksInputDto) { return this.service.createKonteks(body); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Delete('konteks/:id') removeKonteks(@Param('id', ParseIntPipe) id: number) { return this.service.removeKonteks(id); }
   @ApiOperation({ summary: 'Upsert monthly medicine stock input' })
   @ApiResponse({ status: 201, description: 'Stock input saved' })
   @Get('stok') listStok(@Query('puskesmasId') puskesmasId?: string, @Query('periode') periode?: string) { return this.service.listStok(puskesmasId, periode); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('stok') createStok(@Body() body: StokInputDto) { return this.service.createStok(body); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Delete('stok/:id') removeStok(@Param('id', ParseIntPipe) id: number) { return this.service.removeStok(id); }
   @ApiOperation({ summary: 'Create raw anamnesis transcript input' })
   @ApiResponse({ status: 201, description: 'Anamnesis input saved' })
   @Get('anamnesis') listAnamnesis(@Query('puskesmasId') puskesmasId?: string, @Query('periode') periode?: string) { return this.service.listAnamnesis(puskesmasId, periode); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('anamnesis') createAnamnesis(@Body() body: AnamnesisInputDto) { return this.service.createAnamnesis(body); }
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Delete('anamnesis/:id') removeAnamnesis(@Param('id', ParseIntPipe) id: number) { return this.service.removeAnamnesis(id); }
 }

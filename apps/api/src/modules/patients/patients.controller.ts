@@ -8,11 +8,11 @@ import { CreatePatientDto, UpdatePatientDto } from './patients.dto';
 import { PatientsService } from './patients.service';
 
 @UseGuards(AuthGuard, RolesGuard)
+@Roles(UserRole.BIDAN_PUSKESMAS)
 @Controller('patients')
 export class PatientsController {
   constructor(private readonly service: PatientsService) {}
 
-  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post()
   create(@Body() body: CreatePatientDto, @Req() request: { user: CurrentUser }) {
     return this.service.create(body, request.user);
@@ -28,13 +28,11 @@ export class PatientsController {
     return this.service.get(id, request.user);
   }
 
-  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: UpdatePatientDto, @Req() request: { user: CurrentUser }) {
     return this.service.update(id, body, request.user);
   }
 
-  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Delete(':id')
   remove(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
     return this.service.remove(id, request.user);

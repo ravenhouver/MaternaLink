@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import {
   approveRecommendation,
@@ -42,6 +43,9 @@ function RecommendationsSidebar() {
         <a href={routes.ifkClinics}><AppIcon name="users" width={20} height={20} />Clinic List</a>
         <a href={routes.ifkEnvironment}><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
       </nav>
+      <div className={styles.recoSidebarFooter}>
+        <RoleLogoutButton className={styles.recoLogoutButton} />
+      </div>
     </aside>
   );
 }

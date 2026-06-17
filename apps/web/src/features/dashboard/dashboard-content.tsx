@@ -7,6 +7,7 @@ import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { getCurrentUser, getDashboardSummary, getQueue, getRecommendations, type CurrentUser, type DashboardSummary } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { buildDashboardActivities, type DashboardActivity } from './dashboard-activities';
 import styles from './dashboard.module.css';
 
 type StatCard = {
@@ -23,14 +24,6 @@ type QuickAction = {
   href: string;
 };
 
-type Activity = {
-  name: string;
-  title: string;
-  meta: string;
-  icon: AppIconName;
-  tone: string;
-};
-
 const quickActions: QuickAction[] = [
   { label: 'New Patient', icon: 'users', href: routes.newPatient },
   { label: 'Calendar', icon: 'calendar', href: routes.forecastCalendar },
@@ -41,7 +34,7 @@ const quickActions: QuickAction[] = [
 export function DashboardContent() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,10 +44,7 @@ export function DashboardContent() {
         if (!mounted) return;
         setSummary(nextSummary);
         setUser(nextUser);
-        setActivities([
-          ...queueRows.slice(0, 2).map((row) => ({ name: row.patient.fullName, title: `Queue ${row.status}`, meta: `${row.queueNo} - ${new Date(row.queuedAt).toLocaleString('id-ID')}`, icon: 'clipboard' as const, tone: row.status === 'WAITING' ? 'blue' : 'green' })),
-          ...recommendations.slice(0, 2).map((row) => ({ name: row.puskesmas?.nama ?? row.puskesmasId, title: `Distribution ${row.status}`, meta: row.justification ?? row.source, icon: row.urgency === 'CRITICAL' ? 'alert' as const : 'package' as const, tone: row.urgency === 'CRITICAL' ? 'red' : 'green' })),
-        ]);
+        setActivities(buildDashboardActivities(queueRows, recommendations));
       })
       .catch((loadError) => {
         if (!mounted) return;
@@ -147,7 +137,7 @@ export function DashboardContent() {
           <div className={styles.activityCard}>
             {activities.length === 0 ? <button type="button" className={styles.activityRow}><span className={[styles.activityIcon, styles.blue].join(' ')}><AppIcon name="clipboard" width={22} height={22} /></span><span className={styles.activityText}><span><strong>No activity</strong> - database kosong</span><small>Tambah pasien atau rekomendasi untuk melihat aktivitas.</small></span></button> : null}
             {activities.map((activity) => (
-              <button type="button" className={styles.activityRow} key={activity.name}>
+              <button type="button" className={styles.activityRow} key={activity.key}>
                 <span className={[styles.activityIcon, styles[activity.tone]].join(' ')}>
                   <AppIcon name={activity.icon} width={22} height={22} />
                 </span>

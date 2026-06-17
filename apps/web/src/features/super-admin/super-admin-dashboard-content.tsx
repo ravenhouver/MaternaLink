@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getCurrentUser, getDashboardSummary, type CurrentUser, type DashboardSummary } from '@/lib/api';
 import { routes } from '@/lib/routes';
@@ -131,6 +132,7 @@ export function SuperAdminDashboardContent() {
         <div className={styles.sidebarFooter}>
           <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></button>
           <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
+          <RoleLogoutButton className={styles.navItem} />
         </div>
       </aside>
 

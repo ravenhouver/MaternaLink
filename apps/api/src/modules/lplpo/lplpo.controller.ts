@@ -16,6 +16,7 @@ export class LplpoController {
 
   @ApiOperation({ summary: 'Generate predictive LPLPO request from latest forecast' })
   @ApiResponse({ status: 201, description: 'LPLPO rows generated' })
+  @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('generate') generate(@Body() body: GenerateLplpoDto) { return this.service.generate(body); }
   @ApiOperation({ summary: 'List predictive LPLPO rows' })
   @ApiResponse({ status: 200, description: 'LPLPO rows returned' })
