@@ -69,7 +69,9 @@ export function CalendarPredictionContent() {
     setMessage(null);
     try {
       await runDemoWorkflow();
-      setMessage('Workflow selesai. Forecast, LPLPO, dan rekomendasi IFK sudah diperbarui.');
+      const refreshedPatients = await getPatients();
+      setPatients(refreshedPatients);
+      setMessage(`Workflow selesai. Forecast, LPLPO, rekomendasi IFK, dan kalender pasien sudah diperbarui (${refreshedPatients.length} pasien).`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Workflow gagal dijalankan.');
     } finally {
