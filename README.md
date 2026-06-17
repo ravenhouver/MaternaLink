@@ -28,7 +28,7 @@ Default local URLs:
 | Web dashboard | `http://localhost:3000` |
 | API base | `http://localhost:3001/api` |
 | Swagger docs | `http://localhost:3001/api/docs` |
-| FastAPI AI stub | `http://localhost:8000/health` |
+| Hosted AI API | `https://azrilfahmiardi-maternalink-ai.hf.space` |
 | PostgreSQL | `localhost:55432` |
 
 ## Demo Login
@@ -90,10 +90,9 @@ Compose starts:
 
 1. PostgreSQL on host port `55432`.
 2. API on host port `3001`.
-3. FastAPI AI stub on host port `8000`.
-4. Web dashboard on host port `3000`.
-5. Prisma migrations through API entrypoint.
-6. Demo seed data when `RUN_SEED=true`.
+3. Web dashboard on host port `3000`.
+4. Prisma migrations through API entrypoint.
+5. Demo seed data when `RUN_SEED=true`.
 
 Stop stack:
 
@@ -168,9 +167,10 @@ File: `apps/api/.env`
 | `PORT` | No | `3001` | NestJS HTTP port. |
 | `RUN_SEED` | No | `true` | Docker entrypoint runs seed data when set to `true`. |
 | `WEB_ORIGIN` | No | `http://localhost:3000` | CORS origin allowed to send credentialed auth requests. |
-| `AI_MODE` | No | `fallback` | `fallback` returns deterministic local readiness; `remote` calls FastAPI. |
-| `AI_SERVICE_BASE_URL` | No | `http://localhost:8000` / compose `http://ai-service:8000` | FastAPI service base URL. |
-| `AI_SERVICE_TIMEOUT_MS` | No | `30000` | Timeout for remote AI health calls. |
+| `AI_MODE` | No | `remote` | `remote` calls the hosted Hugging Face AI API; `fallback` skips external calls for offline development. |
+| `AI_SERVICE_BASE_URL` | No | `https://azrilfahmiardi-maternalink-ai.hf.space` | Hosted MaternaLink AI base URL. |
+| `AI_SERVICE_TIMEOUT_MS` | No | `30000` | Timeout for health, Layer 0, and Layer 1 AI calls. |
+| `AI_LAYER2_TIMEOUT_MS` | No | `600000` | Timeout for long Layer 2 allocation calls. |
 
 ### Web
 
@@ -222,26 +222,18 @@ Do not commit real production credentials or secrets.
 
 Role entry routes are `/dashboard` for bidan and `/ifk` for IFK.
 
-## FastAPI AI Stub
+## Hosted AI Integration
 
-FastAPI is scaffolded in `apps/ai-service` for later AI model integration. Current endpoints return deterministic stub responses:
+The backend calls the hosted MaternaLink AI API directly. The frontend never calls Hugging Face directly.
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Service status. |
-| `POST` | `/layer0/extract-symptoms` | Stub symptom extraction. |
-| `POST` | `/layer1/forecast-demand` | Stub demand forecast. |
-| `POST` | `/layer2/allocate` | Stub allocation. |
-| `POST` | `/layer2/explain` | Stub explanation. |
+| `POST` | `/api/v1/layer0/extract` | Symptom extraction and condition estimates. |
+| `POST` | `/api/v1/layer1/forecast` | Drug demand forecast per facility and medicine. |
+| `POST` | `/api/v1/layer2/allocate` | Equitable allocation and justifications. |
 
-Local smoke:
-
-```bash
-cd apps/ai-service
-python -m pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 8000
-curl http://127.0.0.1:8000/health
-```
+Layer 2 may take several minutes, so `/api/workflow/demo/run` starts an async backend job and `/api/workflow/demo/state` is used for polling.
 
 ## API Modules
 
