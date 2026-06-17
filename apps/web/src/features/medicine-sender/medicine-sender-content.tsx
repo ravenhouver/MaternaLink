@@ -27,6 +27,7 @@ export function MedicineSenderContent() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof getDashboardSummary>> | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([getRecommendations(), getAlerts(), getPuskesmas(), getDashboardSummary()])
@@ -71,6 +72,10 @@ export function MedicineSenderContent() {
     status: item.status === 'APPROVED' || item.status === 'DISPATCHED' || item.status === 'RECEIVED' ? 'approved' as const : item.status === 'REJECTED' ? 'rejected' as const : 'pending' as const,
   })), [recommendations]);
 
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
+
   return (
     <div className={styles.senderShell}>
       <aside className={styles.roleSidebar} aria-label="Medicine sender navigation">
@@ -102,7 +107,7 @@ export function MedicineSenderContent() {
         </nav>
 
         <div className={styles.roleProfile}>
-          <a href="#settings"><AppIcon name="settings" width={20} height={20} />Settings</a>
+          <a href={routes.ifk} onClick={(event) => { event.preventDefault(); explainUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
           <div>
             <span><AppIcon name="user" width={18} height={18} /></span>
             <strong>Officer 042</strong>
@@ -121,11 +126,11 @@ export function MedicineSenderContent() {
             <span>Medicine Sender</span>
           </nav>
           <div className={styles.topbarActions}>
-            <button type="button" aria-label="Notifikasi" className={styles.notificationButton}>
+            <button type="button" aria-label="Notifikasi" className={styles.notificationButton} onClick={() => explainUnavailable('Notifikasi')}>
               <AppIcon name="bell" width={20} height={20} />
               <span />
             </button>
-            <button type="button" aria-label="Pengaturan"><AppIcon name="settings" width={20} height={20} /></button>
+            <button type="button" aria-label="Pengaturan" onClick={() => explainUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.topbarProfile}>
               <div>
                 <strong>Pharmacy Management</strong>
@@ -137,6 +142,7 @@ export function MedicineSenderContent() {
         </header>
 
         <main id="sender-dashboard" className={styles.page}>
+          {notice ? <p role="status" className={styles.senderNotice}>{notice}</p> : null}
           <section className={styles.kpiGrid} aria-label="Ringkasan status klinik">
             {dashboardKpis.map((item) => (
               <article className={[styles.kpiCard, styles[item.tone]].join(' ')} key={item.label}>

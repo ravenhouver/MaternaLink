@@ -50,6 +50,18 @@ function splitName(name: string) {
   return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')].filter(Boolean);
 }
 
+function downloadClinicCsv(rows: ClinicRow[]) {
+  const header = ['id', 'name', 'location', 'risk', 'weather', 'deliveries'].join(',');
+  const body = rows.map((row) => [row.id, row.name, row.location, row.riskLabel, row.weather, row.deliveries].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'maternalink-clinics.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function ClinicsSidebar({ detail }: { detail: boolean }) {
   return (
     <aside className={styles.clinicsSidebar} aria-label="Medicine sender navigation">
@@ -70,7 +82,7 @@ function ClinicsSidebar({ detail }: { detail: boolean }) {
   );
 }
 
-function ClinicsTopbar({ detail }: { detail: boolean }) {
+function ClinicsTopbar({ detail, onUnavailable }: { detail: boolean; onUnavailable: (feature: string) => void }) {
   return (
     <header className={styles.clinicsTopbar}>
       <div className={styles.clinicsCrumbs}>
@@ -82,19 +94,19 @@ function ClinicsTopbar({ detail }: { detail: boolean }) {
       </div>
       <div className={styles.clinicsTopbarActions}>
         <strong>Petugas IFK</strong>
-        <button type="button" aria-label="Notifikasi"><AppIcon name="bell" width={18} height={18} /></button>
-        <button type="button" aria-label="Bantuan"><AppIcon name="info" width={18} height={18} /></button>
+        <button type="button" aria-label="Notifikasi" onClick={() => onUnavailable('Notifikasi')}><AppIcon name="bell" width={18} height={18} /></button>
+        <button type="button" aria-label="Bantuan" onClick={() => onUnavailable('Bantuan')}><AppIcon name="info" width={18} height={18} /></button>
         <span className={styles.clinicsAvatar}><AppIcon name="clipboard" width={16} height={16} /></span>
       </div>
     </header>
   );
 }
 
-function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+function ClinicTable({ onUnavailable, onView, rows }: { onUnavailable: (feature: string) => void; onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
   return (
     <div className={styles.clinicTableCard}>
       <div className={styles.clinicFilters}>
-        <button type="button"><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
+        <button type="button" onClick={() => onUnavailable('Clinic filters')}><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
       </div>
       <table className={styles.clinicTable}>
         <thead>
@@ -130,7 +142,7 @@ function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
               <td>
                 <span className={styles.clinicActions}>
                   <button type="button" aria-label={`Lihat ${clinic.name}`} onClick={() => onView(clinic)}><AppIcon name="eye" width={18} height={18} /></button>
-                  <button type="button" aria-label={`Menu ${clinic.name}`}><AppIcon name="moreVertical" width={18} height={18} /></button>
+                  <button type="button" aria-label={`Menu ${clinic.name}`} onClick={() => onUnavailable(`Menu ${clinic.name}`)}><AppIcon name="moreVertical" width={18} height={18} /></button>
                 </span>
               </td>
             </tr>
@@ -140,20 +152,16 @@ function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
       <div className={styles.clinicPagination}>
         <span>Showing {rows.length} health facilities</span>
         <div>
-          <button type="button" aria-label="Halaman sebelumnya"><AppIcon name="chevronLeft" width={14} height={14} /></button>
+          <button type="button" aria-label="Halaman sebelumnya" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
           <button type="button" className={styles.currentPage}>1</button>
-          <button type="button">2</button>
-          <button type="button">3</button>
-          <span>...</span>
-          <button type="button">36</button>
-          <button type="button" aria-label="Halaman berikutnya"><AppIcon name="chevronRight" width={14} height={14} /></button>
+          <button type="button" aria-label="Halaman berikutnya" disabled><AppIcon name="chevronRight" width={14} height={14} /></button>
         </div>
       </div>
     </div>
   );
 }
 
-function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+function ClinicsList({ onUnavailable, onView, rows }: { onUnavailable: (feature: string) => void; onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
   const stats: Array<{ label: string; value: string; tone: string; delta?: string }> = [
     { label: 'Total Facilities', value: String(rows.length), tone: 'clinicStatBlue' },
     { label: 'Critical (Stockout)', value: String(rows.filter((row) => row.risk === 'critical').length), tone: 'clinicStatRed' },
@@ -170,8 +178,8 @@ function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
           </Typography.Paragraph>
         </div>
         <div className={styles.clinicsHeaderActions}>
-          <Button className={styles.clinicsGhostButton} icon={<AppIcon name="upload" width={16} height={16} />}>Export CSV</Button>
-          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="plus" width={16} height={16} />}>Add Clinic</Button>
+          <Button className={styles.clinicsGhostButton} icon={<AppIcon name="upload" width={16} height={16} />} onClick={() => downloadClinicCsv(rows)}>Export CSV</Button>
+          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="plus" width={16} height={16} />} onClick={() => onUnavailable('Add clinic')}>Add Clinic</Button>
         </div>
       </section>
 
@@ -185,7 +193,7 @@ function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
       </section>
 
       <section className={styles.clinicRegistry} aria-label="Registry filters and table">
-        <ClinicTable rows={rows} onView={onView} />
+        <ClinicTable rows={rows} onView={onView} onUnavailable={onUnavailable} />
       </section>
     </main>
   );
@@ -304,6 +312,11 @@ function ClinicDetail({ clinic, onBack }: { clinic: ClinicRow; onBack: () => voi
 export function MedicineSenderClinicsContent() {
   const [selectedClinic, setSelectedClinic] = useState<ClinicRow | null>(null);
   const [rows, setRows] = useState<ClinicRow[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
 
   useEffect(() => {
     getPuskesmas()
@@ -317,8 +330,9 @@ export function MedicineSenderClinicsContent() {
     <div className={styles.clinicsShell}>
       <ClinicsSidebar detail={Boolean(selectedClinic)} />
       <div className={styles.clinicsWorkspace}>
-        <ClinicsTopbar detail={Boolean(selectedClinic)} />
-        {selectedClinic ? <ClinicDetail clinic={selectedClinic} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onView={setSelectedClinic} />}
+        <ClinicsTopbar detail={Boolean(selectedClinic)} onUnavailable={explainUnavailable} />
+        {notice ? <p role="status" className={styles.senderNotice}>{notice}</p> : null}
+        {selectedClinic ? <ClinicDetail clinic={selectedClinic} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onView={setSelectedClinic} onUnavailable={explainUnavailable} />}
       </div>
     </div>
   );

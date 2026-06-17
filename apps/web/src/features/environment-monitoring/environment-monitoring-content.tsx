@@ -34,7 +34,7 @@ const statusLabel: Record<RouteRow['status'], string> = {
   elevated: 'Elevated',
 };
 
-function RoleSidebar() {
+function RoleSidebar({ onUnavailable }: { onUnavailable: (feature: string) => void }) {
   return (
     <aside className={styles.sidebar} aria-label="Medicine sender navigation">
       <div className={styles.roleBrand}>
@@ -53,7 +53,7 @@ function RoleSidebar() {
       </nav>
 
       <div className={styles.supportNav}>
-        <a href="#settings"><AppIcon name="settings" width={20} height={20} />Settings</a>
+        <a href={routes.ifkEnvironment} onClick={(event) => { event.preventDefault(); onUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
         <div className={styles.officerCard}>
           <span><AppIcon name="user" width={18} height={18} /></span>
           <strong>Officer 042</strong>
@@ -64,7 +64,7 @@ function RoleSidebar() {
   );
 }
 
-function Topbar() {
+function Topbar({ onUnavailable }: { onUnavailable: (feature: string) => void }) {
   return (
     <header className={styles.topbar}>
       <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
@@ -75,8 +75,8 @@ function Topbar() {
         <span>Environment Monitoring</span>
       </nav>
       <div className={styles.topbarActions}>
-        <button type="button" aria-label="Notifikasi" className={styles.notificationButton}><AppIcon name="bell" width={20} height={20} /><span /></button>
-        <button type="button" aria-label="Pengaturan"><AppIcon name="settings" width={20} height={20} /></button>
+        <button type="button" aria-label="Notifikasi" className={styles.notificationButton} onClick={() => onUnavailable('Notifikasi')}><AppIcon name="bell" width={20} height={20} /><span /></button>
+        <button type="button" aria-label="Pengaturan" onClick={() => onUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
         <div className={styles.topbarProfile}>
           <div>
             <strong>Pharmacy Management</strong>
@@ -166,7 +166,7 @@ function RiskTable({ rows }: { rows: RouteRow[] }) {
             {rows.length === 0 ? <tr><td colSpan={6}>Belum ada data rute.</td></tr> : null}
             {rows.map((item) => (
               <tr key={item.id}>
-                <td><a href={`#${item.id}`}>{item.id}<br />({item.route})</a></td>
+                <td><span>{item.id}<br />({item.route})</span></td>
                 <td>{item.clinics}</td>
                 <td>
                   <div className={styles.riskMeter}>
@@ -189,6 +189,11 @@ function RiskTable({ rows }: { rows: RouteRow[] }) {
 export function EnvironmentMonitoringContent() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
 
   useEffect(() => {
     Promise.all([getAlerts(), getPuskesmas()])
@@ -219,10 +224,11 @@ export function EnvironmentMonitoringContent() {
 
   return (
     <div className={styles.shell}>
-      <RoleSidebar />
+      <RoleSidebar onUnavailable={explainUnavailable} />
       <div className={styles.workspace}>
-        <Topbar />
+        <Topbar onUnavailable={explainUnavailable} />
         <main className={styles.page}>
+          {notice ? <p role="status" className={styles.environmentNotice}>{notice}</p> : null}
           <section className={styles.pageHeader} aria-labelledby="environment-title">
             <div>
               <Typography.Text className={styles.eyebrow}>Intelligence Hub / Regional Sector 04</Typography.Text>

@@ -248,6 +248,18 @@
   padding: 64px 32px 32px;
 }
 
+.environmentNotice {
+  margin: 0;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 18px;
+}
+
 .pageHeader {
   display: flex;
   align-items: flex-end;
@@ -708,7 +720,8 @@
   line-height: 20px;
 }
 
-.routeTable td:first-child a {
+.routeTable td:first-child a,
+.routeTable td:first-child span {
   color: #1a73e8;
   font-weight: 800;
 }
