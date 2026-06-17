@@ -16,6 +16,8 @@ services:
       AI_LAYER2_TIMEOUT_MS: 600000
       KIA_OCR_SERVICE_URL: http://kia-ocr:8001
       KIA_OCR_TIMEOUT_MS: 60000
+      SPEECH_STT_SERVICE_URL: http://speech-stt:8002
+      SPEECH_STT_TIMEOUT_MS: 120000
       RUN_SEED: "true"
     ports:
       - "3001:3001"
@@ -30,6 +32,8 @@ services:
         condition: service_healthy
       kia-ocr:
         condition: service_started
+      speech-stt:
+        condition: service_started
     restart: unless-stopped
 
   kia-ocr:
@@ -38,6 +42,18 @@ services:
       dockerfile: services/kia-ocr/Dockerfile
     ports:
       - "8001:8001"
+    restart: unless-stopped
+
+  speech-stt:
+    build:
+      context: .
+      dockerfile: services/speech-stt/Dockerfile
+    environment:
+      STT_MODEL_SIZE: small
+      STT_DEVICE: cpu
+      STT_COMPUTE_TYPE: int8
+    ports:
+      - "8002:8002"
     restart: unless-stopped
 
   web:

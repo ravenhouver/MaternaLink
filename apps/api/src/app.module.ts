@@ -11,10 +11,11 @@ import { LplpoModule } from './modules/lplpo/lplpo.module';
 import { MasterModule } from './modules/master/master.module';
 import { PatientsModule } from './modules/patients/patients.module';
 import { QueueModule } from './modules/queue/queue.module';
+import { SpeechModule } from './modules/speech/speech.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, AiModule, MasterModule, PatientsModule, QueueModule, ExaminationsModule, InputsModule, ForecastModule, LplpoModule, DistributionModule, WorkflowModule, DashboardModule, KiaModule],
+  imports: [PrismaModule, AuthModule, AiModule, MasterModule, PatientsModule, QueueModule, ExaminationsModule, InputsModule, ForecastModule, LplpoModule, DistributionModule, WorkflowModule, DashboardModule, KiaModule, SpeechModule],
 })
 export class AppModule {}

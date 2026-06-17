@@ -173,6 +173,8 @@ File: `apps/api/.env`
 | `AI_LAYER2_TIMEOUT_MS` | No | `600000` | Timeout for long Layer 2 allocation calls. |
 | `KIA_OCR_SERVICE_URL` | No | `http://localhost:8001` | Python OCR service used to extract KIA book photo fields. |
 | `KIA_OCR_TIMEOUT_MS` | No | `60000` | Timeout for KIA OCR extraction calls. |
+| `SPEECH_STT_SERVICE_URL` | No | `http://localhost:8002` | Python speech-to-text service used for voice examination recording. |
+| `SPEECH_STT_TIMEOUT_MS` | No | `120000` | Timeout for speech-to-text transcription calls. |
 
 ### Web
 
@@ -236,6 +238,8 @@ The backend calls the hosted MaternaLink AI API directly. The frontend never cal
 | `POST` | `/api/v1/layer2/allocate` | Equitable allocation and justifications. |
 
 KIA book photo extraction is handled by a separate local Python service at `services/kia-ocr`. The web app uploads photos to the Nest API (`POST /api/kia/extract`), then the API proxies the image to `KIA_OCR_SERVICE_URL/v1/kia/extract` and returns normalized patient and pregnancy fields for review.
+
+Voice examination recording is handled by a separate local Python service at `services/speech-stt`. The web app records audio with `MediaRecorder`, uploads it to the Nest API (`POST /api/speech/transcribe`), then the API proxies the audio to `SPEECH_STT_SERVICE_URL/v1/stt/transcribe` and returns a transcript plus draft examination fields for review.
 
 Layer 2 may take several minutes, so `/api/workflow/demo/run` starts an async backend job and `/api/workflow/demo/state` is used for polling.
 

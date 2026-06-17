@@ -206,6 +206,28 @@ export type KiaExtractionResult = {
   needsReview: boolean;
 };
 
+export type SpeechTranscriptionResult = {
+  transcript: string;
+  language: string;
+  durationSeconds?: number | null;
+  confidence?: number | null;
+  segments: Array<{ start: number; end: number; text: string }>;
+  draft: {
+    complaint: string;
+    bloodPressure?: string | null;
+    pulse?: string | null;
+    gestationalAge?: number | null;
+    ancVisit?: string | null;
+    symptoms: string[];
+    diagnosis?: string | null;
+    medicine?: string | null;
+    dosage?: string | null;
+    unit?: string | null;
+    notes?: string | null;
+  };
+  needsReview: boolean;
+};
+
 export type AiMasterSyncResult = {
   puskesmas: number;
   obat: number;
@@ -374,6 +396,12 @@ export async function extractKiaBook(file: File): Promise<KiaExtractionResult> {
   const form = new FormData();
   form.append('file', file);
   return apiFetch('/kia/extract', { method: 'POST', body: form });
+}
+
+export async function transcribeSpeech(file: Blob): Promise<SpeechTranscriptionResult> {
+  const form = new FormData();
+  form.append('file', file, 'examination-recording.webm');
+  return apiFetch('/speech/transcribe', { method: 'POST', body: form });
 }
 
 export async function getPatients(): Promise<PatientRecord[]> {

@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
-import { createExamination, getTodayQueue, type ExaminationSource, type QueueRecord } from '@/lib/api';
+import { createExamination, getTodayQueue, transcribeSpeech, type ExaminationSource, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
 
@@ -72,20 +72,6 @@ const defaultForm: ExaminationFormState = {
   notes: '',
 };
 
-const voiceFallbackForm: ExaminationFormState = {
-  complaint: 'Pusing dan bengkak kaki setelah aktivitas',
-  bloodPressure: '145/95',
-  pulse: '88',
-  gestationalAge: '36',
-  ancVisit: 'K5 - Trimester 3',
-  symptoms: 'Pusing, bengkak kaki',
-  diagnosis: 'K03',
-  medicine: 'OBT-010',
-  dosage: '1',
-  unit: 'Ampul',
-  notes: 'Data diisi dari fallback voice transcript.',
-};
-
 export function PatientExaminationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -121,10 +107,16 @@ export function PatientExaminationContent() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function finishRecording() {
-    setForm(voiceFallbackForm);
-    setSource('VOICE_TRANSCRIPT_FALLBACK');
-    setMode('transcript');
+  async function finishRecording(audio: Blob) {
+    setError(null);
+    try {
+      const result = await transcribeSpeech(audio);
+      setForm(applySpeechDraft(form, result));
+      setSource('VOICE_TRANSCRIPT_AI');
+      setMode('transcript');
+    } catch (transcribeError) {
+      setError(transcribeError instanceof Error ? transcribeError.message : 'Gagal mentranskrip rekaman suara');
+    }
   }
 
   async function saveExamination() {
@@ -181,11 +173,28 @@ export function PatientExaminationContent() {
       {error ? <p className={styles.examError}>{error}</p> : null}
 
       {mode === 'method' ? <MethodSelector onManual={() => setMode('manual')} onRecord={() => setMode('recording')} /> : null}
-      {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={finishRecording} /> : null}
+      {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={(audio) => void finishRecording(audio)} /> : null}
       {mode === 'transcript' ? <ExaminationForm fields={transcriptFields} form={form} isSaving={isSaving} mode="transcript" onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
       {mode === 'manual' ? <ExaminationForm fields={manualFields} form={form} isSaving={isSaving} mode="manual" onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
     </PageContainer>
   );
+}
+
+function applySpeechDraft(current: ExaminationFormState, result: SpeechTranscriptionResult): ExaminationFormState {
+  return {
+    ...current,
+    complaint: result.draft.complaint || result.transcript || current.complaint,
+    bloodPressure: result.draft.bloodPressure ?? current.bloodPressure,
+    pulse: result.draft.pulse ?? current.pulse,
+    gestationalAge: result.draft.gestationalAge != null ? String(result.draft.gestationalAge) : current.gestationalAge,
+    ancVisit: result.draft.ancVisit ?? current.ancVisit,
+    symptoms: result.draft.symptoms.length ? result.draft.symptoms.join(', ') : current.symptoms,
+    diagnosis: result.draft.diagnosis ?? current.diagnosis,
+    medicine: result.draft.medicine ?? current.medicine,
+    dosage: result.draft.dosage ?? current.dosage,
+    unit: result.draft.unit ?? current.unit,
+    notes: result.draft.notes ?? current.notes,
+  };
 }
 
 function PatientInfoBar({ queue }: { queue: QueueRecord | null }) {
@@ -245,26 +254,83 @@ function MethodSelector({ onManual, onRecord }: { onManual: () => void; onRecord
   );
 }
 
-function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: () => void }) {
+function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: (audio: Blob) => void }) {
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [status, setStatus] = useState<'starting' | 'recording' | 'processing'>('starting');
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        const recorder = new MediaRecorder(stream, { mimeType: preferredMimeType() });
+        streamRef.current = stream;
+        recorderRef.current = recorder;
+        chunksRef.current = [];
+        recorder.addEventListener('dataavailable', (event) => {
+          if (event.data.size > 0) chunksRef.current.push(event.data);
+        });
+        recorder.addEventListener('stop', () => {
+          if (cancelled) return;
+          const audio = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+          stream.getTracks().forEach((track) => track.stop());
+          onFinish(audio);
+        });
+        recorder.start();
+        setStatus('recording');
+      } catch (error) {
+        setRecordingError(error instanceof Error ? error.message : 'Tidak bisa mengakses mikrofon');
+      }
+    }
+
+    void startRecording();
+    return () => {
+      cancelled = true;
+      if (recorderRef.current?.state === 'recording') recorderRef.current.stop();
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, [onFinish]);
+
+  function stopRecording() {
+    if (recorderRef.current?.state !== 'recording') return;
+    setStatus('processing');
+    recorderRef.current.stop();
+  }
+
   return (
     <section className={styles.recordingCard} aria-live="polite">
       <span className={styles.recordingPulse}><AppIcon name="mic" width={42} height={42} /></span>
       <div>
-        <h2>Recording in Progress</h2>
-        <p>Capture doctor notes for Mrs. Anisa Rahmawati. Finish recording to review extracted examination data.</p>
+        <h2>{status === 'processing' ? 'Processing Recording' : status === 'starting' ? 'Starting Microphone' : 'Recording in Progress'}</h2>
+        <p>{recordingError ?? 'Capture doctor notes. Finish recording to transcribe and review extracted examination data.'}</p>
       </div>
       <div className={styles.waveform} aria-hidden="true">
         {Array.from({ length: 24 }).map((_, index) => <span key={index} style={{ height: `${18 + (index % 6) * 9}px` }} />)}
       </div>
       <div className={styles.recordingActions}>
         <button type="button" className={styles.outlineAction} onClick={onBack}>Cancel</button>
-        <button type="button" className={styles.primaryAction} onClick={onFinish}>
+        <button type="button" className={styles.primaryAction} disabled={status !== 'recording'} onClick={stopRecording}>
           <AppIcon name="circleStop" width={18} height={18} />
-          Finish Recording
+          {status === 'processing' ? 'Transcribing...' : 'Finish Recording'}
         </button>
       </div>
     </section>
   );
+}
+
+function preferredMimeType() {
+  if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
+  if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) return 'audio/ogg;codecs=opus';
+  return 'audio/webm';
 }
 
 function ExaminationForm({ fields, form, isSaving, mode, onChange, onRecordAgain, onSave }: { fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; mode: 'transcript' | 'manual'; onChange: (key: keyof ExaminationFormState, value: string) => void; onRecordAgain: () => void; onSave: () => void }) {
