@@ -10,6 +10,15 @@ loadRuntimeEnv();
 describe('MaternaLink API', () => {
   let app: Awaited<ReturnType<import('@nestjs/common').INestApplication['init']>>;
   const prisma = new PrismaClient();
+  const originalFetch = global.fetch;
+
+  function mockFetch(handler: (url: string, init?: RequestInit) => Promise<Response> | Response) {
+    global.fetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => handler(String(input), init)) as jest.MockedFunction<typeof fetch>;
+  }
+
+  function jsonResponse(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  }
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -22,6 +31,12 @@ describe('MaternaLink API', () => {
   afterAll(async () => {
     await app.close();
     await prisma.$disconnect();
+    global.fetch = originalFetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    process.env.AI_MODE = 'fallback';
   });
 
   it('lists puskesmas master data', async () => {
@@ -48,8 +63,21 @@ describe('MaternaLink API', () => {
   });
 
   it('returns fallback AI gateway health', async () => {
+    process.env.AI_MODE = 'fallback';
     const response = await request(app.getHttpServer()).get('/api/ai/health').expect(200);
     expect(response.body).toEqual(expect.objectContaining({ mode: 'fallback', remote: false, status: 'fallback-ready' }));
+  });
+
+  it('returns hosted AI gateway health in remote mode', async () => {
+    process.env.AI_MODE = 'remote';
+    process.env.AI_SERVICE_BASE_URL = 'https://azrilfahmiardi-maternalink-ai.hf.space';
+    mockFetch(async (url) => {
+      expect(url).toBe('https://azrilfahmiardi-maternalink-ai.hf.space/health');
+      return jsonResponse({ service: 'MaternaLink AI', version: '1.0.0', status: 'ok' });
+    });
+
+    const response = await request(app.getHttpServer()).get('/api/ai/health').expect(200);
+    expect(response.body).toEqual(expect.objectContaining({ mode: 'remote', remote: true, status: 'ok', service: 'MaternaLink AI' }));
   });
 
   it('lets bidan create patient, queue patient, call patient, and save examination', async () => {
