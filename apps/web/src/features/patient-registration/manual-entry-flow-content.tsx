@@ -139,6 +139,7 @@ export function ManualEntryFlowContent() {
 
   return (
     <PageContainer size="wide" className={styles.manualFlowPage}>
+      {stage === 'manual-personal' ? <ManualInfoBanner /> : null}
       <WizardStepper currentStep={visualStep} />
       {error ? <p className={styles.formError}>{error}</p> : null}
 
@@ -147,6 +148,18 @@ export function ManualEntryFlowContent() {
       {stage === 'pregnancy' ? <PregnancyPanel form={form} onFieldChange={updateField} onBack={goBack} onNext={goNext} /> : null}
       {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
+  );
+}
+
+function ManualInfoBanner() {
+  return (
+    <div className={styles.manualInfoBanner}>
+      <span className={styles.manualInfoCopy}>
+        <AppIcon name="edit" width={18} height={18} />
+        <strong>Manual input — fill all fields below</strong>
+      </span>
+      <Link href={routes.kiaUpload}>Use KIA Upload instead?</Link>
+    </div>
   );
 }
 
@@ -175,12 +188,6 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
 function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Manual patient identity form">
-      <div className={styles.manualBanner}>
-        <span><AppIcon name="edit" width={18} height={18} /></span>
-        <strong>Manual input — fill all fields below</strong>
-        <Link href={routes.kiaUpload}>Use KIA Upload instead?</Link>
-      </div>
-
       <div className={styles.manualFormBody}>
         <FormSection icon="user" title="PATIENT IDENTITY">
           <div className={styles.manualFormGrid}>
