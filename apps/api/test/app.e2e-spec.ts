@@ -209,7 +209,33 @@ describe('MaternaLink API', () => {
     expect(tracking.body).toEqual(expect.arrayContaining([expect.objectContaining({ status: 'APPROVED' })]));
   });
 
-  it('runs demo workflow and exposes bidan dashboard state', async () => {
+  it('starts hosted AI demo workflow and exposes completed state after polling', async () => {
+    process.env.AI_MODE = 'remote';
+    const calls: string[] = [];
+    mockFetch(async (url, init) => {
+      calls.push(url);
+      if (url.endsWith('/api/v1/layer0/extract')) {
+        return jsonResponse({
+          extraction_results: [],
+          condition_estimates: [{ facility_id: 'PKM-001', period: '2026-06-01', condition_id: 'K03', manual_cases: 1, anamnesis_indicated_cases: 0, estimated_total_cases: 2, confidence_level: 'medium' }],
+        });
+      }
+      if (url.endsWith('/api/v1/layer1/forecast')) {
+        const body = JSON.parse(String(init?.body));
+        return jsonResponse({ facility_id: body.facility_id, drug_id: body.drug_id, period: body.period, forecast_demand: 18, buffer_pct: 0.2, buffer_units: 4, total_requirement: 22, current_stock: body.closing_stock });
+      }
+      if (url.endsWith('/api/v1/layer2/allocate')) {
+        return jsonResponse({
+          run_id: 'REC-DEMO-001',
+          forecast_period: '2026-06-01',
+          summary: { total_allocated_units: 20, facilities_served: 1 },
+          allocations: [{ facility_id: 'PKM-001', facility_name: 'Puskesmas Demo', drug_id: 'OBT-010', drug_name: 'MgSO4', category: 'OBAT', requirement: 22, allocated: 20, coverage_ratio: 0.91, unmet: 2, priority_score: 0.9, factors: [], justification: 'AI allocation prioritizes PKM-001 due to low stock.' }],
+          redistribution: [],
+        });
+      }
+      return jsonResponse({ status: 'ok' });
+    });
+
     const login = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ username: 'bidan', password: 'password123' })
@@ -217,12 +243,23 @@ describe('MaternaLink API', () => {
     const cookie = login.headers['set-cookie'];
 
     const run = await request(app.getHttpServer()).post('/api/workflow/demo/run').set('Cookie', cookie).expect(201);
-    expect(run.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', source: 'RULE_BASED_FALLBACK', status: 'PENDING' }));
-    expect(run.body.lplpoRows.length).toBeGreaterThan(0);
+    expect(run.body).toEqual(expect.objectContaining({ jobId: expect.any(String), status: expect.stringMatching(/PENDING|RUNNING/) }));
 
-    const state = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', cookie).expect(200);
+    let state = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', cookie).expect(200);
+    for (let attempt = 0; attempt < 10 && state.body.job?.status !== 'COMPLETED'; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      state = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', cookie).expect(200);
+    }
+
     expect(state.body).toEqual(expect.objectContaining({ puskesmasId: 'PKM-001', periode: '2026-06-01' }));
-    expect(state.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001' }));
+    expect(state.body.job).toEqual(expect.objectContaining({ id: run.body.jobId, status: 'COMPLETED', errorMessage: null }));
+    expect(state.body.recommendation).toEqual(expect.objectContaining({ id: 'REC-DEMO-001', source: 'HF_AI_LAYER2', status: 'PENDING' }));
+    expect(state.body.lplpoRows.length).toBeGreaterThan(0);
+    expect(calls).toEqual(expect.arrayContaining([
+      'https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer0/extract',
+      'https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer1/forecast',
+      'https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer2/allocate',
+    ]));
 
     const summary = await request(app.getHttpServer()).get('/api/dashboard/summary').set('Cookie', cookie).expect(200);
     expect(summary.body).toEqual(
@@ -233,6 +270,34 @@ describe('MaternaLink API', () => {
         medicine: expect.objectContaining({ criticalCount: expect.any(Number) }),
       }),
     );
+  });
+
+  it('marks workflow failed partial when layer2 fails after forecast and lplpo', async () => {
+    process.env.AI_MODE = 'remote';
+    mockFetch(async (url, init) => {
+      if (url.endsWith('/api/v1/layer0/extract')) return jsonResponse({ extraction_results: [], condition_estimates: [] });
+      if (url.endsWith('/api/v1/layer1/forecast')) {
+        const body = JSON.parse(String(init?.body));
+        return jsonResponse({ facility_id: body.facility_id, drug_id: body.drug_id, period: body.period, forecast_demand: 18, buffer_pct: 0.2, buffer_units: 4, total_requirement: 22, current_stock: body.closing_stock });
+      }
+      if (url.endsWith('/api/v1/layer2/allocate')) return jsonResponse({ message: 'layer2 unavailable' }, 503);
+      return jsonResponse({ status: 'ok' });
+    });
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const cookie = login.headers['set-cookie'];
+    const run = await request(app.getHttpServer()).post('/api/workflow/demo/run').set('Cookie', cookie).expect(201);
+
+    let state = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', cookie).expect(200);
+    for (let attempt = 0; attempt < 10 && !['FAILED_PARTIAL', 'FAILED'].includes(state.body.job?.status); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      state = await request(app.getHttpServer()).get('/api/workflow/demo/state').set('Cookie', cookie).expect(200);
+    }
+
+    expect(state.body.job).toEqual(expect.objectContaining({ id: run.body.jobId, status: 'FAILED_PARTIAL' }));
+    expect(state.body.job.errorMessage).toContain('AI service returned HTTP 503');
+    expect(state.body.forecastRun).toEqual(expect.objectContaining({ status: 'COMPLETED' }));
+    expect(state.body.lplpoRows.length).toBeGreaterThan(0);
   });
 
   it('exposes IFK dashboard recommendation metrics', async () => {

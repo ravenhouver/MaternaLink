@@ -13,15 +13,15 @@ import { WorkflowService } from './workflow.service';
 export class WorkflowController {
   constructor(private readonly service: WorkflowService) {}
 
-  @ApiOperation({ summary: 'Run deterministic end-to-end demo workflow' })
-  @ApiResponse({ status: 201, description: 'Demo workflow completed' })
+  @ApiOperation({ summary: 'Start hosted AI demo workflow' })
+  @ApiResponse({ status: 201, description: 'Demo workflow job started' })
   @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('demo/run')
   runDemo(@Req() request: { user: CurrentUser }) {
     return this.service.runDemo(request.user);
   }
 
-  @ApiOperation({ summary: 'Get deterministic demo workflow state' })
+  @ApiOperation({ summary: 'Get hosted AI demo workflow state' })
   @ApiResponse({ status: 200, description: 'Demo workflow state returned' })
   @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN)
   @Get('demo/state')
