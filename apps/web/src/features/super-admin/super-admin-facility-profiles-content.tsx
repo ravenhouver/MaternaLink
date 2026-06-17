@@ -80,6 +80,7 @@ const profileRows: ProfileRow[] = [
 
 export function SuperAdminFacilityProfilesContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -96,6 +97,10 @@ export function SuperAdminFacilityProfilesContent() {
   }, []);
 
   const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
 
   return (
     <main className={styles.shell}>
@@ -117,8 +122,8 @@ export function SuperAdminFacilityProfilesContent() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <a href="#settings" className={styles.navItem}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></a>
-          <a href="#help" className={styles.navItem}><AppIcon name="info" width={20} height={20} /><span>Help</span></a>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></button>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
         </div>
       </aside>
 
@@ -130,8 +135,8 @@ export function SuperAdminFacilityProfilesContent() {
             <strong>Facility Profiles</strong>
           </nav>
           <div className={styles.topbarActions}>
-            <button className={styles.iconButton} type="button" aria-label="Notifications"><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
-            <button className={styles.iconButton} type="button" aria-label="Settings"><AppIcon name="settings" width={20} height={20} /></button>
+            <button className={styles.iconButton} type="button" aria-label="Notifications" onClick={() => explainUnavailable('Notifications')}><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
+            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>Superadmin</small></span>
               <span className={styles.avatar} aria-hidden="true">SA</span>
@@ -150,6 +155,8 @@ export function SuperAdminFacilityProfilesContent() {
               2 profiles incomplete
             </span>
           </section>
+
+          {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
 
           <section className={styles.registryCard} aria-label="Facility profile configuration table">
             <div className={styles.tableScroller}>
@@ -188,9 +195,9 @@ export function SuperAdminFacilityProfilesContent() {
                       <td>{row.capacity}</td>
                       <td>
                         {row.action === 'Complete now' ? (
-                          <button type="button" className={styles.completeButton}>Complete now</button>
+                          <button type="button" className={styles.completeButton} onClick={() => explainUnavailable(`Complete ${row.name}`)}>Complete now</button>
                         ) : (
-                          <button type="button" className={styles.linkButton}>Edit</button>
+                          <button type="button" className={styles.linkButton} onClick={() => explainUnavailable(`Edit ${row.name}`)}>Edit</button>
                         )}
                       </td>
                     </tr>
@@ -202,8 +209,9 @@ export function SuperAdminFacilityProfilesContent() {
             <footer className={styles.registryPagination}>
               <p>Showing 3 of 42 health centers</p>
               <div className={styles.pages}>
-                <button type="button" aria-label="Previous page"><AppIcon name="chevronLeft" width={14} height={14} /></button>
-                <button type="button" aria-label="Next page"><AppIcon name="chevronRight" width={14} height={14} /></button>
+                <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
+                <button type="button" className={styles.currentPage}>1</button>
+                <button type="button" aria-label="Next page" disabled><AppIcon name="chevronRight" width={14} height={14} /></button>
               </div>
             </footer>
           </section>

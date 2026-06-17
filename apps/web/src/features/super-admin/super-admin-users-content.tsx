@@ -45,6 +45,7 @@ const accountRows: AccountRow[] = [
 export function SuperAdminUsersContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [activeFilter, setActiveFilter] = useState<UserRoleFilter>('All');
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -63,6 +64,10 @@ export function SuperAdminUsersContent() {
   }, [activeFilter]);
 
   const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
 
   return (
     <main className={styles.shell}>
@@ -85,8 +90,8 @@ export function SuperAdminUsersContent() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <a href="#settings" className={styles.navItem}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></a>
-          <a href="#help" className={styles.navItem}><AppIcon name="info" width={20} height={20} /><span>Help</span></a>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></button>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
         </div>
       </aside>
 
@@ -98,8 +103,8 @@ export function SuperAdminUsersContent() {
             <strong>User Accounts</strong>
           </nav>
           <div className={styles.topbarActions}>
-            <button className={styles.iconButton} type="button" aria-label="Notifications"><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
-            <button className={styles.iconButton} type="button" aria-label="Settings"><AppIcon name="settings" width={20} height={20} /></button>
+            <button className={styles.iconButton} type="button" aria-label="Notifications" onClick={() => explainUnavailable('Notifications')}><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
+            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>Superadmin</small></span>
               <span className={styles.avatar} aria-hidden="true">SA</span>
@@ -113,8 +118,10 @@ export function SuperAdminUsersContent() {
               <h1>User Accounts</h1>
               <p>Manage healthcare personnel and IFK officer accounts</p>
             </div>
-            <button type="button" className={styles.primaryButton}><AppIcon name="plus" width={16} height={16} /> Add User</button>
+            <button type="button" className={styles.primaryButton} onClick={() => explainUnavailable('Add user')}><AppIcon name="plus" width={16} height={16} /> Add User</button>
           </section>
+
+          {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
 
           <section className={styles.userCard} aria-label="User account table">
             <div className={styles.roleTabs} role="tablist" aria-label="User role filters">
@@ -152,8 +159,8 @@ export function SuperAdminUsersContent() {
                       <td><span className={row.active ? styles.activeBadge : styles.inactiveBadge}>{row.active ? 'Active' : 'Inactive'}</span></td>
                       <td>
                         <div className={styles.iconActions}>
-                          <button type="button" aria-label={`Edit ${row.name}`}><AppIcon name="edit" width={16} height={16} /></button>
-                          <button type="button" aria-label={`Delete ${row.name}`}><AppIcon name="trash" width={16} height={16} /></button>
+                          <button type="button" aria-label={`Edit ${row.name}`} onClick={() => explainUnavailable(`Edit ${row.name}`)}><AppIcon name="edit" width={16} height={16} /></button>
+                          <button type="button" aria-label={`Delete ${row.name}`} onClick={() => explainUnavailable(`Delete ${row.name}`)}><AppIcon name="trash" width={16} height={16} /></button>
                         </div>
                       </td>
                     </tr>
@@ -163,13 +170,11 @@ export function SuperAdminUsersContent() {
             </div>
 
             <footer className={styles.registryPagination}>
-              <p>Showing {filteredRows.length} of 124 users</p>
+              <p>Showing {filteredRows.length} of {accountRows.length} users</p>
               <div className={styles.pages}>
-                <button type="button" aria-label="Previous page"><AppIcon name="chevronLeft" width={14} height={14} /></button>
+                <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
                 <button type="button" className={styles.currentPage}>1</button>
-                <button type="button">2</button>
-                <button type="button">3</button>
-                <button type="button" aria-label="Next page"><AppIcon name="chevronRight" width={14} height={14} /></button>
+                <button type="button" aria-label="Next page" disabled><AppIcon name="chevronRight" width={14} height={14} /></button>
               </div>
             </footer>
           </section>

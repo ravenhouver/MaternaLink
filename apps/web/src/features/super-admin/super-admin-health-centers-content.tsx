@@ -58,6 +58,7 @@ export function SuperAdminHealthCentersContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -83,8 +84,12 @@ export function SuperAdminHealthCentersContent() {
     return rows.filter((row) => [row.id, row.name, row.district].some((value) => value.toLowerCase().includes(normalizedQuery)));
   }, [query, rows]);
 
-  const totalCount = Math.max(30, rows.length);
+  const totalCount = rows.length;
   const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
 
   return (
     <main className={styles.shell}>
@@ -106,8 +111,8 @@ export function SuperAdminHealthCentersContent() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <a href="#settings" className={styles.navItem}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></a>
-          <a href="#help" className={styles.navItem}><AppIcon name="info" width={20} height={20} /><span>Help</span></a>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></button>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
         </div>
       </aside>
 
@@ -119,8 +124,8 @@ export function SuperAdminHealthCentersContent() {
             <strong>Health Centers</strong>
           </nav>
           <div className={styles.topbarActions}>
-            <button className={styles.iconButton} type="button" aria-label="Notifications"><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
-            <button className={styles.iconButton} type="button" aria-label="Settings"><AppIcon name="settings" width={20} height={20} /></button>
+            <button className={styles.iconButton} type="button" aria-label="Notifications" onClick={() => explainUnavailable('Notifications')}><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
+            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>Superadmin</small></span>
               <span className={styles.avatar} aria-hidden="true">SA</span>
@@ -139,9 +144,11 @@ export function SuperAdminHealthCentersContent() {
                 <AppIcon name="search" width={18} height={18} />
                 <input aria-label="Search health center name" placeholder="Search health center name..." value={query} onChange={(event) => setQuery(event.target.value)} />
               </label>
-              <button type="button" className={styles.primaryButton}><AppIcon name="plus" width={16} height={16} /> Add Health Center</button>
+              <button type="button" className={styles.primaryButton} onClick={() => explainUnavailable('Add health center')}><AppIcon name="plus" width={16} height={16} /> Add Health Center</button>
             </div>
           </section>
+
+          {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
 
           {error ? <p className={styles.error}>{error}. Showing design fallback data.</p> : null}
 
@@ -159,7 +166,7 @@ export function SuperAdminHealthCentersContent() {
                       <td>{row.district}</td>
                       <td><span className={row.active ? styles.activeBadge : styles.inactiveBadge}>{row.active ? 'Active' : 'Inactive'}</span></td>
                       <td>{row.users} users</td>
-                      <td>{renderActions(row)}</td>
+                      <td>{renderActions(row, explainUnavailable)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -171,11 +178,7 @@ export function SuperAdminHealthCentersContent() {
               <div className={styles.pages}>
                 <button type="button" disabled aria-label="Previous page"><AppIcon name="chevronLeft" width={14} height={14} /></button>
                 <button type="button" className={styles.currentPage}>1</button>
-                <button type="button">2</button>
-                <button type="button">3</button>
-                <span>...</span>
-                <button type="button">6</button>
-                <button type="button" aria-label="Next page"><AppIcon name="chevronRight" width={14} height={14} /></button>
+                <button type="button" disabled aria-label="Next page"><AppIcon name="chevronRight" width={14} height={14} /></button>
               </div>
             </footer>
           </section>
@@ -185,24 +188,24 @@ export function SuperAdminHealthCentersContent() {
   );
 }
 
-function renderActions(row: RegistryRow) {
+function renderActions(row: RegistryRow, explainUnavailable: (feature: string) => void) {
   if (row.actions === 'icons') {
     return (
       <div className={styles.iconActions}>
-        <button type="button" aria-label={`Edit ${row.name}`}><AppIcon name="edit" width={16} height={16} /></button>
-        <button type="button" aria-label={`View ${row.name}`}><AppIcon name="eye" width={17} height={17} /></button>
-        <button type="button" aria-label={`Deactivate ${row.name}`}><AppIcon name="circleStop" width={17} height={17} /></button>
+        <button type="button" aria-label={`Edit ${row.name}`} onClick={() => explainUnavailable(`Edit ${row.name}`)}><AppIcon name="edit" width={16} height={16} /></button>
+        <button type="button" aria-label={`View ${row.name}`} onClick={() => explainUnavailable(`Detail ${row.name}`)}><AppIcon name="eye" width={17} height={17} /></button>
+        <button type="button" aria-label={`Deactivate ${row.name}`} onClick={() => explainUnavailable(`Deactivate ${row.name}`)}><AppIcon name="circleStop" width={17} height={17} /></button>
       </div>
     );
   }
 
-  if (row.actions === 'single') return <div className={styles.textActions}><button type="button">Edit</button></div>;
+  if (row.actions === 'single') return <div className={styles.textActions}><button type="button" onClick={() => explainUnavailable(`Edit ${row.name}`)}>Edit</button></div>;
 
   return (
     <div className={styles.textActions}>
-      <button type="button">Edit</button>
-      <button type="button">Detail</button>
-      <button type="button" data-danger={!row.active}>{row.active ? 'Deactivate' : 'Activate'}</button>
+      <button type="button" onClick={() => explainUnavailable(`Edit ${row.name}`)}>Edit</button>
+      <button type="button" onClick={() => explainUnavailable(`Detail ${row.name}`)}>Detail</button>
+      <button type="button" data-danger={!row.active} onClick={() => explainUnavailable(`${row.active ? 'Deactivate' : 'Activate'} ${row.name}`)}>{row.active ? 'Deactivate' : 'Activate'}</button>
     </div>
   );
 }

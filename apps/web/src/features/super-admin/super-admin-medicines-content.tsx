@@ -70,12 +70,25 @@ function categoryTone(category: string) {
   return 'routine';
 }
 
+function downloadCsv(filename: string, rows: MedicineRow[]) {
+  const header = ['id', 'name', 'category', 'unit', 'dailyDosage', 'coldChain'].join(',');
+  const body = rows.map((row) => [row.id, row.name, row.category, row.unit, row.dailyDosage, row.coldChain ? 'yes' : 'no'].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function SuperAdminMedicinesContent() {
   const [rows, setRows] = useState<MedicineRow[]>(fallbackRows);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -106,7 +119,11 @@ export function SuperAdminMedicinesContent() {
   }, [category, query, rows]);
 
   const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
-  const totalCount = Math.max(30, rows.length);
+  const totalCount = rows.length;
+
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
 
   return (
     <main className={styles.shell}>
@@ -128,8 +145,8 @@ export function SuperAdminMedicinesContent() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <a href="#settings" className={styles.navItem}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></a>
-          <a href="#help" className={styles.navItem}><AppIcon name="info" width={20} height={20} /><span>Help</span></a>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></button>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
         </div>
       </aside>
 
@@ -141,8 +158,8 @@ export function SuperAdminMedicinesContent() {
             <strong>Medicine List</strong>
           </nav>
           <div className={styles.topbarActions}>
-            <button className={styles.iconButton} type="button" aria-label="Notifications"><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
-            <button className={styles.iconButton} type="button" aria-label="Settings"><AppIcon name="settings" width={20} height={20} /></button>
+            <button className={styles.iconButton} type="button" aria-label="Notifications" onClick={() => explainUnavailable('Notifications')}><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
+            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>Superadmin</small></span>
               <span className={styles.avatar} aria-hidden="true">SA</span>
@@ -156,8 +173,10 @@ export function SuperAdminMedicinesContent() {
               <h1>Maternal Medicine Registry</h1>
               <p>Catalog of {totalCount} maternal medicines used in the system</p>
             </div>
-            <button type="button" className={styles.primaryButton}><AppIcon name="plus" width={16} height={16} /> Add Medicine</button>
+            <button type="button" className={styles.primaryButton} onClick={() => explainUnavailable('Add medicine')}><AppIcon name="plus" width={16} height={16} /> Add Medicine</button>
           </section>
+
+          {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
 
           <section className={styles.medicineToolbar} aria-label="Medicine filters">
             <div className={styles.medicineFilterGroup}>
@@ -174,8 +193,8 @@ export function SuperAdminMedicinesContent() {
               </label>
             </div>
             <div className={styles.toolbarIconActions}>
-              <button type="button" aria-label="Open advanced filters"><AppIcon name="filter" width={18} height={18} /></button>
-              <button type="button" aria-label="Download medicine list"><AppIcon name="download" width={18} height={18} /></button>
+              <button type="button" aria-label="Open advanced filters" onClick={() => explainUnavailable('Advanced filters')}><AppIcon name="filter" width={18} height={18} /></button>
+              <button type="button" aria-label="Download medicine list" onClick={() => downloadCsv('maternalink-medicines.csv', filteredRows)}><AppIcon name="download" width={18} height={18} /></button>
             </div>
           </section>
 
@@ -201,7 +220,7 @@ export function SuperAdminMedicinesContent() {
                           {row.coldChain ? 'Yes' : 'No'}
                         </span>
                       </td>
-                      <td><div className={styles.textActions}><button type="button">Edit</button></div></td>
+                      <td><div className={styles.textActions}><button type="button" onClick={() => explainUnavailable(`Edit ${row.name}`)}>Edit</button></div></td>
                     </tr>
                   ))}
                 </tbody>
@@ -212,8 +231,8 @@ export function SuperAdminMedicinesContent() {
               <p>{totalCount} registered medicines</p>
               <div className={styles.pages}>
                 <button type="button" disabled aria-label="Previous page"><AppIcon name="chevronLeft" width={14} height={14} /></button>
-                <span>Page 1 of {Math.max(1, Math.ceil(totalCount / 4))}</span>
-                <button type="button" aria-label="Next page"><AppIcon name="chevronRight" width={14} height={14} /></button>
+                <span>Page 1 of 1</span>
+                <button type="button" disabled aria-label="Next page"><AppIcon name="chevronRight" width={14} height={14} /></button>
               </div>
             </footer>
           </section>

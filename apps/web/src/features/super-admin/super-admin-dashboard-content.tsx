@@ -71,6 +71,7 @@ export function SuperAdminDashboardContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -103,6 +104,10 @@ export function SuperAdminDashboardContent() {
   const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
   const lastUpdated = updatedAt ? formatUpdatedAt(updatedAt) : '12 Oct 2023, 10:45 AM WIB';
 
+  function explainUnavailable(feature: string) {
+    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
+
   return (
     <main className={styles.shell}>
       <aside className={styles.sidebar} aria-label="Super admin navigation">
@@ -124,8 +129,8 @@ export function SuperAdminDashboardContent() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <a href="#settings" className={styles.navItem}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></a>
-          <a href="#help" className={styles.navItem}><AppIcon name="info" width={20} height={20} /><span>Help</span></a>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></button>
+          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
         </div>
       </aside>
 
@@ -137,11 +142,11 @@ export function SuperAdminDashboardContent() {
             <strong>Dashboard</strong>
           </nav>
           <div className={styles.topbarActions}>
-            <button className={styles.iconButton} type="button" aria-label="Notifications">
+            <button className={styles.iconButton} type="button" aria-label="Notifications" onClick={() => explainUnavailable('Notifications')}>
               <AppIcon name="bell" width={20} height={20} />
               <span aria-hidden="true" />
             </button>
-            <button className={styles.iconButton} type="button" aria-label="Settings">
+            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}>
               <AppIcon name="settings" width={20} height={20} />
             </button>
             <div className={styles.profile}>
@@ -167,6 +172,7 @@ export function SuperAdminDashboardContent() {
           </section>
 
           {error ? <p className={styles.error}>{error}. Showing design fallback data.</p> : null}
+          {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
 
           <section className={styles.statsGrid} aria-label="Master data summary">
             {stats.map((stat) => (
@@ -185,7 +191,7 @@ export function SuperAdminDashboardContent() {
             <article className={styles.activityPanel}>
               <header className={styles.panelHeader}>
                 <h2>Recent Activity</h2>
-                <button type="button">All Activity</button>
+                <button type="button" onClick={() => explainUnavailable('All activity')}>All Activity</button>
               </header>
 
               <div className={styles.activityList}>
@@ -205,7 +211,7 @@ export function SuperAdminDashboardContent() {
               </div>
 
               <footer className={styles.panelFooter}>
-                <button type="button">Load 10 More Activities</button>
+                <button type="button" onClick={() => explainUnavailable('Load more activities')}>Load 10 More Activities</button>
               </footer>
             </article>
 
@@ -213,7 +219,7 @@ export function SuperAdminDashboardContent() {
               <h2>Account Health</h2>
               <p>{masterData.inactiveAccounts} inactive accounts need review before monthly audit.</p>
               <div className={styles.progressTrack}><span /></div>
-              <button type="button"><AppIcon name="userPlus" width={18} height={18} /> Review users</button>
+              <Link href={routes.adminUsers}><AppIcon name="userPlus" width={18} height={18} /> Review users</Link>
             </aside>
           </section>
         </div>

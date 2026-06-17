@@ -28,7 +28,8 @@
 .statTopline,
 .panelHeader,
 .activityRow,
-.sidePanel button {
+.sidePanel button,
+.sidePanel a {
   display: flex;
   align-items: center;
 }
@@ -141,6 +142,7 @@
 .panelHeader button,
 .panelFooter button,
 .sidePanel button,
+.sidePanel a,
 .primaryButton,
 .searchBox input,
 .roleTabs button,
@@ -154,6 +156,27 @@
   color: inherit;
   cursor: pointer;
   font: inherit;
+}
+
+.sidebarFooter button.navItem {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.noticeText {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
 }
 
 .iconButton {
@@ -522,7 +545,8 @@
   background: #4069f2;
 }
 
-.sidePanel button {
+.sidePanel button,
+.sidePanel a {
   width: max-content;
   gap: 8px;
   padding: 10px 14px;
@@ -1196,6 +1220,7 @@
 .panelHeader button:hover,
 .panelFooter button:hover,
 .sidePanel button:hover,
+.sidePanel a:hover,
 .primaryButton:hover,
 .roleTabs button:hover,
 .textActions button:hover,
