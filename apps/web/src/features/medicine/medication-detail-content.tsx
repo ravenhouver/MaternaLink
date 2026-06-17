@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { getObat, getStokRows, type ObatRecord, type StokRow } from '@/lib/api';
+import { deleteObat, getObat, getStokRows, type ObatRecord, type StokRow } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
@@ -17,6 +17,7 @@ function slugify(value: string) {
 
 export function MedicationDetailContent() {
   const params = useParams<{ medicine?: string }>();
+  const router = useRouter();
   const [medicine, setMedicine] = useState<ObatRecord | null>(null);
   const [stockRows, setStockRows] = useState<StokRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,19 @@ export function MedicationDetailContent() {
 
   function explainUnavailable(feature: string) {
     setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  }
+
+  async function removeFromInventory() {
+    if (!medicine) return;
+    const confirmed = window.confirm(`Hapus ${medicine.nama} dari master obat? Data yang sudah memakai obat ini bisa menolak penghapusan dari backend.`);
+    if (!confirmed) return;
+    try {
+      await deleteObat(medicine.id);
+      setNotice(`${medicine.nama} berhasil dihapus dari master obat.`);
+      router.push(routes.medicineNeeds);
+    } catch (removeError) {
+      setNotice(removeError instanceof Error ? removeError.message : 'Gagal menghapus obat');
+    }
   }
 
   return (
@@ -132,7 +146,7 @@ export function MedicationDetailContent() {
       </section>
 
       <footer className={styles.detailFooter}>
-        <button type="button" className={styles.removeButton} onClick={() => explainUnavailable(`Remove ${medicine?.nama ?? 'medicine'}`)}><AppIcon name="trash" width={18} height={18} />Remove from Inventory</button>
+        <button type="button" className={styles.removeButton} onClick={() => void removeFromInventory()} disabled={!medicine}><AppIcon name="trash" width={18} height={18} />Remove from Inventory</button>
         <div>
           <Link href={routes.medicineNeeds} className={styles.backButton}>Back</Link>
           <button type="button" className={styles.detailSaveButton} onClick={() => explainUnavailable('Save medicine changes')}><AppIcon name="save" width={18} height={18} />Save Changes</button>

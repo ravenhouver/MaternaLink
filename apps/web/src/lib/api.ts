@@ -334,6 +334,10 @@ export async function getObat(): Promise<ObatRecord[]> {
   return apiFetch('/master/obat');
 }
 
+export async function deleteObat(id: string): Promise<{ id: string; deleted: boolean }> {
+  return apiFetch(`/master/obat/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
 export async function getAlerts(): Promise<AlertRecord[]> {
   return apiFetch('/distribution/alerts');
 }
