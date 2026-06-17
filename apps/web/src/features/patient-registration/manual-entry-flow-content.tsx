@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
 import { createPatient, createQueue, type PregnancyRiskLevel } from '@/lib/api';
@@ -10,8 +10,10 @@ import { routes } from '@/lib/routes';
 import styles from './patient-registration.module.css';
 
 type ManualStage = 'manual-personal' | 'autofill-personal' | 'pregnancy' | 'screening';
+type ManualEntryMode = 'manual' | 'kia';
 
-const stages: ManualStage[] = ['manual-personal', 'autofill-personal', 'pregnancy', 'screening'];
+const manualStages: ManualStage[] = ['manual-personal', 'pregnancy', 'screening'];
+const kiaStages: ManualStage[] = ['autofill-personal', 'pregnancy', 'screening'];
 
 const stepLabels = ['Personal Data', 'Pregnancy Data', 'Screening & Risk'];
 
@@ -27,9 +29,10 @@ const identityFields = [
 const emergencyFields = [
   { label: 'Next of Kin Name *', placeholder: 'Husband/parent name' },
   { label: 'Next of Kin Phone No. *', placeholder: '+62...' },
-  { label: 'Blood Type', placeholder: 'Select Blood Type', select: true },
   { label: 'Drug / Food Allergies', placeholder: 'Use commas to separate' },
 ] as const;
+
+const bloodTypeOptions = ['A', 'B', 'AB', 'O'] as const;
 
 const autoFields = [
   { label: 'Full Name *', value: 'Rina Safitri', fromKia: true },
@@ -54,6 +57,8 @@ const screeningFactors: ReadonlyArray<{ checked?: boolean; label: string; tag?: 
 ] as const;
 
 type ManualRegistrationForm = {
+  bloodType: string;
+  dateOfBirth: string;
   fullName: string;
   nik: string;
   phone: string;
@@ -64,6 +69,8 @@ type ManualRegistrationForm = {
 };
 
 const emptyForm: ManualRegistrationForm = {
+  bloodType: '',
+  dateOfBirth: '',
   fullName: '',
   nik: '',
   phone: '',
@@ -73,10 +80,20 @@ const emptyForm: ManualRegistrationForm = {
   riskLevel: 'MEDIUM',
 };
 
-export function ManualEntryFlowContent() {
+const kiaExtractedForm: ManualRegistrationForm = {
+  ...emptyForm,
+  address: 'Alamat hasil ekstraksi KIA',
+  dateOfBirth: '1998-03-15',
+  fullName: 'Rina Safitri',
+  nik: '3271050000000012',
+  phone: '08123456789',
+};
+
+export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntryMode }) {
   const router = useRouter();
-  const [stage, setStage] = useState<ManualStage>('manual-personal');
-  const [form, setForm] = useState<ManualRegistrationForm>(emptyForm);
+  const stages = mode === 'kia' ? kiaStages : manualStages;
+  const [stage, setStage] = useState<ManualStage>(mode === 'kia' ? 'autofill-personal' : 'manual-personal');
+  const [form, setForm] = useState<ManualRegistrationForm>(mode === 'kia' ? kiaExtractedForm : emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const stageIndex = stages.indexOf(stage);
@@ -88,8 +105,8 @@ export function ManualEntryFlowContent() {
 
   function goNext() {
     setError(null);
-    if (stage === 'manual-personal' && (!form.fullName.trim() || !form.nik.trim() || !form.phone.trim() || !form.address.trim())) {
-      setError('Lengkapi nama, NIK, nomor HP, dan alamat pasien.');
+    if (stage === 'manual-personal' && (!form.fullName.trim() || !form.nik.trim() || !form.dateOfBirth || !form.phone.trim() || !form.address.trim())) {
+      setError('Lengkapi nama, NIK, tanggal lahir, nomor HP, dan alamat pasien.');
       return;
     }
     setStage((current) => stages[Math.min(stages.indexOf(current) + 1, stages.length - 1)]);
@@ -108,7 +125,7 @@ export function ManualEntryFlowContent() {
 
   async function submitRegistration() {
     setError(null);
-    if (!form.fullName.trim() || !form.nik.trim() || !form.phone.trim() || !form.address.trim() || !form.gestationalAge.trim() || !form.ancVisit.trim()) {
+    if (!form.fullName.trim() || !form.nik.trim() || !form.dateOfBirth || !form.phone.trim() || !form.address.trim() || !form.gestationalAge.trim() || !form.ancVisit.trim()) {
       setError('Lengkapi semua field wajib sebelum submit.');
       return;
     }
@@ -118,8 +135,10 @@ export function ManualEntryFlowContent() {
       const created = await createPatient({
         fullName: form.fullName.trim(),
         nik: form.nik.trim(),
+        dateOfBirth: form.dateOfBirth || undefined,
         phone: form.phone.trim(),
         address: form.address.trim(),
+        bloodType: form.bloodType || undefined,
         gestationalAge: Number(form.gestationalAge),
         ancVisit: form.ancVisit,
         riskLevel: form.riskLevel,
@@ -140,7 +159,7 @@ export function ManualEntryFlowContent() {
       {error ? <p className={styles.formError}>{error}</p> : null}
 
       {stage === 'manual-personal' ? <ManualPersonalPanel form={form} onFieldChange={updateField} onNext={goNext} /> : null}
-      {stage === 'autofill-personal' ? <AutofillPersonalPanel onBack={goBack} onNext={goNext} /> : null}
+      {stage === 'autofill-personal' ? <AutofillPersonalPanel onNext={goNext} /> : null}
       {stage === 'pregnancy' ? <PregnancyPanel onBack={goBack} onNext={goNext} /> : null}
       {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
@@ -189,7 +208,7 @@ function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegi
           <div className={styles.manualFormGrid}>
             <ManualField label="Patient Full Name *" placeholder="Example: Siti Aminah" wide value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
             <ManualField label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
-            <ManualField label="Date of Birth *" placeholder="mm/dd/yyyy" />
+            <ManualField label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
             <ManualField label="Residential Address *" placeholder="Street, RT/RW, Sub-district, District" wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
             <ManualField label="Phone Number (WhatsApp) *" placeholder="8123456789" prefix="+62" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
             <ManualField label="BPJS / Insurance Number (Optional)" placeholder="Enter number if available" />
@@ -198,7 +217,9 @@ function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegi
 
         <FormSection icon="asterisk" title="EMERGENCY CONTACT & BASIC HISTORY">
           <div className={styles.manualFormGrid}>
-            {emergencyFields.map((field) => <ManualField key={field.label} {...field} />)}
+            {emergencyFields.slice(0, 2).map((field) => <ManualField key={field.label} {...field} />)}
+            <ManualField label="Blood Type" placeholder="Select Blood Type" select options={bloodTypeOptions} value={form.bloodType} onChange={(value) => onFieldChange('bloodType', value)} />
+            {emergencyFields.slice(2).map((field) => <ManualField key={field.label} {...field} />)}
             <div className={styles.wideManualField}>
               <span className={styles.manualLabel}>Chronic Disease History</span>
               <div className={styles.checkboxRow}>
@@ -216,7 +237,7 @@ function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegi
   );
 }
 
-function AutofillPersonalPanel({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
+function AutofillPersonalPanel({ onNext }: { onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Auto-filled patient identity review">
       <div className={styles.autoBanner}>
@@ -244,14 +265,14 @@ function AutofillPersonalPanel({ onBack, onNext }: { onBack: () => void; onNext:
 
         <FormSection icon="briefcase" title="Medical Information" tone="blue">
           <div className={`${styles.manualFormGrid} ${styles.threeColumnGrid}`}>
-            <ManualField label="Blood Type" placeholder="Select Type" select />
+            <ManualField label="Blood Type" placeholder="Select Type" select options={bloodTypeOptions} />
             <ManualField label="Allergy" placeholder="Food/medicine allergy" />
             <ManualField label="Chronic History" placeholder="Asthma, Hypertension, etc." />
           </div>
         </FormSection>
       </div>
 
-      <ActionFooter backLabel="Back" nextLabel="Continue to Pregnancy Data" onBack={onBack} onNext={onNext} />
+      <ActionFooter backHref={routes.kiaUpload} backLabel="Back" nextLabel="Continue to Pregnancy Data" onNext={onNext} />
     </section>
   );
 }
@@ -388,26 +409,38 @@ type ManualFieldProps = {
   alert?: boolean;
   label: string;
   onChange?: (value: string) => void;
+  options?: readonly string[];
   placeholder: string;
   prefix?: string;
   select?: boolean;
   textarea?: boolean;
+  type?: 'date' | 'text';
   value?: string;
   wide?: boolean;
 };
 
-function ManualField({ alert, label, onChange, placeholder, prefix, select, textarea, value, wide }: ManualFieldProps) {
+function ManualField({ alert, label, onChange, options, placeholder, prefix, select, textarea, type = 'text', value, wide }: ManualFieldProps) {
+  const selectProps = onChange
+    ? { value: value ?? '', onChange: (event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value) }
+    : { defaultValue: value ?? '' };
+
   return (
     <label className={`${styles.manualField} ${wide ? styles.wideManualField : ''} ${alert ? styles.alertManualField : ''}`}>
       <span className={styles.manualLabel}>{label}</span>
       {prefix ? (
-        <span className={styles.prefixInput}><small>{prefix}</small><input placeholder={placeholder} value={value} onChange={(event) => onChange?.(event.target.value)} /></span>
+        <span className={styles.prefixInput}><small>{prefix}</small><input placeholder={placeholder} type={type} value={value} onChange={(event) => onChange?.(event.target.value)} /></span>
       ) : textarea ? (
         <textarea placeholder={placeholder} value={value} onChange={(event) => onChange?.(event.target.value)} />
       ) : select ? (
-        <span className={styles.selectInput}><select defaultValue=""><option value="">{placeholder}</option></select><AppIcon name="chevronDown" width={18} height={18} /></span>
+        <span className={styles.selectInput}>
+          <select {...selectProps}>
+            <option value="">{placeholder}</option>
+            {options?.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select>
+          <AppIcon name="chevronDown" width={18} height={18} />
+        </span>
       ) : (
-        <input placeholder={placeholder} value={value} onChange={(event) => onChange?.(event.target.value)} />
+        <input placeholder={placeholder} type={type} value={value} onChange={(event) => onChange?.(event.target.value)} />
       )}
     </label>
   );

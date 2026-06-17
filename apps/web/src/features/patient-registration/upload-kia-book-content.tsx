@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { createPatient, createQueue } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patient-registration.module.css';
 
@@ -44,7 +43,6 @@ export function UploadKiaBookContent() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,27 +107,9 @@ export function UploadKiaBookContent() {
     setUploadState('idle');
   }
 
-  async function confirmExtraction() {
+  function continueToRegistrationForm() {
     setError(null);
-    setIsSubmitting(true);
-    try {
-      const suffix = Date.now().toString().slice(-6);
-      const created = await createPatient({
-        fullName: 'Rina Safitri',
-        nik: `327105${suffix.padStart(10, '0')}`.slice(0, 16),
-        phone: '08123456789',
-        address: 'Alamat hasil ekstraksi KIA',
-        gestationalAge: 28,
-        ancVisit: 'K3',
-        riskLevel: 'MEDIUM',
-      });
-      await createQueue({ patientId: created.patient.id, pregnancyId: created.pregnancy.id });
-      router.push(routes.queue);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Gagal menyimpan hasil ekstraksi');
-    } finally {
-      setIsSubmitting(false);
-    }
+    router.push(`${routes.manualPatient}?source=kia`);
   }
 
   return (
@@ -146,7 +126,7 @@ export function UploadKiaBookContent() {
       {uploadState === 'idle' ? <IdleUploadPanel onFileChange={handleFileChange} cameraInputRef={cameraInputRef} galleryInputRef={galleryInputRef} /> : null}
       {uploadState === 'processing' ? <ProcessingPanel progress={progressLabel} /> : null}
       {error ? <p className={styles.formError}>{error}</p> : null}
-      {uploadState === 'success' ? <SuccessPanel isSubmitting={isSubmitting} previewUrl={previewUrl} selectedFileName={selectedFile?.name ?? 'KIA book photo'} onConfirm={confirmExtraction} onRetake={resetUpload} /> : null}
+      {uploadState === 'success' ? <SuccessPanel previewUrl={previewUrl} selectedFileName={selectedFile?.name ?? 'KIA book photo'} onConfirm={continueToRegistrationForm} onRetake={resetUpload} /> : null}
 
       {uploadState !== 'success' ? <GuidanceCards active={uploadState === 'processing'} /> : null}
     </PageContainer>
@@ -213,7 +193,7 @@ function ProcessingPanel({ progress }: { progress: number }) {
   );
 }
 
-function SuccessPanel({ isSubmitting, onConfirm, onRetake, previewUrl, selectedFileName }: { isSubmitting: boolean; onConfirm: () => void; onRetake: () => void; previewUrl: string | null; selectedFileName: string }) {
+function SuccessPanel({ onConfirm, onRetake, previewUrl, selectedFileName }: { onConfirm: () => void; onRetake: () => void; previewUrl: string | null; selectedFileName: string }) {
   return (
     <section className={styles.successPanel} aria-label="KIA book extraction result">
       <div className={styles.previewPane}>
@@ -253,8 +233,8 @@ function SuccessPanel({ isSubmitting, onConfirm, onRetake, previewUrl, selectedF
             <AppIcon name="rotateCcw" width={18} height={18} />
             Retake Photo
           </button>
-          <button type="button" className={styles.continueButton} disabled={isSubmitting} onClick={onConfirm}>
-            {isSubmitting ? 'Saving...' : 'Confirm and Queue Patient'}
+          <button type="button" className={styles.continueButton} onClick={onConfirm}>
+            Continue to Registration Form
             <AppIcon name="arrowRight" width={18} height={18} />
           </button>
         </div>
