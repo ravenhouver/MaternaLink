@@ -171,6 +171,8 @@ File: `apps/api/.env`
 | `AI_SERVICE_BASE_URL` | No | `https://azrilfahmiardi-maternalink-ai.hf.space` | Hosted MaternaLink AI base URL. |
 | `AI_SERVICE_TIMEOUT_MS` | No | `30000` | Timeout for health, Layer 0, and Layer 1 AI calls. |
 | `AI_LAYER2_TIMEOUT_MS` | No | `600000` | Timeout for long Layer 2 allocation calls. |
+| `KIA_OCR_SERVICE_URL` | No | `http://localhost:8001` | Python OCR service used to extract KIA book photo fields. |
+| `KIA_OCR_TIMEOUT_MS` | No | `60000` | Timeout for KIA OCR extraction calls. |
 
 ### Web
 
@@ -232,6 +234,8 @@ The backend calls the hosted MaternaLink AI API directly. The frontend never cal
 | `POST` | `/api/v1/layer0/extract` | Symptom extraction and condition estimates. |
 | `POST` | `/api/v1/layer1/forecast` | Drug demand forecast per facility and medicine. |
 | `POST` | `/api/v1/layer2/allocate` | Equitable allocation and justifications. |
+
+KIA book photo extraction is handled by a separate local Python service at `services/kia-ocr`. The web app uploads photos to the Nest API (`POST /api/kia/extract`), then the API proxies the image to `KIA_OCR_SERVICE_URL/v1/kia/extract` and returns normalized patient and pregnancy fields for review.
 
 Layer 2 may take several minutes, so `/api/workflow/demo/run` starts an async backend job and `/api/workflow/demo/state` is used for polling.
 

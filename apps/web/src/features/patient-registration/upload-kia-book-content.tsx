@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
+import { extractKiaBook, type KiaExtractionResult } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { kiaExtractionStorageKey } from './kia-extraction-storage';
 import styles from './patient-registration.module.css';
 
 const guidanceCards = [
@@ -26,14 +28,6 @@ const guidanceCards = [
   },
 ] as const;
 
-const extractedFields = [
-  { label: 'PATIENT NAME', value: 'Rina Safitri' },
-  { label: 'NIK', value: '3271xxxxxxxxxxxx' },
-  { label: 'LMP', value: '20 Apr 2025' },
-  { label: 'GESTATIONAL AGE', value: '28 weeks' },
-  { label: 'ESTIMATED DUE DATE', value: '25 Jan 2026' },
-] as const;
-
 type UploadState = 'idle' | 'processing' | 'success';
 
 export function UploadKiaBookContent() {
@@ -42,6 +36,7 @@ export function UploadKiaBookContent() {
   const [progress, setProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [extraction, setExtraction] = useState<KiaExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -55,14 +50,8 @@ export function UploadKiaBookContent() {
     const interval = window.setInterval(() => {
       setProgress((current) => Math.min(current + 4, 92));
     }, 220);
-    const completion = window.setTimeout(() => {
-      setProgress(100);
-      setUploadState('success');
-    }, 3600);
-
     return () => {
       window.clearInterval(interval);
-      window.clearTimeout(completion);
     };
   }, [uploadState]);
 
@@ -79,9 +68,20 @@ export function UploadKiaBookContent() {
 
   const progressLabel = useMemo(() => Math.min(progress, 100), [progress]);
 
-  function startProcessing() {
+  async function startProcessing(file: File) {
     setProgress(0);
+    setExtraction(null);
     setUploadState('processing');
+
+    try {
+      const result = await extractKiaBook(file);
+      setExtraction(result);
+      setProgress(100);
+      setUploadState('success');
+    } catch (extractError) {
+      setUploadState('idle');
+      setError(extractError instanceof Error ? extractError.message : 'Gagal membaca foto KIA');
+    }
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -89,7 +89,7 @@ export function UploadKiaBookContent() {
     if (file) {
       setSelectedFile(file);
       setError(null);
-      startProcessing();
+      void startProcessing(file);
     }
   }
 
@@ -102,6 +102,7 @@ export function UploadKiaBookContent() {
     }
     setSelectedFile(null);
     setPreviewUrl(null);
+    setExtraction(null);
     setError(null);
     setProgress(0);
     setUploadState('idle');
@@ -109,6 +110,9 @@ export function UploadKiaBookContent() {
 
   function continueToRegistrationForm() {
     setError(null);
+    if (extraction) {
+      window.sessionStorage.setItem(kiaExtractionStorageKey, JSON.stringify(extraction));
+    }
     router.push(`${routes.manualPatient}?source=kia`);
   }
 
@@ -126,7 +130,7 @@ export function UploadKiaBookContent() {
       {uploadState === 'idle' ? <IdleUploadPanel onFileChange={handleFileChange} cameraInputRef={cameraInputRef} galleryInputRef={galleryInputRef} /> : null}
       {uploadState === 'processing' ? <ProcessingPanel progress={progressLabel} /> : null}
       {error ? <p className={styles.formError}>{error}</p> : null}
-      {uploadState === 'success' ? <SuccessPanel previewUrl={previewUrl} selectedFileName={selectedFile?.name ?? 'KIA book photo'} onConfirm={continueToRegistrationForm} onRetake={resetUpload} /> : null}
+      {uploadState === 'success' ? <SuccessPanel extraction={extraction} previewUrl={previewUrl} selectedFileName={selectedFile?.name ?? 'KIA book photo'} onConfirm={continueToRegistrationForm} onRetake={resetUpload} /> : null}
 
       {uploadState !== 'success' ? <GuidanceCards active={uploadState === 'processing'} /> : null}
     </PageContainer>
@@ -193,7 +197,15 @@ function ProcessingPanel({ progress }: { progress: number }) {
   );
 }
 
-function SuccessPanel({ onConfirm, onRetake, previewUrl, selectedFileName }: { onConfirm: () => void; onRetake: () => void; previewUrl: string | null; selectedFileName: string }) {
+function SuccessPanel({ extraction, onConfirm, onRetake, previewUrl, selectedFileName }: { extraction: KiaExtractionResult | null; onConfirm: () => void; onRetake: () => void; previewUrl: string | null; selectedFileName: string }) {
+  const extractedFields = [
+    { label: 'PATIENT NAME', value: extraction?.fullName ?? 'Needs review' },
+    { label: 'NIK', value: extraction?.nik ?? 'Needs review' },
+    { label: 'LMP', value: formatDate(extraction?.lmp) ?? 'Needs review' },
+    { label: 'GESTATIONAL AGE', value: extraction?.gestationalAge ? `${extraction.gestationalAge} weeks` : 'Needs review' },
+    { label: 'ESTIMATED DUE DATE', value: formatDate(extraction?.edd) ?? 'Needs review' },
+  ];
+
   return (
     <section className={styles.successPanel} aria-label="KIA book extraction result">
       <div className={styles.previewPane}>
@@ -219,7 +231,7 @@ function SuccessPanel({ onConfirm, onRetake, previewUrl, selectedFileName }: { o
           ))}
           <div>
             <dt>ANC VISIT</dt>
-            <dd><span className={styles.ancBadge}>K3</span></dd>
+            <dd><span className={styles.ancBadge}>{extraction?.ancVisit ?? 'Review'}</span></dd>
           </div>
         </dl>
 
@@ -241,6 +253,13 @@ function SuccessPanel({ onConfirm, onRetake, previewUrl, selectedFileName }: { o
       </div>
     </section>
   );
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
 function GuidanceCards({ active }: { active: boolean }) {

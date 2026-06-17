@@ -97,7 +97,7 @@ export function AppShell({ children }: AppShellProps) {
         <MobileNavbar user={user} />
         <Sidebar collapsed={isSidebarCollapsed} user={user} onToggle={() => setIsSidebarCollapsed((current) => !current)} />
         <Layout className={styles.mainLayout}>
-          {hasTopbar ? <Topbar /> : null}
+          {hasTopbar ? <Topbar user={user} /> : null}
           <Content className={styles.content}>{children}</Content>
         </Layout>
       </Layout>

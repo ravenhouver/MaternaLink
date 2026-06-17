@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import { getAlerts, getCurrentUser, getDashboardSummary, getPuskesmas, getRecommendations, type AlertRecord, type CurrentUser, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
@@ -110,7 +111,6 @@ export function MedicineSenderContent() {
         </nav>
 
         <div className={styles.roleProfile}>
-          <a href={routes.ifk} onClick={(event) => { event.preventDefault(); explainUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
           <RoleLogoutButton className={styles.roleLogoutButton} />
           <div>
             <span><AppIcon name="user" width={18} height={18} /></span>
@@ -130,10 +130,7 @@ export function MedicineSenderContent() {
             <span>Medicine Sender</span>
           </nav>
           <div className={styles.topbarActions}>
-            <button type="button" aria-label="Notifikasi" className={styles.notificationButton} onClick={() => explainUnavailable('Notifikasi')}>
-              <AppIcon name="bell" width={20} height={20} />
-              <span />
-            </button>
+            {user ? <NotificationCenter user={user} /> : null}
             <button type="button" aria-label="Pengaturan" onClick={() => explainUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.topbarProfile}>
               <div>

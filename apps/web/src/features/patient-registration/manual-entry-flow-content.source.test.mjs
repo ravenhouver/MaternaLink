@@ -7,6 +7,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(__dirname, 'manual-entry-flow-content.tsx'), 'utf8');
 const pregnancyPanel = source.slice(source.indexOf('function PregnancyPanel'), source.indexOf('function ScreeningPanel'));
 
+assert.ok(source.includes("const manualStages: ManualStage[] = ['manual-personal', 'pregnancy', 'screening']"), 'manual input skips the KIA autofill review stage');
+assert.ok(source.includes("const kiaStages: ManualStage[] = ['autofill-personal', 'pregnancy', 'screening']"), 'KIA upload flow starts with the autofill review stage');
+
 assert.ok(pregnancyPanel.includes('I. PREGNANCY IDENTITY (AUTO-FILLED)'), 'step 2 keeps the pregnancy identity section');
 assert.ok(pregnancyPanel.includes('II. PREGNANCY HISTORY'), 'step 2 keeps the pregnancy history section');
 assert.ok(pregnancyPanel.includes("III. TODAY\\'S EXAMINATION (MANUAL INPUT)"), 'step 2 keeps the manual examination section');
@@ -14,4 +17,3 @@ assert.ok(pregnancyPanel.includes("III. TODAY\\'S EXAMINATION (MANUAL INPUT)"), 
 assert.equal(pregnancyPanel.includes('label="Current Gestational Age *"'), false, 'gestational age example must not be rendered as an editable field');
 assert.equal(pregnancyPanel.includes('label="Last ANC Visit *"'), false, 'last ANC example must not be rendered as an editable field');
 assert.equal(pregnancyPanel.includes('<input defaultValue='), false, 'GPA examples must not be rendered as default input values');
-

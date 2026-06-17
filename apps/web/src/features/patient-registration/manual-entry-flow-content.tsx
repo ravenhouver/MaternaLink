@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
-import { createPatient, createQueue, type PregnancyRiskLevel } from '@/lib/api';
+import { createPatient, createQueue, type KiaExtractionResult, type PregnancyRiskLevel } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { kiaExtractionStorageKey } from './kia-extraction-storage';
 import styles from './patient-registration.module.css';
 
 type ManualStage = 'manual-personal' | 'autofill-personal' | 'pregnancy' | 'screening';
@@ -63,8 +64,13 @@ type ManualRegistrationForm = {
   nik: string;
   phone: string;
   address: string;
+  abortus: string;
   gestationalAge: string;
+  gravida: string;
+  lmp: string;
+  edd: string;
   ancVisit: string;
+  para: string;
   riskLevel: PregnancyRiskLevel;
 };
 
@@ -75,8 +81,13 @@ const emptyForm: ManualRegistrationForm = {
   nik: '',
   phone: '',
   address: '',
+  abortus: '0',
   gestationalAge: '28',
+  gravida: '2',
+  lmp: '',
+  edd: '',
   ancVisit: 'K3',
+  para: '1',
   riskLevel: 'MEDIUM',
 };
 
@@ -84,10 +95,42 @@ const kiaExtractedForm: ManualRegistrationForm = {
   ...emptyForm,
   address: 'Alamat hasil ekstraksi KIA',
   dateOfBirth: '1998-03-15',
+  edd: '2026-01-25',
   fullName: 'Rina Safitri',
+  lmp: '2025-04-20',
   nik: '3271050000000012',
   phone: '08123456789',
 };
+
+function applyKiaExtraction(current: ManualRegistrationForm, extraction: KiaExtractionResult): ManualRegistrationForm {
+  return {
+    ...current,
+    address: extraction.address ?? current.address,
+    abortus: extraction.abortus != null ? String(extraction.abortus) : current.abortus,
+    ancVisit: extraction.ancVisit ?? current.ancVisit,
+    bloodType: extraction.bloodType ?? current.bloodType,
+    dateOfBirth: extraction.dateOfBirth ?? current.dateOfBirth,
+    edd: extraction.edd ?? current.edd,
+    fullName: extraction.fullName ?? current.fullName,
+    gestationalAge: extraction.gestationalAge != null ? String(extraction.gestationalAge) : current.gestationalAge,
+    gravida: extraction.gravida != null ? String(extraction.gravida) : current.gravida,
+    lmp: extraction.lmp ?? current.lmp,
+    nik: extraction.nik ?? current.nik,
+    para: extraction.para != null ? String(extraction.para) : current.para,
+    phone: extraction.phone ?? current.phone,
+  };
+}
+
+function toOptionalNumber(value: string) {
+  return value.trim() ? Number(value) : undefined;
+}
+
+function formatDisplayDate(value: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+}
 
 export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntryMode }) {
   const router = useRouter();
@@ -102,6 +145,17 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [stage]);
+
+  useEffect(() => {
+    if (mode !== 'kia') return;
+    const stored = window.sessionStorage.getItem(kiaExtractionStorageKey);
+    if (!stored) return;
+    try {
+      setForm((current) => applyKiaExtraction(current, JSON.parse(stored) as KiaExtractionResult));
+    } catch {
+      window.sessionStorage.removeItem(kiaExtractionStorageKey);
+    }
+  }, [mode]);
 
   function goNext() {
     setError(null);
@@ -139,8 +193,13 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
         phone: form.phone.trim(),
         address: form.address.trim(),
         bloodType: form.bloodType || undefined,
+        lmp: form.lmp || undefined,
+        edd: form.edd || undefined,
         gestationalAge: Number(form.gestationalAge),
         ancVisit: form.ancVisit,
+        gravida: toOptionalNumber(form.gravida),
+        para: toOptionalNumber(form.para),
+        abortus: toOptionalNumber(form.abortus),
         riskLevel: form.riskLevel,
       });
       await createQueue({ patientId: created.patient.id, pregnancyId: created.pregnancy.id });
@@ -159,8 +218,8 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
       {error ? <p className={styles.formError}>{error}</p> : null}
 
       {stage === 'manual-personal' ? <ManualPersonalPanel form={form} onFieldChange={updateField} onNext={goNext} /> : null}
-      {stage === 'autofill-personal' ? <AutofillPersonalPanel onNext={goNext} /> : null}
-      {stage === 'pregnancy' ? <PregnancyPanel onBack={goBack} onNext={goNext} /> : null}
+      {stage === 'autofill-personal' ? <AutofillPersonalPanel form={form} onFieldChange={updateField} onNext={goNext} /> : null}
+      {stage === 'pregnancy' ? <PregnancyPanel form={form} onBack={goBack} onNext={goNext} /> : null}
       {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
   );
@@ -237,7 +296,7 @@ function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegi
   );
 }
 
-function AutofillPersonalPanel({ onNext }: { onNext: () => void }) {
+function AutofillPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Auto-filled patient identity review">
       <div className={styles.autoBanner}>
@@ -252,7 +311,12 @@ function AutofillPersonalPanel({ onNext }: { onNext: () => void }) {
       <div className={styles.manualFormBody}>
         <FormSection icon="user" title="Main Identity" tone="blue">
           <div className={styles.manualFormGrid}>
-            {autoFields.map((field) => <AutoField key={field.label} {...field} />)}
+            <ManualField label="Full Name *" placeholder="Patient name" value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
+            <ManualField label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
+            <ManualField label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
+            <ManualField label="Phone Number *" placeholder="Example: 08123456789" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
+            <ManualField label="Residential Address *" placeholder="Enter complete address based on current residence..." wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
+            <ManualField label="BPJS Number (Optional)" placeholder="13-digit BPJS card number" />
           </div>
         </FormSection>
 
@@ -265,7 +329,7 @@ function AutofillPersonalPanel({ onNext }: { onNext: () => void }) {
 
         <FormSection icon="briefcase" title="Medical Information" tone="blue">
           <div className={`${styles.manualFormGrid} ${styles.threeColumnGrid}`}>
-            <ManualField label="Blood Type" placeholder="Select Type" select options={bloodTypeOptions} />
+            <ManualField label="Blood Type" placeholder="Select Type" select options={bloodTypeOptions} value={form.bloodType} onChange={(value) => onFieldChange('bloodType', value)} />
             <ManualField label="Allergy" placeholder="Food/medicine allergy" />
             <ManualField label="Chronic History" placeholder="Asthma, Hypertension, etc." />
           </div>
@@ -277,7 +341,7 @@ function AutofillPersonalPanel({ onNext }: { onNext: () => void }) {
   );
 }
 
-function PregnancyPanel({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
+function PregnancyPanel({ form, onBack, onNext }: { form: ManualRegistrationForm; onBack: () => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Pregnancy data form">
       <div className={styles.autoBanner}>
@@ -289,21 +353,21 @@ function PregnancyPanel({ onBack, onNext }: { onBack: () => void; onNext: () => 
       <div className={styles.manualFormBody}>
         <FormSection icon="user" title="I. PREGNANCY IDENTITY (AUTO-FILLED)">
           <div className={styles.manualFormGrid}>
-            <AutoField label="LMP (Last Menstrual Period)" value="20 Apr 2025" fromKia />
-            <AutoField label="EDD (Estimated Due Date)" value="25 Jan 2026" fromKia />
+            <AutoField label="LMP (Last Menstrual Period)" value={formatDisplayDate(form.lmp) ?? 'Needs review'} fromKia />
+            <AutoField label="EDD (Estimated Due Date)" value={formatDisplayDate(form.edd) ?? 'Needs review'} fromKia />
             <div className={styles.wideManualField}>
-              <div className={styles.gestationHeader}><span>Current Gestational Age</span><strong>28 Weeks (Trimester 3)</strong></div>
+              <div className={styles.gestationHeader}><span>Current Gestational Age</span><strong>{form.gestationalAge || '0'} Weeks</strong></div>
               <div className={styles.gestationTrack}><span /></div>
               <div className={styles.gestationScale}><small>1 Week</small><small>20 Weeks</small><small>40 Weeks</small></div>
             </div>
-            <AutoField label="Last ANC Visit" value="K3" fromKia />
+            <AutoField label="Last ANC Visit" value={form.ancVisit || 'Needs review'} fromKia />
           </div>
         </FormSection>
 
         <FormSection icon="clipboard" title="II. PREGNANCY HISTORY">
           <div className={styles.gpaGrid}>
             {['G (Gravida)', 'P (Para)', 'A (Abortus)'].map((label, index) => (
-              <div key={label}><span>{label}</span><strong className={styles.gpaValue}>{index === 0 ? '2' : index === 1 ? '1' : '0'}</strong></div>
+              <div key={label}><span>{label}</span><strong className={styles.gpaValue}>{index === 0 ? form.gravida : index === 1 ? form.para : form.abortus}</strong></div>
             ))}
           </div>
         </FormSection>

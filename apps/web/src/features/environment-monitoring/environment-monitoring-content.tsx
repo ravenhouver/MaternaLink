@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { useEffect, useMemo, useState } from 'react';
+import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import { getAlerts, getCurrentUser, getPuskesmas, type AlertRecord, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
@@ -33,7 +34,7 @@ const statusLabel: Record<RouteRow['status'], string> = {
   elevated: 'Elevated',
 };
 
-function RoleSidebar({ onUnavailable, user }: { onUnavailable: (feature: string) => void; user: CurrentUser | null }) {
+function RoleSidebar({ user }: { user: CurrentUser | null }) {
   return (
     <aside className={styles.sidebar} aria-label="Medicine sender navigation">
       <div className={styles.roleBrand}>
@@ -52,7 +53,6 @@ function RoleSidebar({ onUnavailable, user }: { onUnavailable: (feature: string)
       </nav>
 
       <div className={styles.supportNav}>
-        <a href={routes.ifkEnvironment} onClick={(event) => { event.preventDefault(); onUnavailable('Settings'); }}><AppIcon name="settings" width={20} height={20} />Settings</a>
         <RoleLogoutButton className={styles.supportLogoutButton} />
         <div className={styles.officerCard}>
           <span><AppIcon name="user" width={18} height={18} /></span>
@@ -75,7 +75,7 @@ function Topbar({ onUnavailable, user }: { onUnavailable: (feature: string) => v
         <span>Environment Monitoring</span>
       </nav>
       <div className={styles.topbarActions}>
-        <button type="button" aria-label="Notifikasi" className={styles.notificationButton} onClick={() => onUnavailable('Notifikasi')}><AppIcon name="bell" width={20} height={20} /><span /></button>
+        {user ? <NotificationCenter user={user} /> : null}
         <button type="button" aria-label="Pengaturan" onClick={() => onUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
         <div className={styles.topbarProfile}>
           <div>
@@ -227,7 +227,7 @@ export function EnvironmentMonitoringContent() {
 
   return (
     <div className={styles.shell}>
-      <RoleSidebar onUnavailable={explainUnavailable} user={user} />
+      <RoleSidebar user={user} />
       <div className={styles.workspace}>
         <Topbar onUnavailable={explainUnavailable} user={user} />
         <main className={styles.page}>

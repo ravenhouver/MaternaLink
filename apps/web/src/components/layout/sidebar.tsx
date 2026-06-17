@@ -94,12 +94,6 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
       </div>
 
       <div className={styles.profileArea}>
-        {hasTopbar || collapsed ? (
-          <Link href="/settings" className={styles.navItem} prefetch={false}>
-            <AppIcon name="settings" className={styles.navIcon} width={22} height={22} />
-            <span>Pengaturan</span>
-          </Link>
-        ) : null}
         <button type="button" className={[styles.navItem, styles.navButton].join(' ')} onClick={handleLogout} disabled={isLoggingOut}>
           <AppIcon name="logOut" className={styles.navIcon} width={22} height={22} />
           <span>{isLoggingOut ? 'Keluar...' : 'Logout'}</span>

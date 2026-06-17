@@ -96,10 +96,6 @@ export function MobileNavbar({ user }: MobileNavbarProps) {
         </nav>
 
         <div className={styles.drawerFooter}>
-          <Link href="/settings" className={styles.navItem} prefetch={false}>
-            <AppIcon name="settings" className={styles.navIcon} width={20} height={20} />
-            <span>Pengaturan</span>
-          </Link>
           <button type="button" className={[styles.navItem, styles.navButton].join(' ')} onClick={handleLogout} disabled={isLoggingOut}>
             <AppIcon name="logOut" className={styles.navIcon} width={20} height={20} />
             <span>{isLoggingOut ? 'Keluar...' : 'Logout'}</span>

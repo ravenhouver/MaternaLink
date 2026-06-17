@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getCurrentUser, getObat, syncAiMasterData, type CurrentUser, type ObatRecord } from '@/lib/api';
@@ -155,7 +156,6 @@ export function SuperAdminMedicinesContent() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /><span>Settings</span></button>
           <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
           <RoleLogoutButton className={styles.navItem} />
         </div>
@@ -169,7 +169,7 @@ export function SuperAdminMedicinesContent() {
             <strong>Medicine List</strong>
           </nav>
           <div className={styles.topbarActions}>
-            <button className={styles.iconButton} type="button" aria-label="Notifications" onClick={() => explainUnavailable('Notifications')}><AppIcon name="bell" width={20} height={20} /><span aria-hidden="true" /></button>
+            {user ? <NotificationCenter user={user} /> : null}
             <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>Superadmin</small></span>

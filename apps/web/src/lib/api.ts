@@ -186,6 +186,26 @@ export type ObatRecord = {
   durasiPengobatanHari?: number | null;
 };
 
+export type KiaExtractionResult = {
+  fullName?: string | null;
+  nik?: string | null;
+  dateOfBirth?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  bloodType?: string | null;
+  lmp?: string | null;
+  edd?: string | null;
+  gestationalAge?: number | null;
+  ancVisit?: string | null;
+  gravida?: number | null;
+  para?: number | null;
+  abortus?: number | null;
+  riskFactors?: string[];
+  rawText?: string;
+  confidence: Record<string, number>;
+  needsReview: boolean;
+};
+
 export type AiMasterSyncResult = {
   puskesmas: number;
   obat: number;
@@ -309,12 +329,13 @@ async function readError(response: Response) {
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     credentials: 'include',
     cache: 'no-store',
     headers: {
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init.body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...init.headers,
     },
   });
@@ -347,6 +368,12 @@ export async function getUsers(): Promise<AdminUserRecord[]> {
 
 export async function createPatient(payload: CreatePatientPayload): Promise<{ patient: PatientRecord; pregnancy: PregnancyRecord }> {
   return apiFetch('/patients', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function extractKiaBook(file: File): Promise<KiaExtractionResult> {
+  const form = new FormData();
+  form.append('file', file);
+  return apiFetch('/kia/extract', { method: 'POST', body: form });
 }
 
 export async function getPatients(): Promise<PatientRecord[]> {
