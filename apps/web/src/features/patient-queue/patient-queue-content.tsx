@@ -85,7 +85,9 @@ export function PatientQueueContent() {
   async function handleCall(row: QueueRecord) {
     setError(null);
     try {
-      await updateQueueStatus(row.id, 'EXAMINING');
+      if (row.status === 'WAITING') {
+        await updateQueueStatus(row.id, 'EXAMINING');
+      }
       router.push(`${routes.examination}?queueId=${row.id}`);
     } catch (callError) {
       setError(callError instanceof Error ? callError.message : 'Gagal memanggil pasien');
@@ -175,7 +177,7 @@ export function PatientQueueContent() {
                     </td>
                     <td data-label="Action">
                       <div className={styles.actionGroup}>
-                        {row.status === 'WAITING' ? <button type="button" className={styles.callButton} onClick={() => void handleCall(row)}>Call</button> : null}
+                        {row.status === 'WAITING' || row.status === 'EXAMINING' ? <button type="button" className={styles.callButton} onClick={() => void handleCall(row)}>Call</button> : null}
                         {row.status === 'COMPLETED' ? <span className={styles.completeButton}>Complete</span> : null}
                         {row.status === 'COMPLETED' ? <Link href={`${routes.examination}?queueId=${row.id}`} className={styles.secondaryButton}>View Details</Link> : null}
                       </div>
