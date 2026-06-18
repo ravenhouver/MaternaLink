@@ -209,6 +209,10 @@ function systolicPressure(value: string) {
   return match ? Number(match[1]) : null;
 }
 
+function normalizedBloodPressure(value: string) {
+  return value.trim().replace(/\s+/g, '');
+}
+
 function bmi(weight: string, height: string) {
   const kg = Number(weight);
   const cm = Number(height);
@@ -216,23 +220,53 @@ function bmi(weight: string, height: string) {
   return kg / ((cm / 100) ** 2);
 }
 
+function bmiStatus(value: number | null) {
+  if (value == null) return 'FILL WEIGHT & HEIGHT';
+  if (value < 18.5) return 'UNDERWEIGHT';
+  if (value < 25) return 'NORMAL';
+  if (value < 30) return 'OVERWEIGHT';
+  if (value < 35) return 'OBESITY I';
+  if (value < 40) return 'OBESITY II';
+  return 'OBESITY III';
+}
+
+function hasEmergencySymptoms(form: ManualRegistrationForm) {
+  return form.emergencySigns.some((sign) => sign !== noEmergencySignsLabel);
+}
+
 function calculatedRisks(form: ManualRegistrationForm) {
+  return Array.from(new Set([...riskSummaryItems(form), ...autoDetectedRisks(form)]));
+}
+
+function autoDetectedRisks(form: ManualRegistrationForm) {
   const age = maternalAge(form.dateOfBirth);
   const systolic = systolicPressure(form.bloodPressure);
-  const detected = new Set<string>(form.riskFactors);
-  if (age != null && (age < 20 || age > 35)) detected.add(`Maternal age ${age}`);
-  if (systolic != null && systolic >= 140) detected.add(`High blood pressure ${form.bloodPressure}`);
+  const detected = new Set<string>();
+  if (age != null && (age < 20 || age > 35)) detected.add(`Age ${age} years`);
   if (form.pregnancyType === 'Multiple') detected.add('Multiple pregnancy');
-  for (const sign of form.emergencySigns) {
-    if (sign !== noEmergencySignsLabel) detected.add(sign);
-  }
+  if (hasEmergencySymptoms(form)) detected.add('Emergency symptoms reported');
+  if (systolic != null && systolic >= 140) detected.add(`BP ${normalizedBloodPressure(form.bloodPressure)} mmHg`);
+  if (Number(form.temperature) >= 38) detected.add(`Fever ${form.temperature} °C`);
   return Array.from(detected);
+}
+
+function riskSummaryItems(form: ManualRegistrationForm) {
+  const age = maternalAge(form.dateOfBirth);
+  const systolic = systolicPressure(form.bloodPressure);
+  const items = new Set<string>();
+  if (systolic != null && systolic >= 140) items.add('High Blood Pressure (Systolic >= 140)');
+  if (age != null && (age < 20 || age > 35)) items.add('Maternal Age (High-Risk Maternal Age)');
+  for (const factor of form.riskFactors) items.add(`${factor} ${factor === 'Preeclampsia' ? 'History' : 'Risk'} (Manual Check)`);
+  if (form.pregnancyType === 'Multiple') items.add('Multiple Pregnancy (Auto Check)');
+  if (hasEmergencySymptoms(form)) items.add('Emergency Symptoms (Auto Check)');
+  if (Number(form.temperature) >= 38) items.add('Fever (Body Temperature >= 38 °C)');
+  return Array.from(items);
 }
 
 function calculatedRiskLevel(form: ManualRegistrationForm): PregnancyRiskLevel {
   const risks = calculatedRisks(form);
   const systolic = systolicPressure(form.bloodPressure);
-  if (form.emergencySigns.length > 0 || (systolic != null && systolic >= 140) || risks.length >= 3) return 'HIGH';
+  if (hasEmergencySymptoms(form) || (systolic != null && systolic >= 140) || risks.length >= 3) return 'HIGH';
   if (risks.length > 0) return 'MEDIUM';
   return 'LOW';
 }
@@ -275,7 +309,8 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
 
   useEffect(() => {
     getCurrentUser().then((user) => {
-      if (user?.displayName) updateField('responsibleDoctor', user.displayName);
+      const responsibleDoctor = user?.displayName ?? user?.username;
+      if (responsibleDoctor) setForm((current) => ({ ...current, responsibleDoctor }));
     }).catch(() => undefined);
   }, []);
 
@@ -580,17 +615,13 @@ function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { 
 }
 
 function ScreeningPanel({ form, isSubmitting, onBack, onFieldChange, onSubmit }: { form: ManualRegistrationForm; isSubmitting: boolean; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onSubmit: () => void }) {
-  const detectedRisks = calculatedRisks(form);
+  const detectedRisks = autoDetectedRisks(form);
+  const riskSummary = riskSummaryItems(form);
   const riskLevel = calculatedRiskLevel(form);
   const bmiValue = bmi(form.weight, form.height);
+  const feverDetected = Number(form.temperature) >= 38;
   return (
     <section className={styles.manualCard} aria-label="Screening and risk form">
-      <div className={styles.autoBanner}>
-        <span><AppIcon name="checkCircle" width={20} height={20} /></span>
-        <strong>Data from the MCH Handbook has been auto-filled by MaternaLink AI.</strong>
-        <Link href={routes.kiaUpload}>Change Handbook Photo</Link>
-      </div>
-
       <div className={styles.screeningLayout}>
         <div className={styles.screeningMain}>
           <FormSection icon="activity" title="Vital Signs">
@@ -598,10 +629,10 @@ function ScreeningPanel({ form, isSubmitting, onBack, onFieldChange, onSubmit }:
               <ManualField label="Blood Pressure (mmHg) *" placeholder="145 / 95" alert={Boolean(systolicPressure(form.bloodPressure) && Number(systolicPressure(form.bloodPressure)) >= 140)} value={form.bloodPressure} onChange={(value) => onFieldChange('bloodPressure', value)} />
               <ManualField label="Weight (kg)" placeholder="72" value={form.weight} onChange={(value) => onFieldChange('weight', value)} />
               <ManualField label="Height (cm)" placeholder="158" value={form.height} onChange={(value) => onFieldChange('height', value)} />
-              <div className={styles.bmiCard}><strong>BMI Status</strong><b>{bmiValue ? bmiValue.toFixed(1) : '-'} kg/m2</b><small>{bmiValue == null ? 'FILL WEIGHT & HEIGHT' : bmiValue >= 30 ? 'OBESITY' : bmiValue >= 25 ? 'OVERWEIGHT' : 'NORMAL'}</small></div>
+              <div className={styles.bmiCard}><strong>BMI Status</strong><b>{bmiValue ? bmiValue.toFixed(1) : '-'} kg/m2</b><small>{bmiStatus(bmiValue)}</small></div>
               <ManualField label="MUAC (cm)" placeholder="cm" value={form.muac} onChange={(value) => onFieldChange('muac', value)} />
               <ManualField label="Pulse Rate (bpm)" placeholder="bpm" value={form.pulse} onChange={(value) => onFieldChange('pulse', value)} />
-              <ManualField label="Body Temperature (C)" placeholder="38.2" alert={Number(form.temperature) >= 38} value={form.temperature} onChange={(value) => onFieldChange('temperature', value)} />
+              <ManualField label="Body Temperature (°C)" placeholder="38.2" error={feverDetected ? 'Fever detected' : undefined} value={form.temperature} onChange={(value) => onFieldChange('temperature', value)} />
               <ManualField label="Fetal Heart Rate (bpm)" placeholder="Optional" value={form.fetalHeartRate} onChange={(value) => onFieldChange('fetalHeartRate', value)} />
             </div>
           </FormSection>
@@ -626,20 +657,12 @@ function ScreeningPanel({ form, isSubmitting, onBack, onFieldChange, onSubmit }:
         <aside className={styles.screeningAside}>
           <div className={styles.sideCard}>
             <label className={styles.manualLabel}>Responsible Doctor</label>
-            <input className={styles.manualInput} placeholder="Responsible clinician" value={form.responsibleDoctor} onChange={(event) => onFieldChange('responsibleDoctor', event.target.value)} />
-          </div>
-          <div className={styles.sideCard}>
-            <label className={styles.manualLabel}>Risk Level</label>
-            <select className={styles.manualInput} value={riskLevel} onChange={(event) => onFieldChange('riskLevel', event.target.value as PregnancyRiskLevel)}>
-              <option value="LOW">Low</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="HIGH">High</option>
-            </select>
+            <input className={styles.manualInput} placeholder="Responsible clinician" readOnly value={form.responsibleDoctor} />
           </div>
           <div className={styles.priorityCard}><small>PRIORITY SUGGESTION</small><strong>PRIORITY: {riskLevel === 'HIGH' ? 'HIGH' : riskLevel === 'MEDIUM' ? 'MEDIUM' : 'ROUTINE'}</strong><AppIcon name="alert" width={18} height={18} /></div>
           <div className={styles.riskSummaryCard}>
             <strong><AppIcon name="alert" width={16} height={16} /> RISK SUMMARY</strong>
-            <ol>{detectedRisks.length ? detectedRisks.map((risk) => <li key={risk}>{risk}</li>) : <li>No risk factor selected or detected.</li>}</ol>
+            <ol>{riskSummary.length ? riskSummary.map((risk) => <li key={risk}>{risk}</li>) : <li>No risk factor selected or detected.</li>}</ol>
             <p>{riskLevel === 'HIGH' ? 'System recommends close observation or referral if condition worsens within 24 hours.' : 'System recommends routine ANC monitoring based on current data.'}</p>
           </div>
           <div className={styles.sideCard}>

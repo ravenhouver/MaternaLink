@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(__dirname, 'manual-entry-flow-content.tsx'), 'utf8');
 const pregnancyPanel = source.slice(source.indexOf('function PregnancyPanel'), source.indexOf('function ScreeningPanel'));
+const screeningPanel = source.slice(source.indexOf('function ScreeningPanel'), source.indexOf('type ManualFieldProps'));
 
 assert.ok(source.includes("const manualStages: ManualStage[] = ['manual-personal', 'pregnancy', 'screening']"), 'manual input skips the KIA autofill review stage');
 assert.ok(source.includes("const kiaStages: ManualStage[] = ['autofill-personal', 'pregnancy', 'screening']"), 'KIA upload flow starts with the autofill review stage');
@@ -29,3 +30,21 @@ assert.ok(source.includes("if (!form.visitReason.trim()) errors.visitReason"), '
 assert.ok(source.includes("if (!form.pregnancyType.trim()) errors.pregnancyType"), 'pregnancy type is required');
 assert.ok(source.includes('if (form.emergencySigns.length === 0) errors.emergencySigns'), 'emergency signs checklist is required');
 assert.equal(pregnancyPanel.includes('<input defaultValue='), false, 'GPA examples must not be rendered as default input values');
+
+assert.equal(screeningPanel.includes('Data from the MCH Handbook has been auto-filled by MaternaLink AI.'), false, 'step 3 must not show the MCH auto-fill banner');
+assert.equal(screeningPanel.includes('Change Handbook Photo'), false, 'step 3 must not show change handbook photo link');
+assert.equal(screeningPanel.includes('<label className={styles.manualLabel}>Risk Level</label>'), false, 'step 3 must not show manual risk level card');
+assert.ok(screeningPanel.includes('readOnly value={form.responsibleDoctor}'), 'responsible doctor is locked to the logged-in user');
+assert.ok(screeningPanel.includes('PRIORITY SUGGESTION'), 'priority suggestion remains visible');
+assert.ok(screeningPanel.includes('const riskLevel = calculatedRiskLevel(form)'), 'priority suggestion is calculated from current form data');
+assert.ok(screeningPanel.includes('const detectedRisks = autoDetectedRisks(form)'), 'auto-detected risk chips use auto detection helper');
+assert.ok(screeningPanel.includes('const riskSummary = riskSummaryItems(form)'), 'risk summary uses calculated summary helper');
+assert.ok(screeningPanel.includes('Body Temperature (°C)'), 'temperature field uses Celsius label');
+assert.ok(screeningPanel.includes("error={feverDetected ? 'Fever detected' : undefined}"), 'temperature field shows fever error state');
+assert.ok(source.includes("if (value < 30) return 'OVERWEIGHT'"), 'BMI status includes overweight');
+assert.ok(source.includes("if (value < 35) return 'OBESITY I'"), 'BMI status includes obesity class I');
+assert.ok(source.includes("items.add('High Blood Pressure (Systolic >= 140)')"), 'risk summary includes high blood pressure rule');
+assert.ok(source.includes("items.add('Maternal Age (High-Risk Maternal Age)')"), 'risk summary includes maternal age rule');
+assert.ok(source.includes("detected.add(`Age ${age} years`)"), 'auto-detected risks include age text');
+assert.ok(source.includes("detected.add('Emergency symptoms reported')"), 'auto-detected risks include emergency symptoms text');
+assert.ok(source.includes('setForm((current) => ({ ...current, responsibleDoctor }))'), 'responsible doctor is filled from current user data');
