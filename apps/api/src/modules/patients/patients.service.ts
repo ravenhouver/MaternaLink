@@ -85,7 +85,10 @@ export class PatientsService {
   get(id: string, user: CurrentUser) {
     return this.prisma.patient.findFirstOrThrow({
       where: { id, ...(user.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
-      include: { pregnancies: { orderBy: { createdAt: 'desc' } }, examinations: { orderBy: { createdAt: 'desc' }, take: 5 } },
+      include: {
+        pregnancies: { orderBy: { createdAt: 'desc' } },
+        examinations: { orderBy: { createdAt: 'desc' }, take: 5, include: { createdBy: { select: { id: true, username: true, displayName: true } } } },
+      },
     });
   }
 

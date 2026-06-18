@@ -207,7 +207,7 @@ export function PatientsPageContent() {
                     <td data-label="ANC Visit"><span className={styles.ancDots} aria-label={`${ancDone} of 4 ANC visits`}>{[0, 1, 2, 3].map((dot) => <i key={dot} className={dot < ancDone ? styles.ancDone : styles.ancPending} />)}</span></td>
                     <td data-label="Action">
                       <div className={styles.actionGroup}>
-                        <button type="button" className={styles.detailButton} onClick={() => openEdit(patient)}>View Details</button>
+                        <Link className={styles.detailButton} href={routes.patientDetail(patient.id)}>View Details</Link>
                         <button type="button" className={styles.queueButton} onClick={() => void queuePatient(patient)}><AppIcon name="plus" width={18} height={18} />Queue</button>
                       </div>
                     </td>

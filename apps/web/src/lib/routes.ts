@@ -7,6 +7,7 @@ export const routes = {
   adminFacilityProfiles: '/admin/facility-profiles',
   dashboard: '/dashboard',
   patients: '/patients',
+  patientDetail: (id: string) => `/patients/${encodeURIComponent(id)}`,
   newPatient: '/patients/new',
   manualPatient: '/patients/new/manual',
   kiaUpload: '/patients/new/kia-upload',

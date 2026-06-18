@@ -26,6 +26,26 @@ export type PregnancyRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 export type QueueStatus = 'WAITING' | 'EXAMINING' | 'COMPLETED' | 'CANCELLED';
 export type ExaminationSource = 'MANUAL' | 'VOICE_TRANSCRIPT_FALLBACK' | 'VOICE_TRANSCRIPT_AI';
 
+export type ExaminationRecord = {
+  id: string;
+  patientId: string;
+  pregnancyId: string;
+  queueId?: string | null;
+  source: ExaminationSource;
+  complaint?: string | null;
+  vitalSigns?: Record<string, unknown> | null;
+  gestationalAge?: number | null;
+  ancVisit?: string | null;
+  diagnosis?: unknown;
+  symptoms?: unknown;
+  medication?: unknown;
+  notes?: string | null;
+  riskSummary?: Record<string, unknown> | null;
+  createdById?: string | null;
+  createdAt: string;
+  createdBy?: { id: string; username: string; displayName?: string | null } | null;
+};
+
 export type PatientRecord = {
   id: string;
   fullName: string;
@@ -40,6 +60,7 @@ export type PatientRecord = {
   allergy?: string | null;
   chronicHistory?: string | null;
   pregnancies?: PregnancyRecord[];
+  examinations?: ExaminationRecord[];
 };
 
 export type PregnancyRecord = {
@@ -429,6 +450,10 @@ export async function transcribeSpeech(file: Blob): Promise<SpeechTranscriptionR
 
 export async function getPatients(): Promise<PatientRecord[]> {
   return apiFetch('/patients');
+}
+
+export async function getPatient(id: string): Promise<PatientRecord> {
+  return apiFetch(`/patients/${encodeURIComponent(id)}`);
 }
 
 export async function updatePatient(id: string, payload: Partial<CreatePatientPayload>): Promise<PatientRecord> {
