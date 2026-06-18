@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
-import { createExamination, getTodayQueue, transcribeSpeech, type ExaminationSource, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
+import { createExamination, getGejala, getKondisi, getObat, getTodayQueue, transcribeSpeech, type ExaminationSource, type GejalaRecord, type KondisiRecord, type ObatRecord, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
 
@@ -30,7 +30,7 @@ type ExaminationFormState = {
   pulse: string;
   gestationalAge: string;
   ancVisit: string;
-  symptoms: string;
+  symptomId: string;
   diagnosis: string;
   medicine: string;
   dosage: string;
@@ -39,14 +39,14 @@ type ExaminationFormState = {
 };
 
 const transcriptFields: ExaminationField[] = [
-  { id: 'complaint', label: 'Chief Complaint', value: 'Perut mules', type: 'textarea', status: 'verified', wide: true },
-  { id: 'bloodPressure', label: 'Blood Pressure', value: '160/110', suffix: 'mmHg', status: 'verified' },
+  { id: 'complaint', label: 'Chief Complaint', type: 'textarea', status: 'verified', wide: true },
+  { id: 'bloodPressure', label: 'Blood Pressure', suffix: 'mmHg', status: 'verified' },
   { id: 'pulse', label: 'Pulse Rate', placeholder: 'Contoh: 80', suffix: '/bpm', status: 'empty' },
-  { id: 'gestationalAge', label: 'Gestational Age', value: '36', suffix: 'weeks', status: 'verified' },
+  { id: 'gestationalAge', label: 'Gestational Age', suffix: 'weeks', status: 'verified' },
   { id: 'ancVisit', label: 'ANC Visit', value: 'Select Visit', type: 'select', status: 'manual' },
-  { id: 'symptoms', label: 'Additional Symptoms', placeholder: 'Note other symptoms like dizziness, swelling, or blurred vision...', type: 'textarea', status: 'manual', wide: true },
+  { id: 'symptomId', label: 'Main Symptom', placeholder: 'Select symptom from master data', type: 'select', status: 'manual', wide: true },
   { id: 'diagnosis', label: 'Diagnosis', placeholder: 'Start typing diagnosis (ICD-10)...', status: 'empty', wide: true, icon: true },
-  { id: 'medicine', label: 'Medication Given', value: 'MgSO4 4g IV', status: 'verified' },
+  { id: 'medicine', label: 'Medication Given', status: 'verified' },
   { id: 'dosage', label: 'Dosage', placeholder: 'Example: 1x1', status: 'empty' },
   { id: 'unit', label: 'Unit', value: 'Tablet', type: 'select', status: 'empty' },
   { id: 'notes', label: 'Additional Notes (Optional)', placeholder: 'Any additional information...', type: 'textarea', status: 'empty', wide: true },
@@ -55,20 +55,20 @@ const transcriptFields: ExaminationField[] = [
 const manualFields: ExaminationField[] = transcriptFields.map((field) => ({
   ...field,
   status: 'empty',
-  value: field.id === 'complaint' ? 'Perut mules' : field.id === 'bloodPressure' ? '160/110' : field.id === 'gestationalAge' ? '36' : field.id === 'ancVisit' ? 'K5 - Trimester 3' : field.value,
+  value: field.value,
 }));
 
 const defaultForm: ExaminationFormState = {
-  complaint: 'Perut mules',
-  bloodPressure: '160/110',
+  complaint: '',
+  bloodPressure: '',
   pulse: '',
-  gestationalAge: '36',
-  ancVisit: 'K5 - Trimester 3',
-  symptoms: '',
-  diagnosis: 'K03',
-  medicine: 'OBT-010',
-  dosage: '1',
-  unit: 'Ampul',
+  gestationalAge: '',
+  ancVisit: '',
+  symptomId: '',
+  diagnosis: '',
+  medicine: '',
+  dosage: '',
+  unit: '',
   notes: '',
 };
 
@@ -80,6 +80,9 @@ export function PatientExaminationContent() {
   const [queue, setQueue] = useState<QueueRecord | null>(null);
   const [form, setForm] = useState<ExaminationFormState>(defaultForm);
   const [source, setSource] = useState<ExaminationSource>('MANUAL');
+  const [conditions, setConditions] = useState<KondisiRecord[]>([]);
+  const [symptomOptions, setSymptomOptions] = useState<GejalaRecord[]>([]);
+  const [medicines, setMedicines] = useState<ObatRecord[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isFormMode = mode === 'transcript' || mode === 'manual';
@@ -102,6 +105,14 @@ export function PatientExaminationContent() {
       cancelled = true;
     };
   }, [queueId]);
+
+  useEffect(() => {
+    Promise.all([getKondisi(), getGejala(), getObat()]).then(([nextConditions, nextSymptoms, nextMedicines]) => {
+      setConditions(nextConditions);
+      setSymptomOptions(nextSymptoms);
+      setMedicines(nextMedicines);
+    }).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat master data klinis'));
+  }, []);
 
   function updateForm(key: keyof ExaminationFormState, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -133,12 +144,14 @@ export function PatientExaminationContent() {
         pregnancyId: queue.pregnancy.id,
         source,
         complaint: form.complaint,
+        vitalSigns: { bloodPressure: form.bloodPressure || null, pulse: form.pulse ? Number(form.pulse) : null },
         gestationalAge: Number(form.gestationalAge),
         ancVisit: form.ancVisit,
         diagnosis: form.diagnosis ? [{ kondisiId: form.diagnosis, jumlahKasus: 1 }] : [],
-        symptoms: form.symptoms ? [{ gejalaId: 'G05', jumlah: 1 }] : [],
+        symptoms: form.symptomId ? [{ gejalaId: form.symptomId, jumlah: 1 }] : [],
         medication: form.medicine ? [{ obatId: form.medicine, quantity: Number(form.dosage || 1) }] : [],
         notes: form.notes,
+        riskSummary: buildExaminationRiskSummary(form, queue.pregnancy.riskLevel),
       });
       router.push(routes.forecastCalendar);
     } catch (saveError) {
@@ -174,8 +187,8 @@ export function PatientExaminationContent() {
 
       {mode === 'method' ? <MethodSelector onManual={() => setMode('manual')} onRecord={() => setMode('recording')} /> : null}
       {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={(audio) => void finishRecording(audio)} /> : null}
-      {mode === 'transcript' ? <ExaminationForm fields={transcriptFields} form={form} isSaving={isSaving} mode="transcript" onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
-      {mode === 'manual' ? <ExaminationForm fields={manualFields} form={form} isSaving={isSaving} mode="manual" onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
+      {mode === 'transcript' ? <ExaminationForm conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} medicines={medicines} mode="transcript" symptoms={symptomOptions} onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
+      {mode === 'manual' ? <ExaminationForm conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} medicines={medicines} mode="manual" symptoms={symptomOptions} onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
     </PageContainer>
   );
 }
@@ -188,12 +201,23 @@ function applySpeechDraft(current: ExaminationFormState, result: SpeechTranscrip
     pulse: result.draft.pulse ?? current.pulse,
     gestationalAge: result.draft.gestationalAge != null ? String(result.draft.gestationalAge) : current.gestationalAge,
     ancVisit: result.draft.ancVisit ?? current.ancVisit,
-    symptoms: result.draft.symptoms.length ? result.draft.symptoms.join(', ') : current.symptoms,
+    symptomId: current.symptomId,
     diagnosis: result.draft.diagnosis ?? current.diagnosis,
     medicine: result.draft.medicine ?? current.medicine,
     dosage: result.draft.dosage ?? current.dosage,
     unit: result.draft.unit ?? current.unit,
     notes: result.draft.notes ?? current.notes,
+  };
+}
+
+function buildExaminationRiskSummary(form: ExaminationFormState, pregnancyRiskLevel: string) {
+  const systolic = /^(\d{2,3})\s*\//.exec(form.bloodPressure.trim())?.[1];
+  const risks: string[] = [];
+  if (systolic && Number(systolic) >= 140) risks.push(`High blood pressure ${form.bloodPressure}`);
+  if (pregnancyRiskLevel === 'HIGH') risks.push('Pregnancy marked high risk');
+  return {
+    riskLevel: risks.length ? 'HIGH' : pregnancyRiskLevel,
+    risks,
   };
 }
 
@@ -333,7 +357,7 @@ function preferredMimeType() {
   return 'audio/webm';
 }
 
-function ExaminationForm({ fields, form, isSaving, mode, onChange, onRecordAgain, onSave }: { fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; mode: 'transcript' | 'manual'; onChange: (key: keyof ExaminationFormState, value: string) => void; onRecordAgain: () => void; onSave: () => void }) {
+function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, symptoms, onChange, onRecordAgain, onSave }: { conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void; onRecordAgain: () => void; onSave: () => void }) {
   const manualCount = fields.filter((field) => field.status === 'manual').length;
 
   return (
@@ -344,7 +368,7 @@ function ExaminationForm({ fields, form, isSaving, mode, onChange, onRecordAgain
       </div>
 
       <div className={styles.formGrid}>
-        {fields.map((field) => <FormField key={field.id} field={field} form={form} onChange={onChange} />)}
+        {fields.map((field) => <FormField conditions={conditions} key={field.id} field={field} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} />)}
       </div>
 
       <footer className={styles.formFooter}>
@@ -372,7 +396,7 @@ function ExaminationForm({ fields, form, isSaving, mode, onChange, onRecordAgain
   );
 }
 
-function FormField({ field, form, onChange }: { field: ExaminationField; form: ExaminationFormState; onChange: (key: keyof ExaminationFormState, value: string) => void }) {
+function FormField({ conditions, field, form, medicines, symptoms, onChange }: { conditions: KondisiRecord[]; field: ExaminationField; form: ExaminationFormState; medicines: ObatRecord[]; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void }) {
   const className = [styles.formField, field.wide ? styles.wideField : '', field.status === 'manual' ? styles.manualField : '', field.status === 'verified' ? styles.verifiedField : ''].filter(Boolean).join(' ');
   const key = field.id as keyof ExaminationFormState;
   const value = form[key] ?? '';
@@ -388,16 +412,10 @@ function FormField({ field, form, onChange }: { field: ExaminationField; form: E
         {field.icon ? <AppIcon name="search" width={16} height={16} /> : null}
         {field.type === 'textarea' ? (
           <textarea placeholder={field.placeholder} value={value} onChange={(event) => onChange(key, event.target.value)} />
-        ) : field.type === 'select' ? (
+        ) : field.type === 'select' || field.id === 'diagnosis' || field.id === 'medicine' ? (
           <select value={value} onChange={(event) => onChange(key, event.target.value)}>
             <option value="">{field.placeholder ?? 'Select'}</option>
-            <option value="K1">K1</option>
-            <option value="K2">K2</option>
-            <option value="K3">K3</option>
-            <option value="K4">K4</option>
-            <option value="K5 - Trimester 3">K5 - Trimester 3</option>
-            <option value="Tablet">Tablet</option>
-            <option value="Ampul">Ampul</option>
+            {selectOptions(field.id, conditions, symptoms, medicines).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         ) : (
           <input placeholder={field.placeholder} value={value} onChange={(event) => onChange(key, event.target.value)} />
@@ -406,4 +424,13 @@ function FormField({ field, form, onChange }: { field: ExaminationField; form: E
       </span>
     </label>
   );
+}
+
+function selectOptions(fieldId: string, conditions: KondisiRecord[], symptoms: GejalaRecord[], medicines: ObatRecord[]) {
+  if (fieldId === 'ancVisit') return ['K1', 'K2', 'K3', 'K4', 'K5', 'K6'].map((value) => ({ value, label: value }));
+  if (fieldId === 'symptomId') return symptoms.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}` }));
+  if (fieldId === 'diagnosis') return conditions.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}` }));
+  if (fieldId === 'medicine') return medicines.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}` }));
+  if (fieldId === 'unit') return ['Tablet', 'Ampul', 'Botol', 'Strip', 'Vial'].map((value) => ({ value, label: value }));
+  return [];
 }

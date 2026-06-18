@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePatientDto, UpdatePatientDto } from './patients.dto';
@@ -11,7 +11,7 @@ export class PatientsService {
   constructor(private readonly prisma: PrismaService) {}
 
   create(data: CreatePatientDto, user: CurrentUser) {
-    const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId : user.puskesmasId ?? 'PKM-001';
+    const puskesmasId = user.puskesmasId;
     if (!puskesmasId) throw new Error('Puskesmas context is required');
 
     return this.prisma.$transaction(async (tx) => {
@@ -44,6 +44,15 @@ export class PatientsService {
           para: data.para,
           abortus: data.abortus,
           pregnancyType: data.pregnancyType,
+          visitReason: data.visitReason,
+          chiefComplaint: data.chiefComplaint,
+          emergencySigns: data.emergencySigns as Prisma.InputJsonValue | undefined,
+          vitalSigns: data.vitalSigns as Prisma.InputJsonValue | undefined,
+          riskFactors: data.riskFactors as Prisma.InputJsonValue | undefined,
+          routineMedication: data.routineMedication as Prisma.InputJsonValue | undefined,
+          clinicalNotes: data.clinicalNotes,
+          responsibleDoctor: data.responsibleDoctor ?? user.username,
+          priority: data.priority,
           riskLevel: data.riskLevel ?? 'LOW',
         },
       });
@@ -104,6 +113,15 @@ export class PatientsService {
         para: data.para,
         abortus: data.abortus,
         pregnancyType: data.pregnancyType,
+        visitReason: data.visitReason,
+        chiefComplaint: data.chiefComplaint,
+        emergencySigns: data.emergencySigns as Prisma.InputJsonValue | undefined,
+        vitalSigns: data.vitalSigns as Prisma.InputJsonValue | undefined,
+        riskFactors: data.riskFactors as Prisma.InputJsonValue | undefined,
+        routineMedication: data.routineMedication as Prisma.InputJsonValue | undefined,
+        clinicalNotes: data.clinicalNotes,
+        responsibleDoctor: data.responsibleDoctor,
+        priority: data.priority,
         riskLevel: data.riskLevel,
       };
       const hasPregnancyChange = Object.values(pregnancyData).some((value) => value !== undefined);

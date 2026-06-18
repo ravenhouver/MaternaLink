@@ -514,25 +514,34 @@ model Patient {
 }
 
 model Pregnancy {
-  id             String             @id @default(cuid()) @map("id")
-  patientId      String             @map("patient_id")
-  puskesmasId    String             @map("puskesmas_id")
-  lmp            DateTime?          @map("lmp") @db.Date
-  edd            DateTime?          @map("edd") @db.Date
-  gestationalAge Int?               @map("gestational_age")
-  gravida        Int?               @map("gravida")
-  para           Int?               @map("para")
-  abortus        Int?               @map("abortus")
-  ancVisit       String?            @map("anc_visit")
-  pregnancyType  String?            @map("pregnancy_type")
-  riskLevel      PregnancyRiskLevel @default(LOW) @map("risk_level")
-  active         Boolean            @default(true) @map("active")
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @updatedAt @map("updated_at")
-  patient        Patient            @relation(fields: [patientId], references: [id])
-  puskesmas      Puskesmas          @relation(fields: [puskesmasId], references: [id])
-  queues         PatientQueue[]
-  examinations   Examination[]
+  id                String             @id @default(cuid()) @map("id")
+  patientId         String             @map("patient_id")
+  puskesmasId       String             @map("puskesmas_id")
+  lmp               DateTime?          @map("lmp") @db.Date
+  edd               DateTime?          @map("edd") @db.Date
+  gestationalAge    Int?               @map("gestational_age")
+  gravida           Int?               @map("gravida")
+  para              Int?               @map("para")
+  abortus           Int?               @map("abortus")
+  ancVisit          String?            @map("anc_visit")
+  pregnancyType     String?            @map("pregnancy_type")
+  visitReason       String?            @map("visit_reason")
+  chiefComplaint    String?            @map("chief_complaint")
+  emergencySigns    Json?              @map("emergency_signs")
+  vitalSigns        Json?              @map("vital_signs")
+  riskFactors       Json?              @map("risk_factors")
+  routineMedication Json?              @map("routine_medication")
+  clinicalNotes     String?            @map("clinical_notes")
+  responsibleDoctor String?            @map("responsible_doctor")
+  priority          String?            @map("priority")
+  riskLevel         PregnancyRiskLevel @default(LOW) @map("risk_level")
+  active            Boolean            @default(true) @map("active")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  patient           Patient            @relation(fields: [patientId], references: [id])
+  puskesmas         Puskesmas          @relation(fields: [puskesmasId], references: [id])
+  queues            PatientQueue[]
+  examinations      Examination[]
 
   @@map("pregnancy")
 }

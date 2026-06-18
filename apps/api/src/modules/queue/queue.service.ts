@@ -37,7 +37,7 @@ export class QueueService {
         pregnancyId: data.pregnancyId,
         puskesmasId,
         queueNo,
-        assignedDoctor: 'dr. Ratna Wulandari',
+        assignedDoctor: data.assignedDoctor ?? user.username,
       },
       include: { patient: true, pregnancy: true },
     });

@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { ExaminationSource } from '@prisma/client';
-import { IsArray, IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class ExaminationDiagnosisDto {
   @IsString()
@@ -46,6 +46,10 @@ export class CreateExaminationDto {
   complaint?: string;
 
   @IsOptional()
+  @IsObject()
+  vitalSigns?: Record<string, unknown>;
+
+  @IsOptional()
   @IsInt()
   gestationalAge?: number;
 
@@ -68,6 +72,10 @@ export class CreateExaminationDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsObject()
+  riskSummary?: Record<string, unknown>;
 }
 
 export class UpdateExaminationDto extends PartialType(CreateExaminationDto) {}

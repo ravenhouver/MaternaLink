@@ -4,7 +4,10 @@ import type { CurrentUser } from '../../common/auth/current-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExaminationDto, UpdateExaminationDto } from './examinations.dto';
 
-const DEMO_PERIOD = new Date('2026-06-01');
+function currentPeriod() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
 
 @Injectable()
 export class ExaminationsService {
@@ -16,6 +19,7 @@ export class ExaminationsService {
       const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId ?? pregnancy.puskesmasId : pregnancy.puskesmasId;
       const diagnosis = data.diagnosis ?? [];
       const symptoms = data.symptoms ?? [];
+      const period = currentPeriod();
 
       const examination = await tx.examination.create({
         data: {
@@ -25,30 +29,31 @@ export class ExaminationsService {
           puskesmasId,
           source: data.source ?? 'MANUAL',
           complaint: data.complaint,
+          vitalSigns: data.vitalSigns as Prisma.InputJsonValue | undefined,
           gestationalAge: data.gestationalAge,
           ancVisit: data.ancVisit,
           diagnosis: diagnosis as unknown as Prisma.InputJsonValue,
           symptoms: symptoms as unknown as Prisma.InputJsonValue,
           medication: (data.medication ?? []) as unknown as Prisma.InputJsonValue,
           notes: data.notes,
-          riskSummary: { riskLevel: pregnancy.riskLevel } as Prisma.InputJsonValue,
+          riskSummary: (data.riskSummary ?? { riskLevel: pregnancy.riskLevel }) as Prisma.InputJsonValue,
           createdById: user.id,
         },
       });
 
       for (const item of diagnosis) {
         await tx.diagnosisPeriode.upsert({
-          where: { puskesmasId_kondisiId_periode: { puskesmasId, kondisiId: item.kondisiId, periode: DEMO_PERIOD } },
+          where: { puskesmasId_kondisiId_periode: { puskesmasId, kondisiId: item.kondisiId, periode: period } },
           update: { jumlahKasus: item.jumlahKasus, source: 'BIDAN' },
-          create: { puskesmasId, kondisiId: item.kondisiId, periode: DEMO_PERIOD, jumlahKasus: item.jumlahKasus, source: 'BIDAN' },
+          create: { puskesmasId, kondisiId: item.kondisiId, periode: period, jumlahKasus: item.jumlahKasus, source: 'BIDAN' },
         });
       }
 
       for (const item of symptoms) {
         await tx.gejalaPeriode.upsert({
-          where: { puskesmasId_gejalaId_periode: { puskesmasId, gejalaId: item.gejalaId, periode: DEMO_PERIOD } },
+          where: { puskesmasId_gejalaId_periode: { puskesmasId, gejalaId: item.gejalaId, periode: period } },
           update: { jumlah: item.jumlah },
-          create: { puskesmasId, gejalaId: item.gejalaId, periode: DEMO_PERIOD, jumlah: item.jumlah },
+          create: { puskesmasId, gejalaId: item.gejalaId, periode: period, jumlah: item.jumlah },
         });
       }
 
@@ -56,11 +61,11 @@ export class ExaminationsService {
         await tx.anamnesisRaw.create({
           data: {
             puskesmasId,
-            periode: DEMO_PERIOD,
+            periode: period,
             transkrip: data.complaint,
             gejalaExtracted: symptoms as unknown as Prisma.InputJsonValue,
             gejalaValidated: symptoms as unknown as Prisma.InputJsonValue,
-            extractionModel: data.source === 'VOICE_TRANSCRIPT_AI' ? 'future-fastapi-ai' : 'rule-based-fallback',
+            extractionModel: data.source === 'VOICE_TRANSCRIPT_AI' ? 'speech-stt-service' : 'manual-entry',
           },
         });
       }
@@ -108,10 +113,12 @@ export class ExaminationsService {
         source: data.source,
         complaint: data.complaint,
         gestationalAge: data.gestationalAge,
+        vitalSigns: data.vitalSigns as Prisma.InputJsonValue | undefined,
         ancVisit: data.ancVisit,
         diagnosis,
         symptoms,
         medication,
+        riskSummary: data.riskSummary as Prisma.InputJsonValue | undefined,
         notes: data.notes,
       },
       include: { patient: true, pregnancy: true, queue: true },

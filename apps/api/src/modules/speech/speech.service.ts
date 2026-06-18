@@ -1,4 +1,5 @@
 import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 
 export type SttSegment = { start: number; end: number; text: string };
 
@@ -29,6 +30,8 @@ export type SpeechExaminationDraft = SttTranscription & {
 
 @Injectable()
 export class SpeechService {
+  constructor(private readonly prisma: PrismaService) {}
+
   async transcribe(file: { buffer: Buffer; mimetype: string; originalname: string; size: number }): Promise<SpeechExaminationDraft> {
     if (!file) throw new BadRequestException('Audio recording is required');
     if (!['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'].includes(file.mimetype)) {
@@ -46,7 +49,7 @@ export class SpeechService {
       const response = await fetch(`${this.baseUrl()}/v1/stt/transcribe`, { method: 'POST', body: form, signal: controller.signal });
       if (!response.ok) throw new BadGatewayException(`Speech STT service returned HTTP ${response.status}`);
       const transcription = (await response.json()) as SttTranscription;
-      return { ...transcription, draft: this.toDraft(transcription.transcript), needsReview: true };
+      return { ...transcription, draft: await this.toDraft(transcription.transcript), needsReview: true };
     } catch (error) {
       if (error instanceof BadGatewayException) throw error;
       throw new BadGatewayException(error instanceof Error ? error.message : 'Speech STT service unavailable');
@@ -59,14 +62,20 @@ export class SpeechService {
     return (process.env.SPEECH_STT_SERVICE_URL ?? 'http://localhost:8002').replace(/\/$/, '');
   }
 
-  private toDraft(transcript: string): SpeechExaminationDraft['draft'] {
+  private async toDraft(transcript: string): Promise<SpeechExaminationDraft['draft']> {
     const lower = transcript.toLowerCase();
-    const symptoms = ['pusing', 'mual', 'muntah', 'bengkak', 'nyeri perut', 'perdarahan', 'sesak', 'demam'].filter((term) => lower.includes(term));
+    const [symptomMatches, conditionMatches, medicineMatches] = await Promise.all([
+      this.prisma.gejala.findMany(),
+      this.prisma.kondisi.findMany(),
+      this.prisma.obat.findMany(),
+    ]);
+    const symptoms = symptomMatches.filter((item) => lower.includes(item.nama.toLowerCase()) || lower.includes(item.id.toLowerCase())).map((item) => item.id);
     const bloodPressure = match(transcript, /(?:tekanan darah|tensi|td)\s*(\d{2,3}\s*\/\s*\d{2,3})/i);
     const pulse = match(transcript, /(?:nadi|pulse)\s*(\d{2,3})/i);
     const gestationalAgeText = match(transcript, /(?:usia kehamilan|umur kehamilan|gestasi)\s*(\d{1,2})\s*(?:minggu|week)/i);
     const ancVisit = match(transcript, /\b(K[1-6])\b/i)?.toUpperCase() ?? null;
-    const medicine = lower.includes('mgso4') || lower.includes('magnesium') ? 'OBT-010' : null;
+    const diagnosis = conditionMatches.find((item) => lower.includes(item.nama.toLowerCase()) || lower.includes(item.id.toLowerCase()))?.id ?? null;
+    const medicine = medicineMatches.find((item) => lower.includes(item.nama.toLowerCase()) || lower.includes(item.id.toLowerCase()))?.id ?? null;
 
     return {
       complaint: transcript,
@@ -75,7 +84,7 @@ export class SpeechService {
       gestationalAge: gestationalAgeText ? Number(gestationalAgeText) : null,
       ancVisit,
       symptoms,
-      diagnosis: symptoms.some((term) => ['pusing', 'bengkak', 'nyeri perut'].includes(term)) || bloodPressure ? 'K03' : null,
+      diagnosis,
       medicine,
       dosage: medicine ? '1' : null,
       unit: medicine ? 'Ampul' : null,

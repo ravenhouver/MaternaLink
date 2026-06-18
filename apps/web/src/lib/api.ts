@@ -52,6 +52,15 @@ export type PregnancyRecord = {
   para?: number | null;
   abortus?: number | null;
   pregnancyType?: string | null;
+  visitReason?: string | null;
+  chiefComplaint?: string | null;
+  emergencySigns?: string[] | null;
+  vitalSigns?: Record<string, unknown> | null;
+  riskFactors?: string[] | null;
+  routineMedication?: string[] | null;
+  clinicalNotes?: string | null;
+  responsibleDoctor?: string | null;
+  priority?: string | null;
   riskLevel: PregnancyRiskLevel;
 };
 
@@ -143,6 +152,15 @@ export type CreatePatientPayload = {
   para?: number;
   abortus?: number;
   pregnancyType?: string;
+  visitReason?: string;
+  chiefComplaint?: string;
+  emergencySigns?: string[];
+  vitalSigns?: Record<string, unknown>;
+  riskFactors?: string[];
+  routineMedication?: string[];
+  clinicalNotes?: string;
+  responsibleDoctor?: string;
+  priority?: string;
   riskLevel?: PregnancyRiskLevel;
 };
 
@@ -185,6 +203,9 @@ export type ObatRecord = {
   dosisStandarHarian?: number | null;
   durasiPengobatanHari?: number | null;
 };
+
+export type KondisiRecord = { id: string; nama: string; deskripsi?: string | null };
+export type GejalaRecord = { id: string; nama: string; deskripsi?: string | null };
 
 export type KiaExtractionResult = {
   fullName?: string | null;
@@ -297,12 +318,14 @@ export type CreateExaminationPayload = {
   pregnancyId: string;
   source?: ExaminationSource;
   complaint?: string;
+  vitalSigns?: Record<string, unknown>;
   gestationalAge?: number;
   ancVisit?: string;
   diagnosis?: Array<{ kondisiId: string; jumlahKasus: number }>;
   symptoms?: Array<{ gejalaId: string; jumlah: number }>;
   medication?: Array<{ obatId: string; quantity: number }>;
   notes?: string;
+  riskSummary?: Record<string, unknown>;
 };
 
 export type ApiReachability = {
@@ -428,6 +451,14 @@ export async function getObat(): Promise<ObatRecord[]> {
   return apiFetch('/master/obat');
 }
 
+export async function getKondisi(): Promise<KondisiRecord[]> {
+  return apiFetch('/master/kondisi');
+}
+
+export async function getGejala(): Promise<GejalaRecord[]> {
+  return apiFetch('/master/gejala');
+}
+
 export async function syncAiMasterData(): Promise<AiMasterSyncResult> {
   return apiFetch('/master/ai/sync', { method: 'POST' });
 }
@@ -452,7 +483,7 @@ export async function upsertStok(payload: { puskesmasId: string; obatId: string;
   return apiFetch('/inputs/stok', { method: 'POST', body: JSON.stringify(payload) });
 }
 
-export async function createQueue(payload: { patientId: string; pregnancyId: string }): Promise<QueueRecord> {
+export async function createQueue(payload: { patientId: string; pregnancyId: string; assignedDoctor?: string }): Promise<QueueRecord> {
   return apiFetch('/queue', { method: 'POST', body: JSON.stringify(payload) });
 }
 

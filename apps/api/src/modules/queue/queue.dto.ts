@@ -7,6 +7,10 @@ export class CreateQueueDto {
 
   @IsString()
   pregnancyId!: string;
+
+  @IsOptional()
+  @IsString()
+  assignedDoctor?: string;
 }
 
 export class UpdateQueueStatusDto {

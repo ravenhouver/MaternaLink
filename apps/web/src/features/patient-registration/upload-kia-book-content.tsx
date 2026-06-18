@@ -38,8 +38,22 @@ export function UploadKiaBookContent() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extraction, setExtraction] = useState<KiaExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const stopCamera = useMemo(() => {
+    return () => {
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+      cameraStreamRef.current = null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (uploadState !== 'processing') {
@@ -66,9 +80,13 @@ export function UploadKiaBookContent() {
     return () => URL.revokeObjectURL(nextPreviewUrl);
   }, [selectedFile]);
 
+  useEffect(() => stopCamera, [stopCamera]);
+
   const progressLabel = useMemo(() => Math.min(progress, 100), [progress]);
 
   async function startProcessing(file: File) {
+    stopCamera();
+    setCameraOpen(false);
     setProgress(0);
     setExtraction(null);
     setUploadState('processing');
@@ -84,6 +102,68 @@ export function UploadKiaBookContent() {
     }
   }
 
+  async function openCamera() {
+    setError(null);
+    setCameraError(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Kamera tidak tersedia di browser ini. Gunakan browser modern dengan izin kamera aktif.');
+      return;
+    }
+
+    try {
+      stopCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' } },
+      });
+      cameraStreamRef.current = stream;
+      setCameraOpen(true);
+
+      window.setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          void videoRef.current.play();
+        }
+      }, 0);
+    } catch {
+      stopCamera();
+      setCameraOpen(false);
+      setCameraError('Tidak bisa membuka kamera. Pastikan izin kamera diberikan dan perangkat kamera tersedia.');
+    }
+  }
+
+  async function capturePhoto() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || video.videoWidth === 0 || video.videoHeight === 0) {
+      setCameraError('Kamera belum siap. Tunggu sebentar lalu coba lagi.');
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      setCameraError('Gagal mengambil foto dari kamera.');
+      return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+    if (!blob) {
+      setCameraError('Gagal menyimpan foto dari kamera.');
+      return;
+    }
+
+    const photo = new File([blob], `kia-photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+    setSelectedFile(photo);
+    setError(null);
+    setCameraError(null);
+    void startProcessing(photo);
+  }
+
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (file) {
@@ -94,9 +174,9 @@ export function UploadKiaBookContent() {
   }
 
   function resetUpload() {
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = '';
-    }
+    stopCamera();
+    setCameraOpen(false);
+    setCameraError(null);
     if (galleryInputRef.current) {
       galleryInputRef.current.value = '';
     }
@@ -127,7 +207,22 @@ export function UploadKiaBookContent() {
         </p>
       </header>
 
-      {uploadState === 'idle' ? <IdleUploadPanel onFileChange={handleFileChange} cameraInputRef={cameraInputRef} galleryInputRef={galleryInputRef} /> : null}
+      {uploadState === 'idle' ? (
+        <IdleUploadPanel
+          cameraError={cameraError}
+          cameraOpen={cameraOpen}
+          canvasRef={canvasRef}
+          galleryInputRef={galleryInputRef}
+          onCapturePhoto={capturePhoto}
+          onCloseCamera={() => {
+            stopCamera();
+            setCameraOpen(false);
+          }}
+          onFileChange={handleFileChange}
+          onOpenCamera={openCamera}
+          videoRef={videoRef}
+        />
+      ) : null}
       {uploadState === 'processing' ? <ProcessingPanel progress={progressLabel} /> : null}
       {error ? <p className={styles.formError}>{error}</p> : null}
       {uploadState === 'success' ? <SuccessPanel extraction={extraction} previewUrl={previewUrl} selectedFileName={selectedFile?.name ?? 'KIA book photo'} onConfirm={continueToRegistrationForm} onRetake={resetUpload} /> : null}
@@ -138,12 +233,18 @@ export function UploadKiaBookContent() {
 }
 
 type IdleUploadPanelProps = {
-  cameraInputRef: React.RefObject<HTMLInputElement>;
+  cameraError: string | null;
+  cameraOpen: boolean;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
   galleryInputRef: React.RefObject<HTMLInputElement>;
+  onCapturePhoto: () => void;
+  onCloseCamera: () => void;
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onOpenCamera: () => void;
+  videoRef: React.RefObject<HTMLVideoElement>;
 };
 
-function IdleUploadPanel({ cameraInputRef, galleryInputRef, onFileChange }: IdleUploadPanelProps) {
+function IdleUploadPanel({ cameraError, cameraOpen, canvasRef, galleryInputRef, onCapturePhoto, onCloseCamera, onFileChange, onOpenCamera, videoRef }: IdleUploadPanelProps) {
   return (
     <section className={styles.uploadCard} aria-label="KIA book upload">
       <label className={styles.dropZone}>
@@ -152,10 +253,9 @@ function IdleUploadPanel({ cameraInputRef, galleryInputRef, onFileChange }: Idle
         <strong>Drag photo here or Select File</strong>
         <small>Supported formats: JPG, PNG (Max. 5MB)</small>
       </label>
-      <input ref={cameraInputRef} accept="image/png,image/jpeg" capture="environment" type="file" onChange={onFileChange} hidden />
 
       <div className={styles.uploadActions}>
-        <button type="button" className={styles.takePhotoButton} onClick={() => cameraInputRef.current?.click()}>
+        <button type="button" className={styles.takePhotoButton} onClick={onOpenCamera}>
           <AppIcon name="camera" width={22} height={22} />
           Take Photo
         </button>
@@ -164,6 +264,21 @@ function IdleUploadPanel({ cameraInputRef, galleryInputRef, onFileChange }: Idle
           Select from Gallery
         </button>
       </div>
+
+      {cameraError ? <p className={styles.formError}>{cameraError}</p> : null}
+      {cameraOpen ? (
+        <div className={styles.cameraPanel} role="dialog" aria-label="Take KIA book photo">
+          <video ref={videoRef} className={styles.cameraPreview} autoPlay muted playsInline />
+          <canvas ref={canvasRef} hidden />
+          <div className={styles.cameraActions}>
+            <button type="button" className={styles.galleryButton} onClick={onCloseCamera}>Cancel</button>
+            <button type="button" className={styles.takePhotoButton} onClick={onCapturePhoto}>
+              <AppIcon name="camera" width={20} height={20} />
+              Capture
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <aside className={styles.photoHint}>
         <AppIcon name="info" width={18} height={18} />
