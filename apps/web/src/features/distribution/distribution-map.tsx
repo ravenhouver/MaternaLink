@@ -4,22 +4,35 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import styles from './distribution.module.css';
 
-const routePoints: [number, number][] = [
-  [-7.7169, 110.3556],
-  [-7.7358, 110.3658],
-  [-7.7556, 110.3819],
-  [-7.7714, 110.3955],
-];
+type DistributionMapLocation = {
+  id: string;
+  name: string;
+  status: string;
+  latitude: number;
+  longitude: number;
+};
 
-export function DistributionMap() {
+const defaultCenter: [number, number] = [-7.744, 110.374];
+
+function averageCenter(locations: DistributionMapLocation[]): [number, number] {
+  if (!locations.length) return defaultCenter;
+  const total = locations.reduce(
+    (sum, item) => ({ latitude: sum.latitude + item.latitude, longitude: sum.longitude + item.longitude }),
+    { latitude: 0, longitude: 0 },
+  );
+  return [total.latitude / locations.length, total.longitude / locations.length];
+}
+
+export function DistributionMap({ locations = [] }: { locations?: DistributionMapLocation[] }) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return undefined;
+    const center = averageCenter(locations);
 
     const map = L.map(mapRef.current, {
-      center: [-7.744, 110.374],
-      zoom: 12,
+      center,
+      zoom: locations.length > 1 ? 11 : 12,
       scrollWheelZoom: false,
       zoomControl: false,
     });
@@ -28,39 +41,32 @@ export function DistributionMap() {
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    L.polyline(routePoints, {
-      color: '#005bbf',
-      weight: 5,
-      opacity: 0.82,
-      dashArray: '8 10',
-    }).addTo(map);
-
-    L.circleMarker(routePoints[1], {
-      radius: 10,
-      color: '#ffffff',
-      weight: 3,
-      fillColor: '#005bbf',
-      fillOpacity: 1,
-    })
-      .bindTooltip('Courier (PKM-TF-001)', { permanent: true, direction: 'top', offset: [0, -12] })
-      .addTo(map);
-
-    L.circleMarker(routePoints[routePoints.length - 1], {
-      radius: 8,
-      color: '#ffffff',
-      weight: 3,
-      fillColor: '#34a853',
-      fillOpacity: 1,
-    })
-      .bindPopup('<strong>Sleman Health Center</strong><br />ETA Tomorrow, 10:00 WIB')
-      .addTo(map);
+    locations.forEach((location) => {
+      const tone = location.status === 'Received' ? '#34a853' : location.status === 'Rejected' ? '#ba1a1a' : '#005bbf';
+      const popup = document.createElement('div');
+      const name = document.createElement('strong');
+      name.textContent = location.name;
+      const detail = document.createElement('div');
+      detail.textContent = `${location.status} - ${location.id}`;
+      popup.append(name, detail);
+      L.circleMarker([location.latitude, location.longitude], {
+        radius: 9,
+        color: '#ffffff',
+        weight: 3,
+        fillColor: tone,
+        fillOpacity: 1,
+      })
+        .bindTooltip(location.name, { permanent: locations.length === 1, direction: 'top', offset: [0, -12] })
+        .bindPopup(popup)
+        .addTo(map);
+    });
 
     setTimeout(() => map.invalidateSize(), 0);
 
     return () => {
       map.remove();
     };
-  }, []);
+  }, [locations]);
 
   return <div ref={mapRef} className={styles.leafletMap} aria-label="Active shipping locations map" />;
 }

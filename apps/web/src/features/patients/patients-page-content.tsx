@@ -8,6 +8,8 @@ import { createQueue, getPatients, updatePatient, type PatientRecord, type Pregn
 import { routes } from '@/lib/routes';
 import styles from './patients.module.css';
 
+const PAGE_SIZE = 3;
+
 type PatientDraft = {
   fullName: string;
   nik: string;
@@ -66,6 +68,7 @@ function toDraft(patient: PatientRecord): PatientDraft {
 export function PatientsPageContent() {
   const [rows, setRows] = useState<PatientRecord[]>([]);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [editing, setEditing] = useState<PatientRecord | null>(null);
   const [draft, setDraft] = useState<PatientDraft | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,7 +95,18 @@ export function PatientsPageContent() {
     if (!q) return rows;
     return rows.filter((patient) => [patient.fullName, patient.nik, patient.phone ?? '', patient.address ?? ''].some((value) => value.toLowerCase().includes(q)));
   }, [rows, search]);
-  const visibleRows = filteredRows.slice(0, 3);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const visibleRows = filteredRows.slice(pageStart, pageStart + PAGE_SIZE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   async function queuePatient(patient: PatientRecord) {
     const pregnancy = activePregnancy(patient);
@@ -187,7 +201,7 @@ export function PatientsPageContent() {
                 const isUrgent = pregnancy?.riskLevel === 'HIGH' || due === 'Tomorrow!' || due.includes('overdue') || due.startsWith('0 ');
                 return (
                   <tr key={patient.id}>
-                    <td data-label="Name"><strong className={styles.patientName}>{patient.fullName}</strong><span className={styles.patientId}>ID: {formatPatientId(patient, index)}</span></td>
+                    <td data-label="Name"><strong className={styles.patientName}>{patient.fullName}</strong><span className={styles.patientId}>ID: {formatPatientId(patient, pageStart + index)}</span></td>
                     <td data-label="Gestational Age">{pregnancy?.gestationalAge ? `${pregnancy.gestationalAge} weeks` : '-'}</td>
                     <td data-label="Due Date"><strong className={isUrgent ? styles.urgentDate : undefined}>{due === 'Tomorrow!' ? due : formatDueDate(pregnancy?.edd)}</strong>{due && due !== 'Tomorrow!' ? <span className={isUrgent ? styles.urgentHint : styles.dueHint}>({due})</span> : null}{due === 'Tomorrow!' ? <span className={styles.dueHint}>{formatDueDate(pregnancy?.edd)}</span> : null}</td>
                     <td data-label="ANC Visit"><span className={styles.ancDots} aria-label={`${ancDone} of 4 ANC visits`}>{[0, 1, 2, 3].map((dot) => <i key={dot} className={dot < ancDone ? styles.ancDone : styles.ancPending} />)}</span></td>
@@ -204,13 +218,13 @@ export function PatientsPageContent() {
           </table>
         </div>
         <footer className={styles.pagination}>
-          <p>Showing {visibleRows.length ? 1 : 0}-{visibleRows.length} of {rows.length} patients</p>
+          <p>Showing {visibleRows.length ? pageStart + 1 : 0}-{pageStart + visibleRows.length} of {filteredRows.length} patients</p>
           <div className={styles.paginationControls} aria-label="Patient pages">
-            <button type="button" aria-label="Previous page"><AppIcon name="chevronLeft" width={18} height={18} /></button>
-            <button type="button" aria-current="page">1</button>
-            <button type="button">2</button>
-            <button type="button">3</button>
-            <button type="button" aria-label="Next page"><AppIcon name="chevronRight" width={18} height={18} /></button>
+            <button type="button" aria-label="Previous page" disabled={safePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}><AppIcon name="chevronLeft" width={18} height={18} /></button>
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+              <button key={page} type="button" aria-current={page === safePage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>
+            ))}
+            <button type="button" aria-label="Next page" disabled={safePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}><AppIcon name="chevronRight" width={18} height={18} /></button>
           </div>
         </footer>
       </section>

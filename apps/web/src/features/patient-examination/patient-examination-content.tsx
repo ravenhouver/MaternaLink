@@ -200,7 +200,15 @@ export function PatientExaminationContent() {
         ancVisit: form.ancVisit,
         diagnosis: form.diagnosisIds.map((kondisiId) => ({ kondisiId, jumlahKasus: 1 })),
         symptoms: form.symptomIds.map((gejalaId) => ({ gejalaId, jumlah: 1 })),
-        medication: form.medications.filter((item) => item.medicine).map((item) => ({ obatId: item.medicine, quantity: Number(item.dosage || 1) })),
+        medication: form.medications.filter((item) => item.medicine).map((item) => ({
+          obatId: item.medicine,
+          quantity: Math.max(1, Math.round(toMedicationNumber(item.dosage, 1))),
+          unit: item.unit || null,
+          duration: item.duration ? toMedicationNumber(item.duration, 0) : null,
+          durationUnit: item.duration ? 'day' : null,
+          frequency: item.frequency ? toMedicationNumber(item.frequency, 0) : null,
+          frequencyUnit: item.frequency ? 'x/day' : null,
+        })),
         notes: form.notes,
         riskSummary: buildExaminationRiskSummary(form, queue.pregnancy.riskLevel),
       });
@@ -274,6 +282,12 @@ function vitalSignValue(value: Record<string, unknown> | null | undefined, keys:
     if (typeof item === 'number' && Number.isFinite(item)) return String(item);
   }
   return undefined;
+}
+
+function toMedicationNumber(value: string, fallback: number) {
+  const normalized = value.trim().replace(/\./g, '').replace(',', '.');
+  const parsed = Number(normalized || fallback);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function buildExaminationRiskSummary(form: ExaminationFormState, pregnancyRiskLevel: string) {

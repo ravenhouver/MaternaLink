@@ -127,7 +127,7 @@ export type DistributionRecommendation = {
   priorityRank: number;
   justification?: string | null;
   routeSummary?: Record<string, unknown> | null;
-  puskesmas?: { id: string; nama: string; kecamatan?: string; latitude?: number | null; longitude?: number | null };
+  puskesmas?: { id: string; nama: string; kecamatan?: string; latitude?: number | null; longitude?: number | null; jarakKeIfkKm?: number | null; leadTimeHari?: number | null };
   items: RecommendationItem[];
   trackingEvents?: TrackingEvent[];
 };
@@ -323,7 +323,7 @@ export type CreateExaminationPayload = {
   ancVisit?: string;
   diagnosis?: Array<{ kondisiId: string; jumlahKasus: number }>;
   symptoms?: Array<{ gejalaId: string; jumlah: number }>;
-  medication?: Array<{ obatId: string; quantity: number }>;
+  medication?: Array<{ obatId: string; quantity: number; unit?: string | null; duration?: number | null; durationUnit?: string | null; frequency?: number | null; frequencyUnit?: string | null }>;
   notes?: string;
   riskSummary?: Record<string, unknown>;
 };

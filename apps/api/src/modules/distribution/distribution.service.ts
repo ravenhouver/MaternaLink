@@ -24,7 +24,7 @@ export class DistributionService {
       include: {
         puskesmas: true,
         items: { include: { obat: true }, orderBy: { obatId: 'asc' } },
-        trackingEvents: { orderBy: { createdAt: 'desc' }, take: 1 },
+        trackingEvents: { include: { actor: true }, orderBy: { createdAt: 'desc' } },
       },
       orderBy: [{ priorityRank: 'asc' }, { createdAt: 'desc' }],
     });

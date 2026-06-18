@@ -67,7 +67,7 @@ export function CalendarPredictionContent() {
   }, [currentMonth, patients]);
   const todayEvents = useMemo<CalendarPanelEvent[]>(() => patients.slice(0, 3).map((patient) => {
     const pregnancy = activePregnancy(patient);
-    return { title: patient.fullName, label: pregnancy?.riskLevel === 'HIGH' ? 'KONTROL RISIKO TINGGI' : 'ANC FOLLOW UP', time: pregnancy?.edd ? new Date(pregnancy.edd).toLocaleDateString('id-ID') : 'Jadwal aktif', priority: pregnancy?.riskLevel === 'HIGH' };
+    return { id: patient.id, title: patient.fullName, label: pregnancy?.riskLevel === 'HIGH' ? 'KONTROL RISIKO TINGGI' : 'ANC FOLLOW UP', time: pregnancy?.edd ? new Date(pregnancy.edd).toLocaleDateString('id-ID') : 'Jadwal aktif', priority: pregnancy?.riskLevel === 'HIGH' };
   }), [patients]);
 
   useEffect(() => {

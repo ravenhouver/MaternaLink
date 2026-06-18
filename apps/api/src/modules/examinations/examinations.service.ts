@@ -9,6 +9,20 @@ function currentPeriod() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
+function normalizeMedication(data: CreateExaminationDto['medication']) {
+  return (data ?? [])
+    .filter((item) => item.obatId)
+    .map((item) => ({
+      obatId: item.obatId,
+      quantity: item.quantity,
+      unit: item.unit ?? null,
+      duration: item.duration ?? null,
+      durationUnit: item.durationUnit ?? null,
+      frequency: item.frequency ?? null,
+      frequencyUnit: item.frequencyUnit ?? null,
+    }));
+}
+
 @Injectable()
 export class ExaminationsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,6 +33,7 @@ export class ExaminationsService {
       const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId ?? pregnancy.puskesmasId : pregnancy.puskesmasId;
       const diagnosis = data.diagnosis ?? [];
       const symptoms = data.symptoms ?? [];
+      const medication = normalizeMedication(data.medication);
       const period = currentPeriod();
 
       const examination = await tx.examination.create({
@@ -34,7 +49,7 @@ export class ExaminationsService {
           ancVisit: data.ancVisit,
           diagnosis: diagnosis as unknown as Prisma.InputJsonValue,
           symptoms: symptoms as unknown as Prisma.InputJsonValue,
-          medication: (data.medication ?? []) as unknown as Prisma.InputJsonValue,
+          medication: medication as unknown as Prisma.InputJsonValue,
           notes: data.notes,
           riskSummary: (data.riskSummary ?? { riskLevel: pregnancy.riskLevel }) as Prisma.InputJsonValue,
           createdById: user.id,
@@ -105,7 +120,7 @@ export class ExaminationsService {
 
     const diagnosis = data.diagnosis as unknown as Prisma.InputJsonValue | undefined;
     const symptoms = data.symptoms as unknown as Prisma.InputJsonValue | undefined;
-    const medication = data.medication as unknown as Prisma.InputJsonValue | undefined;
+    const medication = data.medication ? normalizeMedication(data.medication) as unknown as Prisma.InputJsonValue : undefined;
 
     const updated = await this.prisma.examination.update({
       where: { id: existing.id },

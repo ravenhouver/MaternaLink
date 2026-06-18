@@ -150,6 +150,8 @@ describe('MaternaLink API', () => {
         nik,
         phone: '081200009999',
         address: 'Umbulharjo',
+        emergencyName: 'Tn. Test Flow',
+        emergencyPhone: '081200001111',
         gestationalAge: 28,
         ancVisit: 'K3',
         riskLevel: 'MEDIUM',
@@ -176,11 +178,14 @@ describe('MaternaLink API', () => {
         ancVisit: 'K3',
         diagnosis: [{ kondisiId: 'K03', jumlahKasus: 1 }],
         symptoms: [{ gejalaId: 'G05', jumlah: 1 }],
-        medication: [{ obatId: 'OBT-008', quantity: 10 }],
+        medication: [{ obatId: 'OBT-008', quantity: 10, unit: 'tablet', duration: 7, durationUnit: 'day', frequency: 2, frequencyUnit: 'x/day' }],
       })
       .expect(201);
 
     expect(exam.body).toEqual(expect.objectContaining({ queueId: queued.body.id, source: 'MANUAL' }));
+    expect(exam.body.medication).toEqual([
+      expect.objectContaining({ obatId: 'OBT-008', quantity: 10, unit: 'tablet', duration: 7, durationUnit: 'day', frequency: 2, frequencyUnit: 'x/day' }),
+    ]);
 
     const queue = await request(app.getHttpServer()).get('/api/queue/today').set('Cookie', cookie).expect(200);
     expect(queue.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: queued.body.id, status: 'COMPLETED' })]));

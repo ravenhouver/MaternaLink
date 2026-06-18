@@ -6,6 +6,7 @@ import styles from '../calendar.module.css';
 const asset = (name: string) => `/figma-calendar/${name}`;
 
 export type CalendarPanelEvent = {
+  id: string;
   title: string;
   label: string;
   time: string;
@@ -41,7 +42,7 @@ export function EventsPanel({ events }: { events: CalendarPanelEvent[] }) {
         </Button>
       </article> : null}
 
-      {events.slice(1, 3).map((event) => <article className={[styles.eventCard, styles.riskCard].join(' ')} key={`${event.title}-${event.label}`}>
+      {events.slice(1, 3).map((event) => <article className={[styles.eventCard, styles.riskCard].join(' ')} key={event.id}>
         <Typography.Title level={4}>{event.title}</Typography.Title>
         <Typography.Text className={styles.riskLabel}>{event.label}</Typography.Text>
         <div className={styles.eventTime}>

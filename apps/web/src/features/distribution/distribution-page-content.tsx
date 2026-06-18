@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { getRecommendations, type DistributionRecommendation, type RecommendationStatus } from '@/lib/api';
+import { getRecommendations, type DistributionRecommendation, type RecommendationStatus, type TrackingEvent, type TrackingStatus } from '@/lib/api';
 import styles from './distribution.module.css';
 
 const DistributionMap = dynamic(() => import('./distribution-map').then((module) => module.DistributionMap), {
@@ -25,6 +25,14 @@ type Shipment = {
   icon: 'package' | 'hourglass' | 'checkCircle' | 'x';
   expanded?: boolean;
   borderTone: string;
+  source: DistributionRecommendation;
+  trackingEvents: TrackingEvent[];
+};
+
+type RouteSummary = {
+  courier?: string;
+  route?: string;
+  estimateMinutes?: number;
 };
 
 const filterChips = ['All', 'In Transit', 'Awaiting Approval', 'Approved', 'Received', 'Rejected'];
@@ -49,6 +57,8 @@ function mapRecommendation(row: DistributionRecommendation): Shipment {
     CANCELLED: { status: 'rejected', statusLabel: 'Cancelled', icon: 'x', borderTone: 'red' },
   };
   const mapped = statusMap[row.status];
+  const trackingEvents = [...(row.trackingEvents ?? [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const latestEvent = trackingEvents[0];
   return {
     id: row.id,
     medicine: row.items.map((item) => item.obat?.nama ?? item.obatId).join(', ') || row.id,
@@ -56,25 +66,91 @@ function mapRecommendation(row: DistributionRecommendation): Shipment {
     code: row.id,
     status: mapped.status,
     statusLabel: mapped.statusLabel,
-    statusMeta: row.trackingEvents?.[0] ? `${row.trackingEvents[0].status} ${new Date(row.trackingEvents[0].createdAt).toLocaleString('id-ID')}` : `Requested ${new Date(row.periode).toLocaleDateString('id-ID')}`,
+    statusMeta: latestEvent ? `${trackingStatusLabel(latestEvent.status)} ${formatDateTime(latestEvent.createdAt)}` : `Requested ${formatDate(row.periode)}`,
     icon: mapped.icon,
     expanded: row.status === 'APPROVED' || row.status === 'DISPATCHED',
     borderTone: mapped.borderTone,
+    source: row,
+    trackingEvents,
   };
 }
 
-const steps = [
-  { label: 'Requested', done: true },
-  { label: 'Approved by IFK', done: true },
-  { label: 'In Transit', done: true, current: true },
-  { label: 'Delivered', done: false },
-];
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString('id-ID');
+}
 
-const trackingHistory = [
-  { title: 'Courier departed from Sleman District IFK', time: 'Nov 1, 2024, 08:00 WIB', active: true },
-  { title: 'Request processed by Pharmacy Warehouse', time: 'Oct 31, 2024, 15:30 WIB' },
-  { title: 'Request approved by IFK Admin', time: 'Oct 31, 2024, 14:00 WIB' },
-];
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function routeSummary(value: DistributionRecommendation['routeSummary']): RouteSummary {
+  if (!value || Array.isArray(value) || typeof value !== 'object') return {};
+  return value as RouteSummary;
+}
+
+function trackingStatusLabel(status: TrackingStatus) {
+  const labels: Record<TrackingStatus, string> = {
+    REQUESTED: 'Requested',
+    APPROVED: 'Approved by IFK',
+    REJECTED: 'Rejected by IFK',
+    DISPATCHED: 'In Transit',
+    RECEIVED: 'Received',
+    ISSUE_REPORTED: 'Issue Reported',
+  };
+  return labels[status];
+}
+
+function statusImplies(status: RecommendationStatus, trackingStatus: TrackingStatus) {
+  const order: TrackingStatus[] = ['REQUESTED', 'APPROVED', 'DISPATCHED', 'RECEIVED'];
+  const statusIndex: Record<RecommendationStatus, number> = {
+    PENDING: 0,
+    APPROVED: 1,
+    DISPATCHED: 2,
+    RECEIVED: 3,
+    REJECTED: 0,
+    CANCELLED: 0,
+  };
+  return order.indexOf(trackingStatus) <= statusIndex[status];
+}
+
+function shipmentSteps(shipment: Shipment) {
+  const eventStatuses = new Set(shipment.trackingEvents.map((event) => event.status));
+  const currentStatus = shipment.status === 'awaiting' ? 'REQUESTED' : shipment.status === 'rejected' ? 'REJECTED' : shipment.status === 'delivered' ? 'RECEIVED' : shipment.source.status === 'APPROVED' ? 'APPROVED' : 'DISPATCHED';
+  const baseSteps: Array<{ status: TrackingStatus; label: string; icon: 'checkCircle' | 'package' | 'truck' | 'x' }> = [
+    { status: 'REQUESTED', label: 'Requested', icon: 'checkCircle' },
+    { status: 'APPROVED', label: 'Approved by IFK', icon: 'checkCircle' },
+    { status: 'DISPATCHED', label: 'In Transit', icon: 'truck' },
+    { status: 'RECEIVED', label: 'Received', icon: 'package' },
+  ];
+  const steps = shipment.status === 'rejected' ? [...baseSteps.slice(0, 1), { status: 'REJECTED' as TrackingStatus, label: 'Rejected', icon: 'x' as const }] : baseSteps;
+  return steps.map((step) => ({
+    ...step,
+    done: eventStatuses.has(step.status) || statusImplies(shipment.source.status, step.status),
+    current: step.status === currentStatus,
+  }));
+}
+
+function rejectionReason(shipment: Shipment) {
+  return shipment.trackingEvents.find((event) => event.status === 'REJECTED')?.note ?? shipment.source.justification ?? 'No reason provided.';
+}
+
+function durationText(minutes?: number) {
+  if (!minutes || minutes <= 0) return '-';
+  if (minutes < 60) return `${Math.round(minutes)} min`;
+  const hours = minutes / 60;
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hours`;
+}
+
+function averageDeliveryDuration(shipments: Shipment[]) {
+  const durations = shipments.flatMap((shipment) => {
+    const requested = [...shipment.trackingEvents].reverse().find((event) => event.status === 'REQUESTED');
+    const received = shipment.trackingEvents.find((event) => event.status === 'RECEIVED');
+    if (!requested || !received) return [];
+    return [(new Date(received.createdAt).getTime() - new Date(requested.createdAt).getTime()) / 60000];
+  });
+  if (!durations.length) return undefined;
+  return durations.reduce((total, value) => total + value, 0) / durations.length;
+}
 
 export function DistributionPageContent() {
   const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
@@ -93,6 +169,30 @@ export function DistributionPageContent() {
     if (activeFilter === 'All') return rows;
     return rows.filter((row) => matchesFilter(row, activeFilter));
   }, [activeFilter, recommendations]);
+
+  const analytics = useMemo(() => {
+    const allShipments = recommendations.map(mapRecommendation);
+    const totalShipments = allShipments.length;
+    const receivedShipments = allShipments.filter((shipment) => shipment.status === 'delivered').length;
+    const activeShipments = allShipments.filter((shipment) => shipment.status === 'transit' || shipment.status === 'awaiting').length;
+    const totalItems = allShipments.reduce((total, shipment) => total + shipment.source.items.reduce((itemTotal, item) => itemTotal + item.finalQuantity, 0), 0);
+    const completionRate = totalShipments ? `${Math.round((receivedShipments / totalShipments) * 100)}%` : '0%';
+    return {
+      activeShipments,
+      completionRate,
+      totalItems,
+      averageDuration: durationText(averageDeliveryDuration(allShipments)),
+      mapLocations: allShipments
+        .filter((shipment) => shipment.source.puskesmas?.latitude != null && shipment.source.puskesmas?.longitude != null)
+        .map((shipment) => ({
+          id: shipment.id,
+          name: shipment.source.puskesmas?.nama ?? shipment.id,
+          status: shipment.statusLabel,
+          latitude: shipment.source.puskesmas?.latitude ?? 0,
+          longitude: shipment.source.puskesmas?.longitude ?? 0,
+        })),
+    };
+  }, [recommendations]);
 
   const openShipmentIds = useMemo(() => {
     const ids = new Set(shipments.filter((shipment) => shipment.expanded).map((shipment) => shipment.id));
@@ -133,7 +233,7 @@ export function DistributionPageContent() {
             </button>
           ))}
         </div>
-        <span>{shipments.length} active shipments</span>
+        <span>{analytics.activeShipments} active shipments</span>
       </section>
 
       {error ? <p className={styles.distributionError}>{error}</p> : null}
@@ -149,18 +249,18 @@ export function DistributionPageContent() {
         <article className={styles.mapCard}>
           <h2>Active Shipping Locations</h2>
           <div className={styles.mapShell}>
-            <DistributionMap />
+            <DistributionMap locations={analytics.mapLocations} />
           </div>
         </article>
 
         <article className={styles.performanceCard}>
           <div>
-            <strong>98.5%</strong>
-            <p>Delivery On-Time Rate This Month</p>
+            <strong>{analytics.completionRate}</strong>
+            <p>Shipment Completion Rate</p>
           </div>
           <div className={styles.performanceStats}>
-            <span><small>Average Duration</small><b>4.2 Hours</b></span>
-            <span><small>Total Items</small><b>1.2k Units</b></span>
+            <span><small>Average Duration</small><b>{analytics.averageDuration}</b></span>
+            <span><small>Total Items</small><b>{analytics.totalItems} Units</b></span>
           </div>
         </article>
       </section>
@@ -194,11 +294,11 @@ function ShipmentCard({ expanded, onToggle, shipment }: { expanded: boolean; onT
           </div>
         </div>
 
-        {expanded ? <ExpandedTransitDetails /> : null}
+        {expanded ? <ExpandedTransitDetails shipment={shipment} /> : null}
 
         {shipment.status === 'rejected' ? (
           <div className={styles.rejectionNote}>
-            <p><strong>Reason:</strong> IFK stock is currently limited</p>
+            <p><strong>Reason:</strong> {rejectionReason(shipment)}</p>
             <a href="#rerequest">Re-request</a>
           </div>
         ) : null}
@@ -214,13 +314,23 @@ function StatusIcon({ status }: { status: ShipmentStatus }) {
   return <AppIcon name="x" width={12} height={12} />;
 }
 
-function ExpandedTransitDetails() {
+function ExpandedTransitDetails({ shipment }: { shipment: Shipment }) {
+  const summary = routeSummary(shipment.source.routeSummary);
+  const routeParts = summary.route?.split(/\s+-\s+/) ?? [];
+  const origin = routeParts[0] ?? 'IFK';
+  const destination = shipment.source.puskesmas?.nama ?? routeParts[routeParts.length - 1] ?? '-';
+  const distance = shipment.source.puskesmas?.jarakKeIfkKm == null ? '-' : `${shipment.source.puskesmas.jarakKeIfkKm} km`;
+  const steps = shipmentSteps(shipment);
+  const history = shipment.trackingEvents.length
+    ? shipment.trackingEvents
+    : [{ id: `${shipment.id}-requested`, status: 'REQUESTED' as TrackingStatus, note: null, createdAt: shipment.source.periode }];
+
   return (
     <div className={styles.expandedDetails}>
       <ol className={styles.stepper} aria-label="Shipping progress">
         {steps.map((step) => (
-          <li className={`${step.done ? styles.stepDone : ''} ${step.current ? styles.stepCurrent : ''}`} key={step.label}>
-            <span>{step.current ? <AppIcon name="truck" width={18} height={18} /> : step.done ? <AppIcon name="checkCircle" width={18} height={18} /> : <AppIcon name="package" width={18} height={18} />}</span>
+          <li className={`${step.done ? styles.stepDone : ''} ${step.current ? styles.stepCurrent : ''}`} key={step.status}>
+            <span><AppIcon name={step.current ? step.icon : step.done ? 'checkCircle' : 'package'} width={18} height={18} /></span>
             <b>{step.label}</b>
           </li>
         ))}
@@ -230,22 +340,31 @@ function ExpandedTransitDetails() {
         <section className={styles.shippingInfo}>
           <h3>Shipping Information</h3>
           <dl>
-            <div><dt>Courier</dt><dd>Sdr. Bambang</dd></div>
-            <div><dt>Origin</dt><dd>Sleman District IFK</dd></div>
-            <div><dt>Destination</dt><dd>Sleman Health Center</dd></div>
-            <div><dt>Distance</dt><dd>12.4 km</dd></div>
+            <div><dt>Courier</dt><dd>{summary.courier ?? '-'}</dd></div>
+            <div><dt>Origin</dt><dd>{origin}</dd></div>
+            <div><dt>Destination</dt><dd>{destination}</dd></div>
+            <div><dt>Distance</dt><dd>{distance}</dd></div>
+            <div><dt>ETA</dt><dd>{durationText(summary.estimateMinutes)}</dd></div>
           </dl>
           <h3>Shipping Contents</h3>
-          <p className={styles.contentChip}><AppIcon name="package" width={15} height={15} />Fe 60mg Tablets - 30 Strips</p>
+          {shipment.source.items.map((item) => (
+            <p className={styles.contentChip} key={item.id}>
+              <AppIcon name="package" width={15} height={15} />
+              {item.obat?.nama ?? item.obatId} - {item.finalQuantity} {item.obat?.satuan ?? 'unit'}
+            </p>
+          ))}
         </section>
 
         <section className={styles.trackingHistory}>
           <h3>Tracking History</h3>
           <ol>
-            {trackingHistory.map((item) => (
-              <li className={item.active ? styles.activeHistory : ''} key={item.title}>
+            {history.map((item, index) => (
+              <li className={index === 0 ? styles.activeHistory : ''} key={item.id}>
                 <span />
-                <div><strong>{item.title}</strong><small>{item.time}</small></div>
+                <div>
+                  <strong>{item.note || trackingStatusLabel(item.status)}</strong>
+                  <small>{formatDateTime(item.createdAt)}{item.actor?.username ? ` · ${item.actor.username}` : ''}</small>
+                </div>
               </li>
             ))}
           </ol>
