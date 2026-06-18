@@ -12,6 +12,7 @@ import styles from './patient-registration.module.css';
 
 type ManualStage = 'manual-personal' | 'autofill-personal' | 'pregnancy' | 'screening';
 type ManualEntryMode = 'manual' | 'kia';
+type RequiredPersonalField = 'address' | 'dateOfBirth' | 'fullName' | 'nik' | 'phone';
 
 const manualStages: ManualStage[] = ['manual-personal', 'pregnancy', 'screening'];
 const kiaStages: ManualStage[] = ['autofill-personal', 'pregnancy', 'screening'];
@@ -32,6 +33,14 @@ const screeningFactors: ReadonlyArray<{ checked?: boolean; label: string; tag?: 
   { label: 'Gap < 2 Yrs' },
   { label: 'Infection' },
 ] as const;
+
+const personalFieldErrors: Record<RequiredPersonalField, string> = {
+  address: 'Alamat pasien wajib diisi.',
+  dateOfBirth: 'Tanggal lahir wajib diisi.',
+  fullName: 'Nama pasien wajib diisi.',
+  nik: 'NIK wajib diisi.',
+  phone: 'Nomor HP wajib diisi.',
+};
 
 type ManualRegistrationForm = {
   allergy: string;
@@ -185,12 +194,23 @@ function calculatedRiskLevel(form: ManualRegistrationForm): PregnancyRiskLevel {
   return 'LOW';
 }
 
+function getPersonalValidationErrors(form: ManualRegistrationForm) {
+  const errors: Partial<Record<RequiredPersonalField, string>> = {};
+  if (!form.fullName.trim()) errors.fullName = personalFieldErrors.fullName;
+  if (!form.nik.trim()) errors.nik = personalFieldErrors.nik;
+  if (!form.dateOfBirth) errors.dateOfBirth = personalFieldErrors.dateOfBirth;
+  if (!form.phone.trim()) errors.phone = personalFieldErrors.phone;
+  if (!form.address.trim()) errors.address = personalFieldErrors.address;
+  return errors;
+}
+
 export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntryMode }) {
   const router = useRouter();
   const stages = mode === 'kia' ? kiaStages : manualStages;
   const [stage, setStage] = useState<ManualStage>(mode === 'kia' ? 'autofill-personal' : 'manual-personal');
   const [form, setForm] = useState<ManualRegistrationForm>(mode === 'kia' ? kiaExtractedForm : emptyForm);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<RequiredPersonalField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const stageIndex = stages.indexOf(stage);
   const visualStep = stage === 'manual-personal' || stage === 'autofill-personal' ? 1 : stage === 'pregnancy' ? 2 : 3;
@@ -218,9 +238,15 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
 
   function goNext() {
     setError(null);
-    if (stage === 'manual-personal' && (!form.fullName.trim() || !form.nik.trim() || !form.dateOfBirth || !form.phone.trim() || !form.address.trim())) {
-      setError('Lengkapi nama, NIK, tanggal lahir, nomor HP, dan alamat pasien.');
-      return;
+    if (stage === 'manual-personal' || stage === 'autofill-personal') {
+      const validationErrors = getPersonalValidationErrors(form);
+      setFieldErrors(validationErrors);
+      if (Object.keys(validationErrors).length > 0) {
+        return;
+      }
+    }
+    if (stage === 'pregnancy') {
+      setFieldErrors({});
     }
     setStage((current) => stages[Math.min(stages.indexOf(current) + 1, stages.length - 1)]);
   }
@@ -234,6 +260,9 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
 
   function updateField<K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+    if (key === 'address' || key === 'dateOfBirth' || key === 'fullName' || key === 'nik' || key === 'phone') {
+      setFieldErrors((current) => ({ ...current, [key]: undefined }));
+    }
   }
 
   async function submitRegistration() {
@@ -300,8 +329,8 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
       <WizardStepper currentStep={visualStep} />
       {error ? <p className={styles.formError}>{error}</p> : null}
 
-      {stage === 'manual-personal' ? <ManualPersonalPanel form={form} onFieldChange={updateField} onNext={goNext} /> : null}
-      {stage === 'autofill-personal' ? <AutofillPersonalPanel form={form} onFieldChange={updateField} onNext={goNext} /> : null}
+      {stage === 'manual-personal' ? <ManualPersonalPanel fieldErrors={fieldErrors} form={form} onFieldChange={updateField} onNext={goNext} /> : null}
+      {stage === 'autofill-personal' ? <AutofillPersonalPanel fieldErrors={fieldErrors} form={form} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'pregnancy' ? <PregnancyPanel form={form} onBack={goBack} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
@@ -342,17 +371,17 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
   );
 }
 
-function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredPersonalField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Manual patient identity form">
       <div className={styles.manualFormBody}>
         <FormSection icon="user" title="PATIENT IDENTITY">
           <div className={styles.manualFormGrid}>
-            <ManualField label="Patient Full Name *" placeholder="Example: Siti Aminah" wide value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
-            <ManualField label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
-            <ManualField label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
-            <ManualField label="Residential Address *" placeholder="Street, RT/RW, Sub-district, District" wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
-            <ManualField label="Phone Number (WhatsApp) *" placeholder="8123456789" prefix="+62" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
+            <ManualField error={fieldErrors.fullName} label="Patient Full Name *" placeholder="Example: Siti Aminah" wide value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
+            <ManualField error={fieldErrors.nik} label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
+            <ManualField error={fieldErrors.dateOfBirth} label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
+            <ManualField error={fieldErrors.address} label="Residential Address *" placeholder="Street, RT/RW, Sub-district, District" wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
+            <ManualField error={fieldErrors.phone} label="Phone Number (WhatsApp) *" placeholder="8123456789" prefix="+62" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
             <ManualField label="BPJS / Insurance Number (Optional)" placeholder="Enter number if available" value={form.bpjsNumber} onChange={(value) => onFieldChange('bpjsNumber', value)} />
           </div>
         </FormSection>
@@ -380,7 +409,7 @@ function ManualPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegi
   );
 }
 
-function AutofillPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+function AutofillPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredPersonalField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Auto-filled patient identity review">
       <div className={styles.autoBanner}>
@@ -395,11 +424,11 @@ function AutofillPersonalPanel({ form, onFieldChange, onNext }: { form: ManualRe
       <div className={styles.manualFormBody}>
         <FormSection icon="user" title="Main Identity" tone="blue">
           <div className={styles.manualFormGrid}>
-            <ManualField label="Full Name *" placeholder="Patient name" value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
-            <ManualField label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
-            <ManualField label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
-            <ManualField label="Phone Number *" placeholder="Example: 08123456789" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
-            <ManualField label="Residential Address *" placeholder="Enter complete address based on current residence..." wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
+            <ManualField error={fieldErrors.fullName} label="Full Name *" placeholder="Patient name" value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
+            <ManualField error={fieldErrors.nik} label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
+            <ManualField error={fieldErrors.dateOfBirth} label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
+            <ManualField error={fieldErrors.phone} label="Phone Number *" placeholder="Example: 08123456789" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
+            <ManualField error={fieldErrors.address} label="Residential Address *" placeholder="Enter complete address based on current residence..." wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
             <ManualField label="BPJS Number (Optional)" placeholder="13-digit BPJS card number" value={form.bpjsNumber} onChange={(value) => onFieldChange('bpjsNumber', value)} />
           </div>
         </FormSection>
@@ -559,6 +588,7 @@ function ScreeningPanel({ form, isSubmitting, onBack, onFieldChange, onSubmit }:
 
 type ManualFieldProps = {
   alert?: boolean;
+  error?: string;
   label: string;
   onChange?: (value: string) => void;
   options?: readonly string[];
@@ -571,13 +601,13 @@ type ManualFieldProps = {
   wide?: boolean;
 };
 
-function ManualField({ alert, label, onChange, options, placeholder, prefix, select, textarea, type = 'text', value, wide }: ManualFieldProps) {
+function ManualField({ alert, error, label, onChange, options, placeholder, prefix, select, textarea, type = 'text', value, wide }: ManualFieldProps) {
   const selectProps = onChange
     ? { value: value ?? '', onChange: (event: ChangeEvent<HTMLSelectElement>) => onChange(event.target.value) }
     : { defaultValue: value ?? '' };
 
   return (
-    <label className={`${styles.manualField} ${wide ? styles.wideManualField : ''} ${alert ? styles.alertManualField : ''}`}>
+    <label className={`${styles.manualField} ${wide ? styles.wideManualField : ''} ${alert ? styles.alertManualField : ''} ${error ? styles.invalidManualField : ''}`}>
       <span className={styles.manualLabel}>{label}</span>
       {prefix ? (
         <span className={styles.prefixInput}><small>{prefix}</small><input placeholder={placeholder} type={type} value={value} onChange={(event) => onChange?.(event.target.value)} /></span>
@@ -594,6 +624,7 @@ function ManualField({ alert, label, onChange, options, placeholder, prefix, sel
       ) : (
         <input placeholder={placeholder} type={type} value={value} onChange={(event) => onChange?.(event.target.value)} />
       )}
+      {error ? <span className={styles.manualFieldError}>{error}</span> : null}
     </label>
   );
 }

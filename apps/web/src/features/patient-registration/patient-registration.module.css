@@ -2259,6 +2259,27 @@
   padding: 13px 16px;
 }
 
+.invalidManualField input,
+.invalidManualField textarea,
+.invalidManualField select,
+.invalidManualField .prefixInput small {
+  border-color: #dc2626;
+}
+
+.invalidManualField input:focus,
+.invalidManualField textarea:focus,
+.invalidManualField select:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgb(220 38 38 / 0.14);
+}
+
+.manualFieldError {
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
 .manualField input::placeholder,
 .manualField textarea::placeholder,
 .sideCard textarea::placeholder {
