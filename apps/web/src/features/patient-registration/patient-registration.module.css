@@ -2262,6 +2262,8 @@
 .invalidManualField input,
 .invalidManualField textarea,
 .invalidManualField select,
+.invalidManualField .flagGrid label,
+.invalidManualField .radioRow label,
 .invalidManualField .prefixInput small {
   border-color: #dc2626;
 }
@@ -2340,8 +2342,16 @@
 .radioRow {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   gap: 16px;
+}
+
+.checkboxRow {
+  justify-content: space-between;
+}
+
+.radioRow {
+  justify-content: flex-start;
+  gap: 12px;
 }
 
 .checkboxRow label,
@@ -2495,6 +2505,13 @@
   color: #475569;
   font-size: 16px;
   line-height: 24px;
+}
+
+.radioRow label {
+  min-width: 128px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 13px;
 }
 
 .gpaValue {

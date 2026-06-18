@@ -12,7 +12,9 @@ import styles from './patient-registration.module.css';
 
 type ManualStage = 'manual-personal' | 'autofill-personal' | 'pregnancy' | 'screening';
 type ManualEntryMode = 'manual' | 'kia';
-type RequiredPersonalField = 'address' | 'dateOfBirth' | 'fullName' | 'nik' | 'phone';
+type RequiredPersonalField = 'address' | 'dateOfBirth' | 'emergencyName' | 'emergencyPhone' | 'fullName' | 'nik' | 'phone';
+type RequiredPregnancyField = 'ancVisit' | 'emergencySigns' | 'pregnancyType' | 'visitReason';
+type RequiredField = RequiredPersonalField | RequiredPregnancyField;
 
 const manualStages: ManualStage[] = ['manual-personal', 'pregnancy', 'screening'];
 const kiaStages: ManualStage[] = ['autofill-personal', 'pregnancy', 'screening'];
@@ -20,6 +22,8 @@ const kiaStages: ManualStage[] = ['autofill-personal', 'pregnancy', 'screening']
 const stepLabels = ['Personal Data', 'Pregnancy Data', 'Screening & Risk'];
 
 const bloodTypeOptions = ['A', 'B', 'AB', 'O'] as const;
+const ancVisitOptions = ['K1', 'K2', 'K3', 'K4', 'K5', 'K6+'] as const;
+const noEmergencySignsLabel = 'No symptoms above';
 
 const pregnancyRiskFlags = ['Severe headache', 'Bleeding', 'Severe vomiting', 'Severe abdominal pain', 'Decreased fetal movement'];
 
@@ -34,12 +38,18 @@ const screeningFactors: ReadonlyArray<{ checked?: boolean; label: string; tag?: 
   { label: 'Infection' },
 ] as const;
 
-const personalFieldErrors: Record<RequiredPersonalField, string> = {
+const requiredFieldErrors: Record<RequiredField, string> = {
   address: 'Alamat pasien wajib diisi.',
+  ancVisit: 'Kunjungan ANC terakhir wajib dipilih.',
   dateOfBirth: 'Tanggal lahir wajib diisi.',
+  emergencyName: 'Nama kontak darurat wajib diisi.',
+  emergencyPhone: 'Nomor HP kontak darurat wajib diisi.',
+  emergencySigns: 'Pilih minimal satu tanda bahaya atau No symptoms above.',
   fullName: 'Nama pasien wajib diisi.',
   nik: 'NIK wajib diisi.',
   phone: 'Nomor HP wajib diisi.',
+  pregnancyType: 'Tipe kehamilan wajib dipilih.',
+  visitReason: 'Alasan kunjungan wajib dipilih.',
 };
 
 type ManualRegistrationForm = {
@@ -154,6 +164,32 @@ function formatDisplayDate(value: string) {
   return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
+function parseLocalDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function calculateGestationalAge(lmp: string, edd: string, source: 'lmp' | 'edd' = lmp ? 'lmp' : 'edd') {
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const lmpDate = parseLocalDate(lmp);
+  const eddDate = parseLocalDate(edd);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const useEdd = source === 'edd' && eddDate;
+  const gestationalDays = useEdd
+    ? 280 - Math.ceil((eddDate.getTime() - todayStart.getTime()) / msPerDay)
+    : lmpDate
+    ? Math.floor((todayStart.getTime() - lmpDate.getTime()) / msPerDay)
+    : eddDate
+      ? 280 - Math.ceil((eddDate.getTime() - todayStart.getTime()) / msPerDay)
+      : null;
+
+  if (gestationalDays == null || gestationalDays < 0) return '';
+  return String(Math.min(Math.floor(gestationalDays / 7), 42));
+}
+
 function toggleItem(items: string[], item: string) {
   return items.includes(item) ? items.filter((value) => value !== item) : [...items, item];
 }
@@ -187,7 +223,9 @@ function calculatedRisks(form: ManualRegistrationForm) {
   if (age != null && (age < 20 || age > 35)) detected.add(`Maternal age ${age}`);
   if (systolic != null && systolic >= 140) detected.add(`High blood pressure ${form.bloodPressure}`);
   if (form.pregnancyType === 'Multiple') detected.add('Multiple pregnancy');
-  for (const sign of form.emergencySigns) detected.add(sign);
+  for (const sign of form.emergencySigns) {
+    if (sign !== noEmergencySignsLabel) detected.add(sign);
+  }
   return Array.from(detected);
 }
 
@@ -201,11 +239,22 @@ function calculatedRiskLevel(form: ManualRegistrationForm): PregnancyRiskLevel {
 
 function getPersonalValidationErrors(form: ManualRegistrationForm) {
   const errors: Partial<Record<RequiredPersonalField, string>> = {};
-  if (!form.fullName.trim()) errors.fullName = personalFieldErrors.fullName;
-  if (!form.nik.trim()) errors.nik = personalFieldErrors.nik;
-  if (!form.dateOfBirth) errors.dateOfBirth = personalFieldErrors.dateOfBirth;
-  if (!form.phone.trim()) errors.phone = personalFieldErrors.phone;
-  if (!form.address.trim()) errors.address = personalFieldErrors.address;
+  if (!form.fullName.trim()) errors.fullName = requiredFieldErrors.fullName;
+  if (!form.nik.trim()) errors.nik = requiredFieldErrors.nik;
+  if (!form.dateOfBirth) errors.dateOfBirth = requiredFieldErrors.dateOfBirth;
+  if (!form.phone.trim()) errors.phone = requiredFieldErrors.phone;
+  if (!form.address.trim()) errors.address = requiredFieldErrors.address;
+  if (!form.emergencyName.trim()) errors.emergencyName = requiredFieldErrors.emergencyName;
+  if (!form.emergencyPhone.trim()) errors.emergencyPhone = requiredFieldErrors.emergencyPhone;
+  return errors;
+}
+
+function getPregnancyValidationErrors(form: ManualRegistrationForm) {
+  const errors: Partial<Record<RequiredPregnancyField, string>> = {};
+  if (!form.ancVisit.trim()) errors.ancVisit = requiredFieldErrors.ancVisit;
+  if (!form.visitReason.trim()) errors.visitReason = requiredFieldErrors.visitReason;
+  if (!form.pregnancyType.trim()) errors.pregnancyType = requiredFieldErrors.pregnancyType;
+  if (form.emergencySigns.length === 0) errors.emergencySigns = requiredFieldErrors.emergencySigns;
   return errors;
 }
 
@@ -215,7 +264,7 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
   const [stage, setStage] = useState<ManualStage>(mode === 'kia' ? 'autofill-personal' : 'manual-personal');
   const [form, setForm] = useState<ManualRegistrationForm>(mode === 'kia' ? kiaExtractedForm : emptyForm);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<RequiredPersonalField, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<RequiredField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const stageIndex = stages.indexOf(stage);
   const visualStep = stage === 'manual-personal' || stage === 'autofill-personal' ? 1 : stage === 'pregnancy' ? 2 : 3;
@@ -251,7 +300,11 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
       }
     }
     if (stage === 'pregnancy') {
-      setFieldErrors({});
+      const validationErrors = getPregnancyValidationErrors(form);
+      setFieldErrors(validationErrors);
+      if (Object.keys(validationErrors).length > 0) {
+        return;
+      }
     }
     setStage((current) => stages[Math.min(stages.indexOf(current) + 1, stages.length - 1)]);
   }
@@ -264,15 +317,21 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
   }
 
   function updateField<K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
-    if (key === 'address' || key === 'dateOfBirth' || key === 'fullName' || key === 'nik' || key === 'phone') {
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      if (key === 'lmp' || key === 'edd') {
+        return { ...next, gestationalAge: calculateGestationalAge(next.lmp, next.edd, key) };
+      }
+      return next;
+    });
+    if (key === 'address' || key === 'ancVisit' || key === 'dateOfBirth' || key === 'emergencyName' || key === 'emergencyPhone' || key === 'emergencySigns' || key === 'fullName' || key === 'nik' || key === 'phone' || key === 'pregnancyType' || key === 'visitReason') {
       setFieldErrors((current) => ({ ...current, [key]: undefined }));
     }
   }
 
   async function submitRegistration() {
     setError(null);
-    if (!form.fullName.trim() || !form.nik.trim() || !form.dateOfBirth || !form.phone.trim() || !form.address.trim() || !form.gestationalAge.trim() || !form.ancVisit.trim()) {
+    if (!form.fullName.trim() || !form.nik.trim() || !form.dateOfBirth || !form.phone.trim() || !form.address.trim() || !form.emergencyName.trim() || !form.emergencyPhone.trim() || !form.gestationalAge.trim() || !form.ancVisit.trim() || !form.visitReason.trim() || !form.pregnancyType.trim() || form.emergencySigns.length === 0) {
       setError('Lengkapi semua field wajib sebelum submit.');
       return;
     }
@@ -286,8 +345,8 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
         phone: form.phone.trim(),
         address: form.address.trim(),
         bpjsNumber: form.bpjsNumber.trim() || undefined,
-        emergencyName: form.emergencyName.trim() || undefined,
-        emergencyPhone: form.emergencyPhone.trim() || undefined,
+        emergencyName: form.emergencyName.trim(),
+        emergencyPhone: form.emergencyPhone.trim(),
         bloodType: form.bloodType || undefined,
         allergy: normalizeCommaSeparated(form.allergy),
         chronicHistory: form.chronicDiseases.join(', ') || undefined,
@@ -301,7 +360,7 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
         pregnancyType: form.pregnancyType || undefined,
         visitReason: form.visitReason || undefined,
         chiefComplaint: form.chiefComplaint.trim() || undefined,
-        emergencySigns: form.emergencySigns,
+        emergencySigns: form.emergencySigns.filter((sign) => sign !== noEmergencySignsLabel),
         vitalSigns: {
           bloodPressure: form.bloodPressure || null,
           weight: toOptionalNumber(form.weight) ?? null,
@@ -336,7 +395,7 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
 
       {stage === 'manual-personal' ? <ManualPersonalPanel fieldErrors={fieldErrors} form={form} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'autofill-personal' ? <AutofillPersonalPanel fieldErrors={fieldErrors} form={form} onFieldChange={updateField} onNext={goNext} /> : null}
-      {stage === 'pregnancy' ? <PregnancyPanel form={form} onBack={goBack} onFieldChange={updateField} onNext={goNext} /> : null}
+      {stage === 'pregnancy' ? <PregnancyPanel fieldErrors={fieldErrors} form={form} onBack={goBack} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
   );
@@ -376,7 +435,7 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
   );
 }
 
-function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredPersonalField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Manual patient identity form">
       <div className={styles.manualFormBody}>
@@ -393,8 +452,8 @@ function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fie
 
         <FormSection icon="asterisk" title="EMERGENCY CONTACT & BASIC HISTORY">
           <div className={styles.manualFormGrid}>
-            <ManualField label="Next of Kin Name *" placeholder="Husband/parent name" value={form.emergencyName} onChange={(value) => onFieldChange('emergencyName', value)} />
-            <ManualField label="Next of Kin Phone No. *" placeholder="+62..." value={form.emergencyPhone} onChange={(value) => onFieldChange('emergencyPhone', value)} />
+            <ManualField error={fieldErrors.emergencyName} label="Next of Kin Name *" placeholder="Husband/parent name" value={form.emergencyName} onChange={(value) => onFieldChange('emergencyName', value)} />
+            <ManualField error={fieldErrors.emergencyPhone} label="Next of Kin Phone No. *" placeholder="+62..." value={form.emergencyPhone} onChange={(value) => onFieldChange('emergencyPhone', value)} />
             <ManualField label="Blood Type" placeholder="Select Blood Type" select options={bloodTypeOptions} value={form.bloodType} onChange={(value) => onFieldChange('bloodType', value)} />
             <ManualField label="Drug / Food Allergies" placeholder="Use commas to separate" value={form.allergy} onChange={(value) => onFieldChange('allergy', value)} />
             <div className={styles.wideManualField}>
@@ -414,7 +473,7 @@ function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fie
   );
 }
 
-function AutofillPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredPersonalField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+function AutofillPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   return (
     <section className={styles.manualCard} aria-label="Auto-filled patient identity review">
       <div className={styles.autoBanner}>
@@ -440,8 +499,8 @@ function AutofillPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { f
 
         <FormSection icon="users" title="Next of Kin" tone="blue">
           <div className={styles.manualFormGrid}>
-            <ManualField label="Next of Kin Name *" placeholder="Husband or guardian name" value={form.emergencyName} onChange={(value) => onFieldChange('emergencyName', value)} />
-            <ManualField label="Next of Kin Phone No. *" placeholder="Example: 08123456789" value={form.emergencyPhone} onChange={(value) => onFieldChange('emergencyPhone', value)} />
+            <ManualField error={fieldErrors.emergencyName} label="Next of Kin Name *" placeholder="Husband or guardian name" value={form.emergencyName} onChange={(value) => onFieldChange('emergencyName', value)} />
+            <ManualField error={fieldErrors.emergencyPhone} label="Next of Kin Phone No. *" placeholder="Example: 08123456789" value={form.emergencyPhone} onChange={(value) => onFieldChange('emergencyPhone', value)} />
           </div>
         </FormSection>
 
@@ -459,15 +518,18 @@ function AutofillPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { f
   );
 }
 
-function PregnancyPanel({ form, onBack, onFieldChange, onNext }: { form: ManualRegistrationForm; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredField, string>>; form: ManualRegistrationForm; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+  const gestationalProgress = `${Math.min(Number(form.gestationalAge) || 0, 40) * 2.5}%`;
+
+  function toggleEmergencySign(label: string) {
+    const next = label === noEmergencySignsLabel
+      ? [noEmergencySignsLabel]
+      : toggleItem(form.emergencySigns.filter((sign) => sign !== noEmergencySignsLabel), label);
+    onFieldChange('emergencySigns', next);
+  }
+
   return (
     <section className={styles.manualCard} aria-label="Pregnancy data form">
-      <div className={styles.autoBanner}>
-        <span><AppIcon name="checkCircle" width={20} height={20} /></span>
-        <strong>Data from the MCH Handbook has been auto-filled by MaternaLink AI.</strong>
-        <Link href={routes.kiaUpload}>Change Handbook Photo</Link>
-      </div>
-
       <div className={styles.manualFormBody}>
         <FormSection icon="user" title="I. PREGNANCY IDENTITY (AUTO-FILLED)">
           <div className={styles.manualFormGrid}>
@@ -475,11 +537,11 @@ function PregnancyPanel({ form, onBack, onFieldChange, onNext }: { form: ManualR
             <ManualField label="EDD (Estimated Due Date)" placeholder="Select date" type="date" value={form.edd} onChange={(value) => onFieldChange('edd', value)} />
             <div className={styles.wideManualField}>
               <div className={styles.gestationHeader}><span>Current Gestational Age</span><strong>{form.gestationalAge || '0'} Weeks</strong></div>
-              <input className={styles.manualInput} placeholder="Gestational age in weeks" value={form.gestationalAge} onChange={(event) => onFieldChange('gestationalAge', event.target.value)} />
-              <div className={styles.gestationTrack}><span /></div>
+              <input className={styles.manualInput} placeholder="Auto-calculated from LMP or EDD" readOnly value={form.gestationalAge} />
+              <div className={styles.gestationTrack}><span style={{ width: gestationalProgress }} /></div>
               <div className={styles.gestationScale}><small>1 Week</small><small>20 Weeks</small><small>40 Weeks</small></div>
             </div>
-            <ManualField label="Last ANC Visit" placeholder="K1/K2/K3/K4/K5" value={form.ancVisit} onChange={(value) => onFieldChange('ancVisit', value)} />
+            <ManualField error={fieldErrors.ancVisit} label="Last ANC Visit *" placeholder="Select ANC visit" select options={ancVisitOptions} value={form.ancVisit} onChange={(value) => onFieldChange('ancVisit', value)} />
           </div>
         </FormSection>
 
@@ -493,18 +555,20 @@ function PregnancyPanel({ form, onBack, onFieldChange, onNext }: { form: ManualR
 
         <FormSection icon="stethoscope" title="III. TODAY\'S EXAMINATION (MANUAL INPUT)">
           <div className={styles.manualFormGrid}>
-            <ManualField label="Reason for Today’s Visit *" placeholder="Select reason..." select options={['ANC routine', 'Complaint', 'Follow-up', 'Emergency']} value={form.visitReason} onChange={(value) => onFieldChange('visitReason', value)} />
-            <div className={styles.manualField}>
+            <ManualField error={fieldErrors.visitReason} label="Reason for Today’s Visit *" placeholder="Select reason..." select options={['ANC routine', 'Complaint', 'Follow-up', 'Emergency']} value={form.visitReason} onChange={(value) => onFieldChange('visitReason', value)} />
+            <div className={`${styles.manualField} ${fieldErrors.pregnancyType ? styles.invalidManualField : ''}`}>
               <span className={styles.manualLabel}>Pregnancy Type *</span>
               <div className={styles.radioRow}><label><input checked={form.pregnancyType === 'Single'} name="pregnancyType" type="radio" onChange={() => onFieldChange('pregnancyType', 'Single')} /> Single</label><label><input checked={form.pregnancyType === 'Multiple'} name="pregnancyType" type="radio" onChange={() => onFieldChange('pregnancyType', 'Multiple')} /> Multiple</label></div>
+              {fieldErrors.pregnancyType ? <span className={styles.manualFieldError}>{fieldErrors.pregnancyType}</span> : null}
             </div>
             <ManualField label="Chief Complaint" placeholder="Describe any complaints if any..." textarea wide value={form.chiefComplaint} onChange={(value) => onFieldChange('chiefComplaint', value)} />
-            <div className={styles.wideManualField}>
+            <div className={`${styles.wideManualField} ${fieldErrors.emergencySigns ? styles.invalidManualField : ''}`}>
               <span className={styles.manualLabel}>Emergency Signs Checklist *</span>
               <div className={styles.flagGrid}>
-                {pregnancyRiskFlags.map((label) => <label key={label}><input checked={form.emergencySigns.includes(label)} type="checkbox" onChange={() => onFieldChange('emergencySigns', toggleItem(form.emergencySigns, label))} /> {label}</label>)}
-                <label><input checked={form.emergencySigns.length === 0} type="checkbox" onChange={() => onFieldChange('emergencySigns', [])} /> No symptoms above</label>
+                {pregnancyRiskFlags.map((label) => <label key={label}><input checked={form.emergencySigns.includes(label)} type="checkbox" onChange={() => toggleEmergencySign(label)} /> {label}</label>)}
+                <label><input checked={form.emergencySigns.includes(noEmergencySignsLabel)} type="checkbox" onChange={() => toggleEmergencySign(noEmergencySignsLabel)} /> {noEmergencySignsLabel}</label>
               </div>
+              {fieldErrors.emergencySigns ? <span className={styles.manualFieldError}>{fieldErrors.emergencySigns}</span> : null}
             </div>
           </div>
         </FormSection>

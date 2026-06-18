@@ -139,8 +139,8 @@ export type CreatePatientPayload = {
   phone?: string;
   address?: string;
   bpjsNumber?: string;
-  emergencyName?: string;
-  emergencyPhone?: string;
+  emergencyName: string;
+  emergencyPhone: string;
   bloodType?: string;
   allergy?: string;
   chronicHistory?: string;
