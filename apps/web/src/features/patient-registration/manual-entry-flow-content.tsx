@@ -142,6 +142,11 @@ function toOptionalNumber(value: string) {
   return value.trim() ? Number(value) : undefined;
 }
 
+function normalizeCommaSeparated(value: string) {
+  const normalized = value.split(',').map((item) => item.trim()).filter(Boolean).join(', ');
+  return normalized || undefined;
+}
+
 function formatDisplayDate(value: string) {
   if (!value) return null;
   const date = new Date(value);
@@ -284,7 +289,7 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
         emergencyName: form.emergencyName.trim() || undefined,
         emergencyPhone: form.emergencyPhone.trim() || undefined,
         bloodType: form.bloodType || undefined,
-        allergy: form.allergy.trim() || undefined,
+        allergy: normalizeCommaSeparated(form.allergy),
         chronicHistory: form.chronicDiseases.join(', ') || undefined,
         lmp: form.lmp || undefined,
         edd: form.edd || undefined,

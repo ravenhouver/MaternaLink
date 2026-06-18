@@ -5,6 +5,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePatientDto, UpdatePatientDto } from './patients.dto';
 
 const toDate = (value?: string) => (value ? new Date(value) : undefined);
+const normalizeCommaSeparated = (value?: string) => {
+  const normalized = value?.split(',').map((item) => item.trim()).filter(Boolean).join(', ');
+  return normalized || undefined;
+};
+
+const normalizeOptionalCommaSeparated = (value?: string) => {
+  if (value === undefined) return undefined;
+  return normalizeCommaSeparated(value) ?? null;
+};
 
 @Injectable()
 export class PatientsService {
@@ -26,7 +35,7 @@ export class PatientsService {
           emergencyName: data.emergencyName,
           emergencyPhone: data.emergencyPhone,
           bloodType: data.bloodType,
-          allergy: data.allergy,
+          allergy: normalizeCommaSeparated(data.allergy),
           chronicHistory: data.chronicHistory,
           puskesmasId,
         },
@@ -99,7 +108,7 @@ export class PatientsService {
           emergencyName: data.emergencyName,
           emergencyPhone: data.emergencyPhone,
           bloodType: data.bloodType,
-          allergy: data.allergy,
+          allergy: normalizeOptionalCommaSeparated(data.allergy),
           chronicHistory: data.chronicHistory,
         },
       });
