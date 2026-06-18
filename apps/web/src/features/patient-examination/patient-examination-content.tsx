@@ -24,18 +24,27 @@ type ExaminationField = {
   icon?: boolean;
 };
 
+type SelectOption = { value: string; label: string; shortLabel?: string };
+
 type ExaminationFormState = {
   complaint: string;
   bloodPressure: string;
   pulse: string;
   gestationalAge: string;
   ancVisit: string;
-  symptomId: string;
-  diagnosis: string;
+  symptomIds: string[];
+  diagnosisIds: string[];
+  medications: MedicationFormRow[];
+  notes: string;
+};
+
+type MedicationFormRow = {
+  id: string;
   medicine: string;
   dosage: string;
   unit: string;
-  notes: string;
+  duration: string;
+  frequency: string;
 };
 
 const transcriptFields: ExaminationField[] = [
@@ -44,11 +53,8 @@ const transcriptFields: ExaminationField[] = [
   { id: 'pulse', label: 'Pulse Rate', placeholder: 'Contoh: 80', suffix: '/bpm', status: 'empty' },
   { id: 'gestationalAge', label: 'Gestational Age', suffix: 'weeks', status: 'verified' },
   { id: 'ancVisit', label: 'ANC Visit', value: 'Select Visit', type: 'select', status: 'manual' },
-  { id: 'symptomId', label: 'Main Symptom', placeholder: 'Select symptom from master data', type: 'select', status: 'manual', wide: true },
-  { id: 'diagnosis', label: 'Diagnosis', placeholder: 'Start typing diagnosis (ICD-10)...', status: 'empty', wide: true, icon: true },
-  { id: 'medicine', label: 'Medication Given', status: 'verified' },
-  { id: 'dosage', label: 'Dosage', placeholder: 'Example: 1x1', status: 'empty' },
-  { id: 'unit', label: 'Unit', value: 'Tablet', type: 'select', status: 'empty' },
+  { id: 'symptomIds', label: 'Additional Symptoms', placeholder: 'Select symptom from master data', type: 'select', status: 'manual', wide: true },
+  { id: 'diagnosisIds', label: 'Diagnosis', placeholder: 'Start typing diagnosis (ICD-10)...', status: 'empty', wide: true, icon: true },
   { id: 'notes', label: 'Additional Notes (Optional)', placeholder: 'Any additional information...', type: 'textarea', status: 'empty', wide: true },
 ];
 
@@ -64,18 +70,27 @@ const defaultForm: ExaminationFormState = {
   pulse: '',
   gestationalAge: '',
   ancVisit: '',
-  symptomId: '',
-  diagnosis: '',
-  medicine: '',
-  dosage: '',
-  unit: '',
+  symptomIds: [],
+  diagnosisIds: [],
+  medications: [createMedicationRow()],
   notes: '',
 };
+
+function createMedicationRow(seed?: Partial<MedicationFormRow>): MedicationFormRow {
+  return {
+    id: seed?.id ?? `med-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    medicine: seed?.medicine ?? '',
+    dosage: seed?.dosage ?? '',
+    unit: seed?.unit ?? '',
+    duration: seed?.duration ?? '',
+    frequency: seed?.frequency ?? '',
+  };
+}
 
 export function PatientExaminationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queueId = searchParams.get('queueId') ?? undefined;
+  const queueId = searchParams?.get('queueId') ?? undefined;
   const [mode, setMode] = useState<FlowMode>('method');
   const [queue, setQueue] = useState<QueueRecord | null>(null);
   const [form, setForm] = useState<ExaminationFormState>(defaultForm);
@@ -86,6 +101,8 @@ export function PatientExaminationContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isFormMode = mode === 'transcript' || mode === 'manual';
+  const pageTitle = mode === 'transcript' ? 'Voice Transcription Results' : mode === 'manual' ? 'Manual Examination Entry' : 'Patient Examination';
+  const pageSubtitle = isFormMode ? 'Check results - empty fields must be filled manually' : 'Perform daily medical recording to monitor maternal and fetal health';
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +115,8 @@ export function PatientExaminationContent() {
           ...current,
           gestationalAge: String(activeQueue.pregnancy.gestationalAge ?? current.gestationalAge),
           ancVisit: activeQueue.pregnancy.ancVisit ?? current.ancVisit,
+          bloodPressure: vitalSignValue(activeQueue.pregnancy.vitalSigns, ['bloodPressure', 'blood_pressure', 'bp']) ?? current.bloodPressure,
+          pulse: vitalSignValue(activeQueue.pregnancy.vitalSigns, ['pulse', 'pulseRate', 'pulse_rate']) ?? current.pulse,
         }));
       }
     }).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat data antrian'));
@@ -117,6 +136,38 @@ export function PatientExaminationContent() {
   function updateForm(key: keyof ExaminationFormState, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
+
+  function updateFormList(key: 'symptomIds' | 'diagnosisIds', value: string[]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function addMedication() {
+    setForm((current) => ({ ...current, medications: [...current.medications, createMedicationRow()] }));
+  }
+
+  function removeMedication(id: string) {
+    setForm((current) => ({
+      ...current,
+      medications: current.medications.length > 1 ? current.medications.filter((item) => item.id !== id) : current.medications,
+    }));
+  }
+
+  function updateMedication(id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) {
+    setForm((current) => ({
+      ...current,
+      medications: current.medications.map((item) => (item.id === id ? { ...item, [key]: value } : item)),
+    }));
+  }
+
+  useEffect(() => {
+    if (!queue || symptomOptions.length === 0) return;
+    const storedSymptoms = Array.isArray(queue.pregnancy.emergencySigns) ? queue.pregnancy.emergencySigns : [];
+    if (storedSymptoms.length === 0) return;
+    const normalized = new Set(storedSymptoms.map((item) => item.toLowerCase()));
+    const matched = symptomOptions.filter((item) => normalized.has(item.id.toLowerCase()) || normalized.has(item.nama.toLowerCase())).map((item) => item.id);
+    if (matched.length === 0) return;
+    setForm((current) => (current.symptomIds.length ? current : { ...current, symptomIds: matched }));
+  }, [queue, symptomOptions]);
 
   async function finishRecording(audio: Blob) {
     setError(null);
@@ -147,9 +198,9 @@ export function PatientExaminationContent() {
         vitalSigns: { bloodPressure: form.bloodPressure || null, pulse: form.pulse ? Number(form.pulse) : null },
         gestationalAge: Number(form.gestationalAge),
         ancVisit: form.ancVisit,
-        diagnosis: form.diagnosis ? [{ kondisiId: form.diagnosis, jumlahKasus: 1 }] : [],
-        symptoms: form.symptomId ? [{ gejalaId: form.symptomId, jumlah: 1 }] : [],
-        medication: form.medicine ? [{ obatId: form.medicine, quantity: Number(form.dosage || 1) }] : [],
+        diagnosis: form.diagnosisIds.map((kondisiId) => ({ kondisiId, jumlahKasus: 1 })),
+        symptoms: form.symptomIds.map((gejalaId) => ({ gejalaId, jumlah: 1 })),
+        medication: form.medications.filter((item) => item.medicine).map((item) => ({ obatId: item.medicine, quantity: Number(item.dosage || 1) })),
         notes: form.notes,
         riskSummary: buildExaminationRiskSummary(form, queue.pregnancy.riskLevel),
       });
@@ -173,8 +224,8 @@ export function PatientExaminationContent() {
 
       <section className={styles.titleRow}>
         <div>
-          <h1>{isFormMode ? 'Voice Transcription Results' : 'Patient Examination'}</h1>
-          <p>{isFormMode ? 'Check results - empty fields must be filled manually' : 'Perform daily medical recording to monitor maternal and fetal health'}</p>
+          <h1>{pageTitle}</h1>
+          <p>{pageSubtitle}</p>
         </div>
         <div className={styles.sessionId}>
           <span>Examination Session</span>
@@ -185,10 +236,10 @@ export function PatientExaminationContent() {
       <PatientInfoBar queue={queue} />
       {error ? <p className={styles.examError}>{error}</p> : null}
 
-      {mode === 'method' ? <MethodSelector onManual={() => setMode('manual')} onRecord={() => setMode('recording')} /> : null}
+      {mode === 'method' ? <MethodSelector onManual={() => { setSource('MANUAL'); setMode('manual'); }} onRecord={() => setMode('recording')} /> : null}
       {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={(audio) => void finishRecording(audio)} /> : null}
-      {mode === 'transcript' ? <ExaminationForm conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} medicines={medicines} mode="transcript" symptoms={symptomOptions} onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
-      {mode === 'manual' ? <ExaminationForm conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} medicines={medicines} mode="manual" symptoms={symptomOptions} onChange={updateForm} onRecordAgain={() => setMode('recording')} onSave={saveExamination} /> : null}
+      {mode === 'transcript' ? <ExaminationForm conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} medicines={medicines} mode="transcript" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
+      {mode === 'manual' ? <ExaminationForm conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} medicines={medicines} mode="manual" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
     </PageContainer>
   );
 }
@@ -201,13 +252,28 @@ function applySpeechDraft(current: ExaminationFormState, result: SpeechTranscrip
     pulse: result.draft.pulse ?? current.pulse,
     gestationalAge: result.draft.gestationalAge != null ? String(result.draft.gestationalAge) : current.gestationalAge,
     ancVisit: result.draft.ancVisit ?? current.ancVisit,
-    symptomId: current.symptomId,
-    diagnosis: result.draft.diagnosis ?? current.diagnosis,
-    medicine: result.draft.medicine ?? current.medicine,
-    dosage: result.draft.dosage ?? current.dosage,
-    unit: result.draft.unit ?? current.unit,
+    symptomIds: current.symptomIds,
+    diagnosisIds: result.draft.diagnosis ? [result.draft.diagnosis] : current.diagnosisIds,
+    medications: result.draft.medicine ? [
+      createMedicationRow({
+        medicine: result.draft.medicine,
+        dosage: result.draft.dosage ?? '',
+        unit: result.draft.unit ?? '',
+      }),
+      ...current.medications.slice(1),
+    ] : current.medications,
     notes: result.draft.notes ?? current.notes,
   };
+}
+
+function vitalSignValue(value: Record<string, unknown> | null | undefined, keys: string[]) {
+  if (!value || typeof value !== 'object') return undefined;
+  for (const key of keys) {
+    const item = value[key];
+    if (typeof item === 'string' && item.trim()) return item;
+    if (typeof item === 'number' && Number.isFinite(item)) return String(item);
+  }
+  return undefined;
 }
 
 function buildExaminationRiskSummary(form: ExaminationFormState, pregnancyRiskLevel: string) {
@@ -357,8 +423,10 @@ function preferredMimeType() {
   return 'audio/webm';
 }
 
-function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, symptoms, onChange, onRecordAgain, onSave }: { conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void; onRecordAgain: () => void; onSave: () => void }) {
+function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, symptoms, onAddMedication, onChange, onListChange, onMedicationChange, onRecordAgain, onRemoveMedication, onSave }: { conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onAddMedication: () => void; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void; onMedicationChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRecordAgain: () => void; onRemoveMedication: (id: string) => void; onSave: () => void }) {
   const manualCount = fields.filter((field) => field.status === 'manual').length;
+  const mainFields = fields.filter((field) => field.id !== 'notes');
+  const notesField = fields.find((field) => field.id === 'notes');
 
   return (
     <section className={styles.formCard} aria-label="Examination data">
@@ -368,7 +436,9 @@ function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, 
       </div>
 
       <div className={styles.formGrid}>
-        {fields.map((field) => <FormField conditions={conditions} key={field.id} field={field} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} />)}
+        {mainFields.map((field) => <FormField conditions={conditions} key={field.id} field={field} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} />)}
+        <MedicationPanel form={form} medicines={medicines} onAdd={onAddMedication} onChange={onMedicationChange} onRemove={onRemoveMedication} />
+        {notesField ? <FormField conditions={conditions} field={notesField} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} /> : null}
       </div>
 
       <footer className={styles.formFooter}>
@@ -396,10 +466,53 @@ function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, 
   );
 }
 
-function FormField({ conditions, field, form, medicines, symptoms, onChange }: { conditions: KondisiRecord[]; field: ExaminationField; form: ExaminationFormState; medicines: ObatRecord[]; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void }) {
+function FormField({ conditions, field, form, medicines, symptoms, onChange, onListChange }: { conditions: KondisiRecord[]; field: ExaminationField; form: ExaminationFormState; medicines: ObatRecord[]; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void }) {
   const className = [styles.formField, field.wide ? styles.wideField : '', field.status === 'manual' ? styles.manualField : '', field.status === 'verified' ? styles.verifiedField : ''].filter(Boolean).join(' ');
   const key = field.id as keyof ExaminationFormState;
   const value = form[key] ?? '';
+  const multiKey: 'symptomIds' | 'diagnosisIds' | null = field.id === 'symptomIds' ? 'symptomIds' : field.id === 'diagnosisIds' ? 'diagnosisIds' : null;
+  const selectedValues = multiKey === 'symptomIds' ? form.symptomIds : multiKey === 'diagnosisIds' ? form.diagnosisIds : [];
+  const options = selectOptions(field.id, conditions, symptoms, medicines);
+
+  function removeSelected(nextValue: string) {
+    if (!multiKey) return;
+    onListChange(multiKey, selectedValues.filter((item) => item !== nextValue));
+  }
+
+  function addSelected(nextValue: string) {
+    if (!multiKey || !nextValue || selectedValues.includes(nextValue)) return;
+    onListChange(multiKey, [...selectedValues, nextValue]);
+  }
+
+  if (multiKey) {
+    return (
+      <div className={className}>
+        <span className={styles.fieldLabelRow}>
+          <span>{field.label}</span>
+          {field.status === 'verified' ? <em className={styles.verifiedTag}>Verified</em> : null}
+          {field.status === 'manual' ? <em className={styles.manualTag}>Fill Manually</em> : null}
+        </span>
+        <span className={styles.inputShell}>
+          {field.icon ? <AppIcon name="search" width={16} height={16} /> : null}
+          <span className={styles.multiSelectBox}>
+            {selectedValues.map((item) => {
+              const option = options.find((entry) => entry.value === item);
+              return (
+                <button type="button" className={styles.selectedTag} key={item} onClick={() => removeSelected(item)}>
+                  {option?.shortLabel ?? option?.label ?? item}
+                  <AppIcon name="x" width={14} height={14} />
+                </button>
+              );
+            })}
+            <select aria-label={field.label} value="" onChange={(event) => addSelected(event.target.value)}>
+              <option value="">{field.placeholder ?? 'Select'}</option>
+              {options.filter((option) => !selectedValues.includes(option.value)).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </span>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <label className={className}>
@@ -411,14 +524,14 @@ function FormField({ conditions, field, form, medicines, symptoms, onChange }: {
       <span className={[styles.inputShell, field.type === 'textarea' ? styles.textareaShell : ''].join(' ')}>
         {field.icon ? <AppIcon name="search" width={16} height={16} /> : null}
         {field.type === 'textarea' ? (
-          <textarea placeholder={field.placeholder} value={value} onChange={(event) => onChange(key, event.target.value)} />
-        ) : field.type === 'select' || field.id === 'diagnosis' || field.id === 'medicine' ? (
-          <select value={value} onChange={(event) => onChange(key, event.target.value)}>
+          <textarea placeholder={field.placeholder} value={String(value)} onChange={(event) => onChange(key, event.target.value)} />
+        ) : field.type === 'select' ? (
+          <select value={String(value)} onChange={(event) => onChange(key, event.target.value)}>
             <option value="">{field.placeholder ?? 'Select'}</option>
-            {selectOptions(field.id, conditions, symptoms, medicines).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         ) : (
-          <input placeholder={field.placeholder} value={value} onChange={(event) => onChange(key, event.target.value)} />
+          <input placeholder={field.placeholder} value={String(value)} onChange={(event) => onChange(key, event.target.value)} />
         )}
         {field.suffix ? <small>{field.suffix}</small> : null}
       </span>
@@ -426,10 +539,73 @@ function FormField({ conditions, field, form, medicines, symptoms, onChange }: {
   );
 }
 
-function selectOptions(fieldId: string, conditions: KondisiRecord[], symptoms: GejalaRecord[], medicines: ObatRecord[]) {
+function MedicationPanel({ form, medicines, onAdd, onChange, onRemove }: { form: ExaminationFormState; medicines: ObatRecord[]; onAdd: () => void; onChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRemove: (id: string) => void }) {
+  return (
+    <section className={styles.medicationPanel} aria-label="Medication given">
+      <div className={styles.medicationHeader}>
+        <h3>Medication Given</h3>
+        <button type="button" className={styles.addMedicineButton} onClick={onAdd}>
+          <AppIcon name="plus" width={16} height={16} />
+          Add Medicine
+        </button>
+      </div>
+      {form.medications.map((row, index) => (
+        <div className={styles.medicationRow} key={row.id}>
+          <div className={styles.medicationGrid}>
+            <label className={styles.compactField}>
+              <span>Medication Name</span>
+              <select aria-label={`Medication name ${index + 1}`} value={row.medicine} onChange={(event) => onChange(row.id, 'medicine', event.target.value)}>
+                <option value="">Select medicine</option>
+                {medicines.map((item) => <option key={item.id} value={item.id}>{item.nama}</option>)}
+              </select>
+            </label>
+            <label className={styles.compactField}>
+              <span>Dosage</span>
+              <div className={styles.comboInput}>
+                <input aria-label={`Dosage ${index + 1}`} placeholder="1.000,00" value={row.dosage} onChange={(event) => onChange(row.id, 'dosage', event.target.value)} />
+                <select aria-label={`Dosage unit ${index + 1}`} value={row.unit} onChange={(event) => onChange(row.id, 'unit', event.target.value)}>
+                  <option value="">unit</option>
+                  <option value="Tablet">Tablet</option>
+                  <option value="Ampul">Ampul</option>
+                  <option value="Botol">Botol</option>
+                  <option value="Strip">Strip</option>
+                  <option value="Vial">Vial</option>
+                </select>
+              </div>
+            </label>
+            <label className={styles.compactField}>
+              <span>Duration</span>
+              <div className={styles.comboInput}>
+                <input aria-label={`Duration ${index + 1}`} placeholder="1.000,00" value={row.duration} onChange={(event) => onChange(row.id, 'duration', event.target.value)} />
+                <select aria-label={`Duration unit ${index + 1}`} value={row.duration ? 'day' : 'day'} onChange={() => undefined}>
+                  <option value="day">day</option>
+                  <option value="week">week</option>
+                </select>
+              </div>
+            </label>
+            <label className={styles.compactField}>
+              <span>Frequency</span>
+              <div className={styles.comboInput}>
+                <input aria-label={`Frequency ${index + 1}`} placeholder="1" value={row.frequency} onChange={(event) => onChange(row.id, 'frequency', event.target.value)} />
+                <span>x / day</span>
+              </div>
+            </label>
+          </div>
+          {form.medications.length > 1 ? (
+            <button type="button" className={styles.removeMedicineButton} aria-label={`Remove medication ${index + 1}`} onClick={() => onRemove(row.id)}>
+              <AppIcon name="x" width={18} height={18} />
+            </button>
+          ) : null}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function selectOptions(fieldId: string, conditions: KondisiRecord[], symptoms: GejalaRecord[], medicines: ObatRecord[]): SelectOption[] {
   if (fieldId === 'ancVisit') return ['K1', 'K2', 'K3', 'K4', 'K5', 'K6'].map((value) => ({ value, label: value }));
-  if (fieldId === 'symptomId') return symptoms.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}` }));
-  if (fieldId === 'diagnosis') return conditions.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}` }));
+  if (fieldId === 'symptomIds') return symptoms.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}`, shortLabel: item.nama }));
+  if (fieldId === 'diagnosisIds') return conditions.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}`, shortLabel: item.nama }));
   if (fieldId === 'medicine') return medicines.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}` }));
   if (fieldId === 'unit') return ['Tablet', 'Ampul', 'Botol', 'Strip', 'Vial'].map((value) => ({ value, label: value }));
   return [];

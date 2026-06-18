@@ -27,13 +27,13 @@ export function MedicationDetailContent() {
   useEffect(() => {
     Promise.all([getObat(), getStokRows({ puskesmasId: DEFAULT_PUSKESMAS_ID })])
       .then(([medicines, stocks]) => {
-        const slug = params.medicine ?? '';
+        const slug = params?.medicine ?? '';
         const selected = medicines.find((item) => slugify(item.id) === slug || slugify(item.nama) === slug || item.id.toLowerCase() === slug) ?? medicines[0] ?? null;
         setMedicine(selected);
         setStockRows(selected ? stocks.filter((row) => row.obatId === selected.id) : stocks);
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat detail obat'));
-  }, [params.medicine]);
+  }, [params?.medicine]);
 
   const latestStock = stockRows[0];
   const currentStock = latestStock?.stokSaatIni ?? 0;

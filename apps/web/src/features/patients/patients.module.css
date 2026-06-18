@@ -69,6 +69,7 @@
 }
 
 .headerActions button,
+.headerActions a,
 .filterButton,
 .detailButton,
 .queueButton,
@@ -81,12 +82,14 @@
   cursor: pointer;
 }
 
-.headerActions button {
+.headerActions button,
+.headerActions a {
   width: 36px;
   height: 36px;
   border-radius: 9999px;
   background: transparent;
   color: #414754;
+  text-decoration: none;
 }
 
 .toolbar {
@@ -171,7 +174,7 @@
 }
 
 .patientTable td {
-  padding: 22px 24px;
+  padding: 20px 24px;
   border-top: 1px solid #e2e8f0;
   color: #414754;
   font-size: 14px;
@@ -225,6 +228,7 @@
 
 .ancDots {
   display: flex;
+  align-items: center;
   gap: 6px;
   min-width: 90px;
 }
@@ -316,6 +320,7 @@
 }
 
 .headerActions button:hover,
+.headerActions a:hover,
 .filterButton:hover,
 .detailButton:hover,
 .queueButton:hover,
@@ -324,6 +329,7 @@
 }
 
 .headerActions button:focus-visible,
+.headerActions a:focus-visible,
 .filterButton:focus-visible,
 .detailButton:focus-visible,
 .queueButton:focus-visible,
@@ -950,7 +956,7 @@
 
   .patientTable td {
     display: grid;
-    grid-template-columns: minmax(124px, 0.42fr) minmax(0, 1fr);
+    grid-template-columns: minmax(112px, 0.38fr) minmax(0, 1fr);
     gap: 12px;
     padding: 10px 0;
     border: 0;
@@ -967,7 +973,8 @@
   }
 
   .actionGroup {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .detailButton,

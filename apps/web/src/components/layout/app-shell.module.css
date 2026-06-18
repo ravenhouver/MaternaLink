@@ -23,8 +23,28 @@
     flex-direction: column;
   }
 
+  .shell:global(.ant-layout-has-sider) {
+    flex-direction: column !important;
+  }
+
+  .shell:global(.ant-layout-has-sider) > :global(.ant-layout) {
+    flex: 0 0 auto !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+    margin-left: 0 !important;
+  }
+
   .mainLayout,
   .collapsed .mainLayout {
-    margin-left: 0;
+    flex: 0 0 auto !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 100vw !important;
+    margin-left: 0 !important;
+  }
+
+  .content {
+    width: 100% !important;
   }
 }

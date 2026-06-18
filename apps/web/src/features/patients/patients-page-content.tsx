@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { createQueue, deletePatient, getPatients, updatePatient, type PatientRecord, type PregnancyRiskLevel } from '@/lib/api';
+import { createQueue, getPatients, updatePatient, type PatientRecord, type PregnancyRiskLevel } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patients.module.css';
 
@@ -20,6 +20,34 @@ type PatientDraft = {
 
 function activePregnancy(patient: PatientRecord) {
   return patient.pregnancies?.[0] ?? null;
+}
+
+function formatPatientId(patient: PatientRecord, index: number) {
+  if (patient.id?.startsWith('ML-')) return patient.id;
+  return `ML-2024-${String(index + 1).padStart(3, '0')}`;
+}
+
+function formatDueDate(value?: string | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+}
+
+function dueHint(value?: string | null) {
+  if (!value) return '';
+  const today = new Date();
+  const due = new Date(value);
+  if (Number.isNaN(due.getTime())) return '';
+  const days = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
+  if (days === 1) return 'Tomorrow!';
+  if (days < 0) return `${Math.abs(days)} days overdue`;
+  return `${days} days left`;
+}
+
+function ancCount(value?: string | null) {
+  const numeric = Number(String(value ?? '').match(/\d+/)?.[0] ?? 0);
+  return Math.max(0, Math.min(4, numeric || 0));
 }
 
 function toDraft(patient: PatientRecord): PatientDraft {
@@ -64,6 +92,7 @@ export function PatientsPageContent() {
     if (!q) return rows;
     return rows.filter((patient) => [patient.fullName, patient.nik, patient.phone ?? '', patient.address ?? ''].some((value) => value.toLowerCase().includes(q)));
   }, [rows, search]);
+  const visibleRows = filteredRows.slice(0, 3);
 
   async function queuePatient(patient: PatientRecord) {
     const pregnancy = activePregnancy(patient);
@@ -77,18 +106,6 @@ export function PatientsPageContent() {
       await refreshRows();
     } catch (queueError) {
       setError(queueError instanceof Error ? queueError.message : 'Gagal memasukkan pasien ke antrean');
-    }
-  }
-
-  async function removePatient(patient: PatientRecord) {
-    const ok = window.confirm(`Hapus pasien ${patient.fullName}? Riwayat antrean dan pemeriksaan pasien ini ikut terhapus.`);
-    if (!ok) return;
-    setError(null);
-    try {
-      await deletePatient(patient.id);
-      await refreshRows();
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Gagal menghapus pasien');
     }
   }
 
@@ -126,21 +143,23 @@ export function PatientsPageContent() {
             <h1>Patient List</h1>
             <span>{rows.length} registered patients</span>
           </div>
-          <p>Kelola data ibu hamil, status risiko, dan antrean pemeriksaan dari database.</p>
+          <p>Manage maternal data, monitor risk status, and pregnancy schedules in a unified view.</p>
         </div>
         <div className={styles.headerActions}>
-          <Link href={routes.newPatient} className={styles.queueButton}><AppIcon name="plus" width={18} height={18} />New Patient</Link>
+          <button type="button" aria-label="Refresh patient list" onClick={() => void refreshRows()}><AppIcon name="bell" width={20} height={20} /></button>
+          <Link href={routes.newPatient} aria-label="Add new patient"><AppIcon name="plus" width={20} height={20} /></Link>
         </div>
       </section>
 
       <section className={styles.toolbar} aria-label="Search and filter patients">
         <label className={styles.searchBox}>
           <AppIcon name="search" width={18} height={18} />
-          <input type="search" placeholder="Cari nama, NIK, atau alamat..." value={search} onChange={(event) => setSearch(event.target.value)} />
+          <input type="search" placeholder="Search patient..." value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
         <button type="button" className={styles.filterButton} onClick={() => void refreshRows()}>
-          <AppIcon name="rotateCcw" width={18} height={18} />
-          Refresh
+          <AppIcon name="filter" width={16} height={16} />
+          Filter
+          <AppIcon name="chevronDown" width={14} height={14} />
         </button>
       </section>
 
@@ -152,30 +171,30 @@ export function PatientsPageContent() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>NIK</th>
                 <th>Gestational Age</th>
+                <th>Due Date</th>
                 <th>ANC Visit</th>
-                <th>Risk</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading ? <tr><td colSpan={6}>Loading patients...</td></tr> : null}
-              {!isLoading && filteredRows.length === 0 ? <tr><td colSpan={6}>Belum ada data pasien.</td></tr> : null}
-              {filteredRows.map((patient) => {
+              {isLoading ? <tr><td colSpan={5}>Loading patients...</td></tr> : null}
+              {!isLoading && filteredRows.length === 0 ? <tr><td colSpan={5}>Belum ada data pasien.</td></tr> : null}
+              {visibleRows.map((patient, index) => {
                 const pregnancy = activePregnancy(patient);
+                const due = dueHint(pregnancy?.edd);
+                const ancDone = ancCount(pregnancy?.ancVisit);
+                const isUrgent = pregnancy?.riskLevel === 'HIGH' || due === 'Tomorrow!' || due.includes('overdue') || due.startsWith('0 ');
                 return (
                   <tr key={patient.id}>
-                    <td data-label="Name"><strong className={styles.patientName}>{patient.fullName}</strong><span className={styles.patientId}>{patient.phone ?? '-'}</span></td>
-                    <td data-label="NIK">{patient.nik}</td>
+                    <td data-label="Name"><strong className={styles.patientName}>{patient.fullName}</strong><span className={styles.patientId}>ID: {formatPatientId(patient, index)}</span></td>
                     <td data-label="Gestational Age">{pregnancy?.gestationalAge ? `${pregnancy.gestationalAge} weeks` : '-'}</td>
-                    <td data-label="ANC Visit">{pregnancy?.ancVisit ?? '-'}</td>
-                    <td data-label="Risk"><strong className={pregnancy?.riskLevel === 'HIGH' ? styles.urgentDate : undefined}>{pregnancy?.riskLevel ?? '-'}</strong></td>
+                    <td data-label="Due Date"><strong className={isUrgent ? styles.urgentDate : undefined}>{due === 'Tomorrow!' ? due : formatDueDate(pregnancy?.edd)}</strong>{due && due !== 'Tomorrow!' ? <span className={isUrgent ? styles.urgentHint : styles.dueHint}>({due})</span> : null}{due === 'Tomorrow!' ? <span className={styles.dueHint}>{formatDueDate(pregnancy?.edd)}</span> : null}</td>
+                    <td data-label="ANC Visit"><span className={styles.ancDots} aria-label={`${ancDone} of 4 ANC visits`}>{[0, 1, 2, 3].map((dot) => <i key={dot} className={dot < ancDone ? styles.ancDone : styles.ancPending} />)}</span></td>
                     <td data-label="Action">
                       <div className={styles.actionGroup}>
-                        <button type="button" className={styles.detailButton} onClick={() => openEdit(patient)}>Edit</button>
+                        <button type="button" className={styles.detailButton} onClick={() => openEdit(patient)}>View Details</button>
                         <button type="button" className={styles.queueButton} onClick={() => void queuePatient(patient)}><AppIcon name="plus" width={18} height={18} />Queue</button>
-                        <button type="button" className={styles.detailButton} onClick={() => void removePatient(patient)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -185,7 +204,14 @@ export function PatientsPageContent() {
           </table>
         </div>
         <footer className={styles.pagination}>
-          <p>Showing {filteredRows.length} of {rows.length} patients</p>
+          <p>Showing {visibleRows.length ? 1 : 0}-{visibleRows.length} of {rows.length} patients</p>
+          <div className={styles.paginationControls} aria-label="Patient pages">
+            <button type="button" aria-label="Previous page"><AppIcon name="chevronLeft" width={18} height={18} /></button>
+            <button type="button" aria-current="page">1</button>
+            <button type="button">2</button>
+            <button type="button">3</button>
+            <button type="button" aria-label="Next page"><AppIcon name="chevronRight" width={18} height={18} /></button>
+          </div>
         </footer>
       </section>
 

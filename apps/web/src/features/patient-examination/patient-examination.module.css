@@ -447,6 +447,10 @@
   grid-template-columns: 1fr 1fr;
 }
 
+.footerActions .primaryAction:only-child {
+  grid-column: 1 / -1;
+}
+
 .formCard {
   padding: 24px;
 }
@@ -482,8 +486,7 @@
   grid-column: span 2;
 }
 
-.formField:nth-of-type(3),
-.formField:nth-of-type(10) {
+.formField:nth-of-type(3) {
   grid-column: span 1;
 }
 
@@ -574,6 +577,43 @@
   white-space: nowrap;
 }
 
+.multiSelectBox {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.multiSelectBox select {
+  min-width: 220px;
+  min-height: 28px;
+  padding: 0;
+}
+
+.selectedTag {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #005bbf;
+  border-radius: 9999px;
+  background: #eff4ff;
+  color: #005bbf;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.selectedTag:hover {
+  background: #d8e2ff;
+}
+
 .placeholder {
   color: #94a3b8;
 }
@@ -585,6 +625,150 @@
 .manualField .inputShell {
   border-color: #7e5260;
   background: #fff5f7;
+}
+
+.medicationPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  grid-column: 1 / -1;
+  padding: 24px;
+  border: 1px solid #cdd5df;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.medicationHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.medicationHeader h3 {
+  margin: 0;
+  color: #475569;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  line-height: 24px;
+  text-transform: uppercase;
+}
+
+.addMedicineButton {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid #004eeb;
+  border-radius: 8px;
+  background: #004eeb;
+  color: #ffffff;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
+}
+
+.medicationRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.medicationGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.removeMedicineButton {
+  display: inline-grid;
+  width: 40px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid #cdd5df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
+}
+
+.removeMedicineButton:hover {
+  border-color: #ba1a1a;
+  color: #ba1a1a;
+}
+
+.compactField {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compactField > span {
+  color: #475569;
+  font-size: 16px;
+  letter-spacing: 0.8px;
+  line-height: 24px;
+  text-transform: uppercase;
+}
+
+.compactField > select,
+.comboInput {
+  min-height: 46px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.05);
+}
+
+.compactField > select {
+  width: 100%;
+  padding: 10px 14px;
+  color: #191c20;
+  font: 14px/20px Roboto, Arial, sans-serif;
+}
+
+.comboInput {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.comboInput input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 10px 14px;
+  color: #71717a;
+  font: 16px/24px Inter, Arial, sans-serif;
+  outline: none;
+}
+
+.comboInput input::placeholder {
+  color: #a1a1aa;
+}
+
+.comboInput select,
+.comboInput span {
+  display: inline-flex;
+  min-width: 72px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: 1px solid #cdd5df;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #71717a;
+  font: 16px/24px Inter, Arial, sans-serif;
+  white-space: nowrap;
 }
 
 .formFooter {
@@ -655,9 +839,20 @@
 
   .formField,
   .formField:nth-of-type(3),
-  .formField:nth-of-type(10),
   .wideField {
     grid-column: 1 / -1;
+  }
+
+  .medicationGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .medicationRow {
+    grid-template-columns: 1fr;
+  }
+
+  .removeMedicineButton {
+    width: 100%;
   }
 }
 
@@ -701,5 +896,19 @@
   .waveform {
     max-width: 100%;
     overflow: hidden;
+  }
+
+  .medicationHeader,
+  .medicationGrid {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .medicationHeader {
+    flex-direction: column;
+  }
+
+  .addMedicineButton {
+    width: 100%;
   }
 }

@@ -29,6 +29,16 @@ type Shipment = {
 
 const filterChips = ['All', 'In Transit', 'Awaiting Approval', 'Approved', 'Received', 'Rejected'];
 
+function matchesFilter(shipment: Shipment, filter: string) {
+  if (filter === 'All') return true;
+  if (filter === 'In Transit') return shipment.status === 'transit' && shipment.statusLabel === 'In Transit';
+  if (filter === 'Awaiting Approval') return shipment.status === 'awaiting';
+  if (filter === 'Approved') return shipment.status === 'transit' && shipment.statusLabel === 'Approved';
+  if (filter === 'Received') return shipment.status === 'delivered';
+  if (filter === 'Rejected') return shipment.status === 'rejected';
+  return false;
+}
+
 function mapRecommendation(row: DistributionRecommendation): Shipment {
   const statusMap: Record<RecommendationStatus, Pick<Shipment, 'status' | 'statusLabel' | 'icon' | 'borderTone'>> = {
     PENDING: { status: 'awaiting', statusLabel: 'Awaiting IFK Approval', icon: 'hourglass', borderTone: 'brown' },
@@ -70,6 +80,7 @@ export function DistributionPageContent() {
   const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [error, setError] = useState<string | null>(null);
+  const [manuallyToggled, setManuallyToggled] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     getRecommendations()
@@ -80,8 +91,26 @@ export function DistributionPageContent() {
   const shipments = useMemo(() => {
     const rows = recommendations.map(mapRecommendation);
     if (activeFilter === 'All') return rows;
-    return rows.filter((row) => row.statusLabel === activeFilter || (activeFilter === 'In Transit' && row.status === 'transit'));
+    return rows.filter((row) => matchesFilter(row, activeFilter));
   }, [activeFilter, recommendations]);
+
+  const openShipmentIds = useMemo(() => {
+    const ids = new Set(shipments.filter((shipment) => shipment.expanded).map((shipment) => shipment.id));
+    manuallyToggled.forEach((id) => {
+      if (ids.has(id)) ids.delete(id);
+      else ids.add(id);
+    });
+    return ids;
+  }, [manuallyToggled, shipments]);
+
+  function toggleShipment(id: string) {
+    setManuallyToggled((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <PageContainer size="wide" className={styles.page}>
@@ -112,7 +141,7 @@ export function DistributionPageContent() {
       <section className={styles.shipmentList} aria-label="Medicine shipments">
         {shipments.length === 0 ? <article className={styles.shipmentCard}><div className={styles.cardContent}>Belum ada data pengiriman.</div></article> : null}
         {shipments.map((shipment) => (
-          <ShipmentCard shipment={shipment} key={shipment.id} />
+          <ShipmentCard expanded={openShipmentIds.has(shipment.id)} onToggle={() => toggleShipment(shipment.id)} shipment={shipment} key={shipment.id} />
         ))}
       </section>
 
@@ -139,7 +168,7 @@ export function DistributionPageContent() {
   );
 }
 
-function ShipmentCard({ shipment }: { shipment: Shipment }) {
+function ShipmentCard({ expanded, onToggle, shipment }: { expanded: boolean; onToggle: () => void; shipment: Shipment }) {
   return (
     <article className={`${styles.shipmentCard} ${styles[shipment.borderTone]}`}>
       <div className={styles.cardContent}>
@@ -152,13 +181,20 @@ function ShipmentCard({ shipment }: { shipment: Shipment }) {
             </div>
           </div>
           <div className={styles.statusCluster}>
-            <span className={`${styles.statusPill} ${styles[shipment.status]}`}>{shipment.statusLabel}</span>
-            <small className={shipment.status === 'transit' ? styles.eta : ''}>{shipment.statusMeta}</small>
-            <button type="button" aria-label={`Toggle ${shipment.medicine} details`}><AppIcon name="chevronDown" width={18} height={18} /></button>
+            <div className={styles.statusText}>
+              <span className={`${styles.statusPill} ${styles[shipment.status]}`}>
+                <StatusIcon status={shipment.status} />
+                {shipment.statusLabel}
+              </span>
+              <small className={shipment.status === 'transit' ? styles.eta : ''}>{shipment.statusMeta}</small>
+            </div>
+            <button className={expanded ? styles.toggleOpen : ''} type="button" aria-expanded={expanded} aria-label={`${expanded ? 'Collapse' : 'Expand'} ${shipment.medicine} details`} onClick={onToggle}>
+              <AppIcon name="chevronDown" width={18} height={18} />
+            </button>
           </div>
         </div>
 
-        {shipment.expanded ? <ExpandedTransitDetails /> : null}
+        {expanded ? <ExpandedTransitDetails /> : null}
 
         {shipment.status === 'rejected' ? (
           <div className={styles.rejectionNote}>
@@ -169,6 +205,13 @@ function ShipmentCard({ shipment }: { shipment: Shipment }) {
       </div>
     </article>
   );
+}
+
+function StatusIcon({ status }: { status: ShipmentStatus }) {
+  if (status === 'transit') return <AppIcon name="truck" width={12} height={12} />;
+  if (status === 'awaiting') return <AppIcon name="hourglass" width={12} height={12} />;
+  if (status === 'delivered') return <AppIcon name="checkCircle" width={12} height={12} />;
+  return <AppIcon name="x" width={12} height={12} />;
 }
 
 function ExpandedTransitDetails() {

@@ -207,15 +207,22 @@
   text-align: right;
 }
 
-.statusCluster > div,
+.statusText,
 .statusCluster {
   min-width: 0;
+}
+
+.statusText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .statusPill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   padding: 4px 12px;
   border-radius: 9999px;
   font-size: 12px;
@@ -247,6 +254,11 @@
   border-radius: 9999px;
   background: transparent;
   color: #334155;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.statusCluster .toggleOpen {
+  transform: rotate(180deg);
 }
 
 .expandedDetails {
@@ -642,6 +654,13 @@
   .statusCluster {
     width: 100%;
     gap: 12px;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .statusText {
+    align-items: flex-start;
+    text-align: left;
   }
 
   .stepper {

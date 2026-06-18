@@ -21,7 +21,7 @@ type SidebarProps = {
 };
 
 export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const hasTopbar = pathname !== routes.dashboard;

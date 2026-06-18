@@ -17,7 +17,7 @@ type MobileNavbarProps = {
 };
 
 export function MobileNavbar({ user }: MobileNavbarProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
