@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { getCurrentUser, type CurrentUser } from '@/lib/api';
 import { routes } from '@/lib/routes';
+import { ActionNotificationBridge } from './action-notification-bridge';
 import { getBrandHref, isRouteAllowedForRole } from './layout-menu';
 import { MobileNavbar } from './mobile-navbar';
 import { Sidebar } from './sidebar';
@@ -74,25 +75,56 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   if (isLogin) {
-    return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
+    return (
+      <ConfigProvider theme={themeConfig}>
+        <ActionNotificationBridge />
+        {children}
+      </ConfigProvider>
+    );
   }
 
   if (isEmbeddedIfkPage || isEmbeddedSuperAdminPage) {
-    if (isAuthLoading || !user) return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
-    if (!isRouteAllowedForRole(pathname, user.role)) return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
-    return <ConfigProvider theme={themeConfig}>{children}</ConfigProvider>;
+    if (isAuthLoading || !user) {
+      return (
+        <ConfigProvider theme={themeConfig}>
+          <ActionNotificationBridge />
+        </ConfigProvider>
+      );
+    }
+    if (!isRouteAllowedForRole(pathname, user.role)) {
+      return (
+        <ConfigProvider theme={themeConfig}>
+          <ActionNotificationBridge />
+        </ConfigProvider>
+      );
+    }
+    return (
+      <ConfigProvider theme={themeConfig}>
+        <ActionNotificationBridge />
+        {children}
+      </ConfigProvider>
+    );
   }
 
   if (isAuthLoading || !user) {
-    return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
+    return (
+      <ConfigProvider theme={themeConfig}>
+        <ActionNotificationBridge />
+      </ConfigProvider>
+    );
   }
 
   if (!isRouteAllowedForRole(pathname, user.role)) {
-    return <ConfigProvider theme={themeConfig}>{null}</ConfigProvider>;
+    return (
+      <ConfigProvider theme={themeConfig}>
+        <ActionNotificationBridge />
+      </ConfigProvider>
+    );
   }
 
   return (
     <ConfigProvider theme={themeConfig}>
+      <ActionNotificationBridge />
       <Layout className={[styles.shell, isSidebarCollapsed ? styles.collapsed : ''].filter(Boolean).join(' ')}>
         <MobileNavbar user={user} />
         <Sidebar collapsed={isSidebarCollapsed} user={user} onToggle={() => setIsSidebarCollapsed((current) => !current)} />

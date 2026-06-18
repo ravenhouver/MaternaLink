@@ -1,3 +1,5 @@
+import { getDefaultActionMessage, isMutationMethod, notifyAction } from './action-notifications';
+
 export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api';
 
 export type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN' | 'SUPER_ADMIN';
@@ -394,30 +396,54 @@ async function readError(response: Response) {
   }
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+type ApiFetchInit = RequestInit & {
+  notify?: boolean;
+  successMessage?: string;
+  errorMessage?: string;
+};
+
+export async function apiFetch<T>(path: string, init: ApiFetchInit = {}): Promise<T> {
+  const { notify = true, successMessage, errorMessage, ...requestInit } = init;
+  const method = requestInit.method ?? 'GET';
+  const shouldNotify = notify && isMutationMethod(method);
+  const isFormData = typeof FormData !== 'undefined' && requestInit.body instanceof FormData;
   const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...init,
+    ...requestInit,
     credentials: 'include',
     cache: 'no-store',
     headers: {
-      ...(init.body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
-      ...init.headers,
+      ...(requestInit.body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
+      ...requestInit.headers,
     },
   });
 
-  if (!response.ok) throw new Error(await readError(response));
+  if (!response.ok) {
+    const message = await readError(response);
+    if (shouldNotify) {
+      notifyAction({
+        type: 'error',
+        message: errorMessage ?? 'Aksi gagal dilakukan',
+        description: message,
+      });
+    }
+    throw new Error(message);
+  }
+
+  if (shouldNotify) {
+    notifyAction({ type: 'success', message: successMessage ?? getDefaultActionMessage(method) });
+  }
+
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
 export async function login(username: string, password: string): Promise<CurrentUser> {
-  const result = await apiFetch<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+  const result = await apiFetch<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }), successMessage: 'Login berhasil', errorMessage: 'Login gagal' });
   return result.user;
 }
 
 export async function logout(): Promise<void> {
-  await apiFetch<void>('/auth/logout', { method: 'POST' });
+  await apiFetch<void>('/auth/logout', { method: 'POST', successMessage: 'Logout berhasil', errorMessage: 'Logout gagal' });
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
@@ -433,19 +459,19 @@ export async function getUsers(): Promise<AdminUserRecord[]> {
 }
 
 export async function createPatient(payload: CreatePatientPayload): Promise<{ patient: PatientRecord; pregnancy: PregnancyRecord }> {
-  return apiFetch('/patients', { method: 'POST', body: JSON.stringify(payload) });
+  return apiFetch('/patients', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Pasien berhasil dibuat', errorMessage: 'Gagal membuat pasien' });
 }
 
 export async function extractKiaBook(file: File): Promise<KiaExtractionResult> {
   const form = new FormData();
   form.append('file', file);
-  return apiFetch('/kia/extract', { method: 'POST', body: form });
+  return apiFetch('/kia/extract', { method: 'POST', body: form, successMessage: 'Buku KIA berhasil diproses', errorMessage: 'Gagal memproses Buku KIA' });
 }
 
 export async function transcribeSpeech(file: Blob): Promise<SpeechTranscriptionResult> {
   const form = new FormData();
   form.append('file', file, 'examination-recording.webm');
-  return apiFetch('/speech/transcribe', { method: 'POST', body: form });
+  return apiFetch('/speech/transcribe', { method: 'POST', body: form, successMessage: 'Rekaman berhasil diproses', errorMessage: 'Gagal memproses rekaman' });
 }
 
 export async function getPatients(): Promise<PatientRecord[]> {
@@ -457,11 +483,11 @@ export async function getPatient(id: string): Promise<PatientRecord> {
 }
 
 export async function updatePatient(id: string, payload: Partial<CreatePatientPayload>): Promise<PatientRecord> {
-  return apiFetch(`/patients/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+  return apiFetch(`/patients/${id}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'Data pasien berhasil diperbarui', errorMessage: 'Gagal memperbarui data pasien' });
 }
 
 export async function deletePatient(id: string): Promise<{ id: string; deleted: boolean }> {
-  return apiFetch(`/patients/${id}`, { method: 'DELETE' });
+  return apiFetch(`/patients/${id}`, { method: 'DELETE', successMessage: 'Pasien berhasil dihapus', errorMessage: 'Gagal menghapus pasien' });
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
@@ -485,11 +511,11 @@ export async function getGejala(): Promise<GejalaRecord[]> {
 }
 
 export async function syncAiMasterData(): Promise<AiMasterSyncResult> {
-  return apiFetch('/master/ai/sync', { method: 'POST' });
+  return apiFetch('/master/ai/sync', { method: 'POST', successMessage: 'Sinkronisasi master data berhasil', errorMessage: 'Gagal sinkronisasi master data' });
 }
 
 export async function deleteObat(id: string): Promise<{ id: string; deleted: boolean }> {
-  return apiFetch(`/master/obat/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  return apiFetch(`/master/obat/${encodeURIComponent(id)}`, { method: 'DELETE', successMessage: 'Obat berhasil dihapus', errorMessage: 'Gagal menghapus obat' });
 }
 
 export async function getAlerts(): Promise<AlertRecord[]> {
@@ -505,7 +531,7 @@ export async function getStokRows(params?: { puskesmasId?: string; periode?: str
 }
 
 export async function upsertStok(payload: { puskesmasId: string; obatId: string; periode: string; stokAwal: number; konsumsiPeriode: number; stokSaatIni: number }): Promise<StokRow> {
-  return apiFetch('/inputs/stok', { method: 'POST', body: JSON.stringify(payload) });
+  return apiFetch('/inputs/stok', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Stok berhasil disimpan', errorMessage: 'Gagal menyimpan stok' });
 }
 
 export async function createQueue(payload: {
@@ -525,7 +551,7 @@ export async function createQueue(payload: {
     riskSummary?: Record<string, unknown>;
   };
 }): Promise<QueueRecord> {
-  return apiFetch('/queue', { method: 'POST', body: JSON.stringify(payload) });
+  return apiFetch('/queue', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Antrian berhasil dibuat', errorMessage: 'Gagal membuat antrian' });
 }
 
 export async function getTodayQueue(params?: { puskesmasId?: string }): Promise<QueueRecord[]> {
@@ -542,19 +568,19 @@ export async function getQueue(params?: { puskesmasId?: string; status?: QueueSt
 }
 
 export async function updateQueueStatus(id: string, status: QueueStatus): Promise<QueueRecord> {
-  return apiFetch(`/queue/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+  return apiFetch(`/queue/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }), successMessage: 'Status antrian berhasil diperbarui', errorMessage: 'Gagal memperbarui status antrian' });
 }
 
 export async function deleteQueue(id: string): Promise<{ id: string; deleted: boolean }> {
-  return apiFetch(`/queue/${id}`, { method: 'DELETE' });
+  return apiFetch(`/queue/${id}`, { method: 'DELETE', successMessage: 'Antrian berhasil dihapus', errorMessage: 'Gagal menghapus antrian' });
 }
 
 export async function createExamination(payload: CreateExaminationPayload) {
-  return apiFetch('/examinations', { method: 'POST', body: JSON.stringify(payload) });
+  return apiFetch('/examinations', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Pemeriksaan berhasil disimpan', errorMessage: 'Gagal menyimpan pemeriksaan' });
 }
 
 export async function runDemoWorkflow(): Promise<DemoWorkflowRunResponse> {
-  return apiFetch('/workflow/demo/run', { method: 'POST' });
+  return apiFetch('/workflow/demo/run', { method: 'POST', successMessage: 'Demo workflow berhasil dimulai', errorMessage: 'Gagal memulai demo workflow' });
 }
 
 export async function getDemoWorkflowState(): Promise<DemoWorkflowState> {
@@ -562,7 +588,7 @@ export async function getDemoWorkflowState(): Promise<DemoWorkflowState> {
 }
 
 export async function runAiWorkflow(payload: AiWorkflowRunPayload): Promise<DemoWorkflowRunResponse> {
-  return apiFetch('/workflow/ai/run', { method: 'POST', body: JSON.stringify(payload) });
+  return apiFetch('/workflow/ai/run', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Workflow AI berhasil dimulai', errorMessage: 'Gagal memulai workflow AI' });
 }
 
 export async function getAiWorkflowState(payload: AiWorkflowRunPayload): Promise<DemoWorkflowState> {
@@ -592,19 +618,19 @@ export async function getRecommendations(filters?: { status?: RecommendationStat
 }
 
 export async function updateRecommendationItem(recommendationId: string, itemId: string, payload: { overrideQuantity?: number; overrideReason?: string }) {
-  return apiFetch(`/distribution/recommendations/${recommendationId}/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+  return apiFetch(`/distribution/recommendations/${recommendationId}/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'Item rekomendasi berhasil diperbarui', errorMessage: 'Gagal memperbarui item rekomendasi' });
 }
 
 export async function reorderRecommendations(orderedIds: string[]): Promise<DistributionRecommendation[]> {
-  return apiFetch('/distribution/recommendations/reorder', { method: 'PATCH', body: JSON.stringify({ orderedIds }) });
+  return apiFetch('/distribution/recommendations/reorder', { method: 'PATCH', body: JSON.stringify({ orderedIds }), successMessage: 'Urutan rekomendasi berhasil disimpan', errorMessage: 'Gagal menyimpan urutan rekomendasi' });
 }
 
 export async function approveRecommendation(id: string): Promise<DistributionRecommendation> {
-  return apiFetch(`/distribution/recommendations/${id}/approve`, { method: 'PATCH' });
+  return apiFetch(`/distribution/recommendations/${id}/approve`, { method: 'PATCH', successMessage: 'Rekomendasi berhasil disetujui', errorMessage: 'Gagal menyetujui rekomendasi' });
 }
 
 export async function rejectRecommendation(id: string, note: string): Promise<DistributionRecommendation> {
-  return apiFetch(`/distribution/recommendations/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ note }) });
+  return apiFetch(`/distribution/recommendations/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ note }), successMessage: 'Rekomendasi berhasil ditolak', errorMessage: 'Gagal menolak rekomendasi' });
 }
 
 export async function getRecommendationTracking(id: string): Promise<TrackingEvent[]> {
@@ -612,5 +638,5 @@ export async function getRecommendationTracking(id: string): Promise<TrackingEve
 }
 
 export async function addTrackingEvent(id: string, payload: { status: TrackingStatus; note?: string }) {
-  return apiFetch(`/distribution/recommendations/${id}/tracking/events`, { method: 'POST', body: JSON.stringify(payload) });
+  return apiFetch(`/distribution/recommendations/${id}/tracking/events`, { method: 'POST', body: JSON.stringify(payload), successMessage: 'Status pengiriman berhasil ditambahkan', errorMessage: 'Gagal menambahkan status pengiriman' });
 }
