@@ -20,6 +20,32 @@ type PatientDraft = {
   riskLevel: PregnancyRiskLevel;
 };
 
+type QueueDraft = {
+  reason: 'ANC Checkup' | 'Complaint' | 'Referral' | 'Emergency';
+  ancVisit: string;
+  complaint: string;
+  systolic: string;
+  diastolic: string;
+  weight: string;
+  height: string;
+  muac: string;
+  fetalHeartRate: string;
+  temperature: string;
+  pulse: string;
+  riskFactors: string[];
+  routineMedication: string[];
+  responsibleDoctor: string;
+};
+
+const riskOptions = ['Gestational Hypertension', 'Mild Anemia (Hb < 11)', 'History of Preeclampsia', 'Diabetes Mellitus'];
+const medicationOptions = ['Folic Acid', 'Iron Supplement (TTD)', 'Calcium', 'Low Dose Aspirin'];
+const reasonOptions: Array<{ label: QueueDraft['reason']; icon: 'stethoscope' | 'archive' | 'clipboardCheck' | 'zap'; danger?: boolean }> = [
+  { label: 'ANC Checkup', icon: 'stethoscope' },
+  { label: 'Complaint', icon: 'archive' },
+  { label: 'Referral', icon: 'clipboardCheck' },
+  { label: 'Emergency', icon: 'zap', danger: true },
+];
+
 function activePregnancy(patient: PatientRecord) {
   return patient.pregnancies?.[0] ?? null;
 }
@@ -52,6 +78,18 @@ function ancCount(value?: string | null) {
   return Math.max(0, Math.min(4, numeric || 0));
 }
 
+function asString(value: unknown) {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+}
+
+function activeArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function vitalValue(vitals: Record<string, unknown> | null | undefined, key: string) {
+  return asString(vitals?.[key]);
+}
+
 function toDraft(patient: PatientRecord): PatientDraft {
   const pregnancy = activePregnancy(patient);
   return {
@@ -65,12 +103,49 @@ function toDraft(patient: PatientRecord): PatientDraft {
   };
 }
 
+function toQueueDraft(patient: PatientRecord): QueueDraft {
+  const pregnancy = activePregnancy(patient);
+  const vitals = pregnancy?.vitalSigns;
+  return {
+    reason: (pregnancy?.visitReason as QueueDraft['reason']) || 'ANC Checkup',
+    ancVisit: pregnancy?.ancVisit || 'ANC K4 (Trimester 3)',
+    complaint: pregnancy?.chiefComplaint || '',
+    systolic: vitalValue(vitals, 'systolic'),
+    diastolic: vitalValue(vitals, 'diastolic'),
+    weight: vitalValue(vitals, 'weight') || '68.5',
+    height: vitalValue(vitals, 'height') || '158',
+    muac: vitalValue(vitals, 'muac') || '24.5',
+    fetalHeartRate: vitalValue(vitals, 'fetalHeartRate') || '142',
+    temperature: vitalValue(vitals, 'temperature') || '36.5',
+    pulse: vitalValue(vitals, 'pulse') || '88',
+    riskFactors: activeArray(pregnancy?.riskFactors),
+    routineMedication: activeArray(pregnancy?.routineMedication),
+    responsibleDoctor: pregnancy?.responsibleDoctor || 'dr. Ratna Wulandari, Sp.OG',
+  };
+}
+
+function inferPriority(patient: PatientRecord | null, draft: QueueDraft | null) {
+  if (!patient || !draft) return { level: 'LOW', minutes: 30, message: 'Complete screening to calculate queue placement.' };
+  const pregnancy = activePregnancy(patient);
+  const highRisk = pregnancy?.riskLevel === 'HIGH' || draft.reason === 'Emergency' || draft.riskFactors.some((risk) => /preeclampsia|hypertension|diabetes/i.test(risk));
+  const mediumRisk = pregnancy?.riskLevel === 'MEDIUM' || draft.riskFactors.length > 0;
+  if (highRisk) {
+    return { level: 'HIGH', minutes: 12, message: 'Patient identified as High Risk based on current screening. Recommended for Priority Queue.' };
+  }
+  if (mediumRisk) {
+    return { level: 'MEDIUM', minutes: 18, message: 'Patient has moderate risk indicators. Recommended for monitored queue placement.' };
+  }
+  return { level: 'LOW', minutes: 30, message: 'Patient screening is stable. Recommended for regular queue placement.' };
+}
+
 export function PatientsPageContent() {
   const [rows, setRows] = useState<PatientRecord[]>([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editing, setEditing] = useState<PatientRecord | null>(null);
+  const [queueing, setQueueing] = useState<PatientRecord | null>(null);
   const [draft, setDraft] = useState<PatientDraft | null>(null);
+  const [queueDraft, setQueueDraft] = useState<QueueDraft | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,15 +183,51 @@ export function PatientsPageContent() {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
-  async function queuePatient(patient: PatientRecord) {
+  function openQueue(patient: PatientRecord) {
     const pregnancy = activePregnancy(patient);
     if (!pregnancy) {
       setError('Pasien belum punya data kehamilan aktif.');
       return;
     }
+    setQueueing(patient);
+    setQueueDraft(toQueueDraft(patient));
+  }
+
+  async function queuePatient() {
+    if (!queueing || !queueDraft) return;
+    const pregnancy = activePregnancy(queueing);
+    if (!pregnancy) return;
+    const priority = inferPriority(queueing, queueDraft);
     setError(null);
     try {
-      await createQueue({ patientId: patient.id, pregnancyId: pregnancy.id });
+      await createQueue({
+        patientId: queueing.id,
+        pregnancyId: pregnancy.id,
+        assignedDoctor: queueDraft.responsibleDoctor,
+        screening: {
+          reason: queueDraft.reason,
+          complaint: queueDraft.complaint,
+          ancVisit: queueDraft.ancVisit,
+          gestationalAge: pregnancy.gestationalAge ?? undefined,
+          vitalSigns: {
+            systolic: Number(queueDraft.systolic) || undefined,
+            diastolic: Number(queueDraft.diastolic) || undefined,
+            weight: Number(queueDraft.weight) || undefined,
+            height: Number(queueDraft.height) || undefined,
+            muac: Number(queueDraft.muac) || undefined,
+            fetalHeartRate: Number(queueDraft.fetalHeartRate) || undefined,
+            temperature: Number(queueDraft.temperature) || undefined,
+            pulse: Number(queueDraft.pulse) || undefined,
+          },
+          riskFactors: queueDraft.riskFactors,
+          routineMedication: queueDraft.routineMedication,
+          responsibleDoctor: queueDraft.responsibleDoctor,
+          priority: priority.level,
+          riskSummary: { riskLevel: priority.level, message: priority.message, estimatedMinutes: priority.minutes },
+        },
+      });
+      setQueueing(null);
+      setQueueDraft(null);
       await refreshRows();
     } catch (queueError) {
       setError(queueError instanceof Error ? queueError.message : 'Gagal memasukkan pasien ke antrean');
@@ -208,7 +319,7 @@ export function PatientsPageContent() {
                     <td data-label="Action">
                       <div className={styles.actionGroup}>
                         <Link className={styles.detailButton} href={routes.patientDetail(patient.id)}>View Details</Link>
-                        <button type="button" className={styles.queueButton} onClick={() => void queuePatient(patient)}><AppIcon name="plus" width={18} height={18} />Queue</button>
+                        <button type="button" className={styles.queueButton} onClick={() => openQueue(patient)}><AppIcon name="plus" width={18} height={18} />Queue</button>
                       </div>
                     </td>
                   </tr>
@@ -228,6 +339,8 @@ export function PatientsPageContent() {
           </div>
         </footer>
       </section>
+
+      {queueing && queueDraft ? <QueueScreeningModal patient={queueing} draft={queueDraft} onChange={setQueueDraft} onClose={() => setQueueing(null)} onSubmit={() => void queuePatient()} /> : null}
 
       {editing && draft ? (
         <div className={styles.modalOverlay} role="presentation" onMouseDown={() => setEditing(null)}>
@@ -255,6 +368,89 @@ export function PatientsPageContent() {
   );
 }
 
-function EditField({ label, onChange, value }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { patient: PatientRecord; draft: QueueDraft; onChange: (draft: QueueDraft) => void; onClose: () => void; onSubmit: () => void }) {
+  const pregnancy = activePregnancy(patient);
+  const priority = inferPriority(patient, draft);
+  const initials = patient.fullName.trim().charAt(0).toUpperCase() || 'P';
+
+  function toggle(list: keyof Pick<QueueDraft, 'riskFactors' | 'routineMedication'>, value: string) {
+    const next = draft[list].includes(value) ? draft[list].filter((item) => item !== value) : [...draft[list], value];
+    onChange({ ...draft, [list]: next });
+  }
+
+  return (
+    <div className={styles.modalOverlay} role="presentation" onMouseDown={onClose}>
+      <section aria-labelledby="queue-screening-title" aria-modal="true" className={styles.queueModal} role="dialog" onMouseDown={(event) => event.stopPropagation()}>
+        <header className={styles.modalHeader}>
+          <div><h2 id="queue-screening-title">Pre-Queue Screening</h2><p>Complete today&apos;s visit data before the patient enters the queue.</p></div>
+          <button type="button" aria-label="Close pre-queue screening" className={styles.modalClose} onClick={onClose}><AppIcon name="x" width={20} height={20} /></button>
+        </header>
+        <div className={styles.patientStrip}>
+          <span className={styles.patientAvatar}>{initials}</span>
+          <div className={styles.patientSummaryText}>
+            <div className={styles.patientSummaryTitle}><strong>{patient.fullName}</strong><span>ID: {patient.id}</span></div>
+            <div className={styles.patientBadges}>
+              <span><AppIcon name="user" width={12} height={12} />{pregnancy?.gestationalAge ?? '-'} Weeks</span>
+              <span><AppIcon name="calendar" width={12} height={12} />{formatDueDate(pregnancy?.edd)}</span>
+              <span><AppIcon name="clock" width={12} height={12} />Last: {pregnancy?.ancVisit ?? '-'}</span>
+              {pregnancy?.riskLevel === 'HIGH' || priority.level === 'HIGH' ? <b>High Risk</b> : null}
+            </div>
+          </div>
+        </div>
+        <div className={styles.modalBody}>
+          <section className={styles.modalSection}>
+            <h3><span />I. Today&apos;s Visit</h3>
+            <span className={styles.fieldLabel}>Reason for Visit</span>
+            <div className={styles.reasonGrid}>
+              {reasonOptions.map((reason) => <button key={reason.label} type="button" className={[styles.reasonCard, draft.reason === reason.label ? styles.reasonActive : '', reason.danger ? styles.reasonDanger : ''].join(' ')} onClick={() => onChange({ ...draft, reason: reason.label })}>{draft.reason === reason.label ? <AppIcon className={styles.reasonCheck} name="checkCircle" width={14} height={14} /> : null}<AppIcon name={reason.icon} width={20} height={20} />{reason.label}</button>)}
+            </div>
+            <div className={styles.twoColumnFields}>
+              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>ANC Visit Type</span><select value={draft.ancVisit} onChange={(event) => onChange({ ...draft, ancVisit: event.target.value })}><option>ANC K1 (Trimester 1)</option><option>ANC K2 (Trimester 2)</option><option>ANC K3 (Trimester 3)</option><option>ANC K4 (Trimester 3)</option></select></label>
+              <EditField label="Complaint Notes (Optional)" value={draft.complaint} onChange={(value) => onChange({ ...draft, complaint: value })} />
+            </div>
+          </section>
+          <section className={styles.modalSection}>
+            <h3><span />II. Vital Signs</h3>
+            <div className={styles.vitalGrid}>
+              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>Blood Pressure (mmHg)</span><span className={styles.bpFields}><input placeholder="Sys" value={draft.systolic} onChange={(event) => onChange({ ...draft, systolic: event.target.value })} /><span>/</span><input placeholder="Dia" value={draft.diastolic} onChange={(event) => onChange({ ...draft, diastolic: event.target.value })} /></span><small>Previous visit: 130/85</small></label>
+              <EditField label="Weight (kg)" value={draft.weight} onChange={(value) => onChange({ ...draft, weight: value })} helper="Previous visit: 66.2 kg" />
+              <EditField label="Height (cm)" value={draft.height} onChange={(value) => onChange({ ...draft, height: value })} helper="BMI: 27.4 (Overweight)" strong />
+              <EditField label="MUAC (cm)" value={draft.muac} onChange={(value) => onChange({ ...draft, muac: value })} helper="Normal (>23.5cm)" good />
+              <EditField label="Fetal Heart Rate (bpm)" value={draft.fetalHeartRate} onChange={(value) => onChange({ ...draft, fetalHeartRate: value })} helper="Normal: 120-160 bpm" />
+              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>Temperature & Pulse</span><span className={styles.tempFields}><input value={draft.temperature} onChange={(event) => onChange({ ...draft, temperature: event.target.value })} /><input value={draft.pulse} onChange={(event) => onChange({ ...draft, pulse: event.target.value })} /></span></label>
+            </div>
+          </section>
+          <section className={styles.modalSection}>
+            <h3><span />III. Risk & Medication Confirmation</h3>
+            <div className={styles.confirmationGrid}>
+              <Checklist title="Detected Risk Factors" items={riskOptions} values={draft.riskFactors} tone="risk" onToggle={(item) => toggle('riskFactors', item)} />
+              <Checklist title="Routine Medication" items={medicationOptions} values={draft.routineMedication} tone="medication" onToggle={(item) => toggle('routineMedication', item)} />
+            </div>
+          </section>
+          <section className={styles.modalSection}>
+            <h3><span />IV. Assessment & Placement</h3>
+            <div className={styles.assessmentBox}>
+              <div className={styles.assessmentMain}>
+                <label className={styles.fieldGroup}><span className={styles.fieldLabel}>Attending Physician (DPJP)</span><select value={draft.responsibleDoctor} onChange={(event) => onChange({ ...draft, responsibleDoctor: event.target.value })}><option>dr. Ratna Wulandari, Sp.OG</option><option>dr. Siti Rahma, Sp.OG</option><option>dr. Ahmad Pratama, Sp.OG</option></select></label>
+                <p className={styles.riskNote}>{priority.message}</p>
+              </div>
+              <div className={styles.priorityCard}><span>Queue Priority</span><strong>{priority.level}</strong><small><AppIcon name="zap" width={12} height={12} />Estimated: {priority.minutes} Minutes</small></div>
+            </div>
+          </section>
+        </div>
+        <footer className={styles.modalFooter}>
+          <p><AppIcon name="info" width={14} height={14} />Visit data will be saved to the patient&apos;s examination history.</p>
+          <div className={styles.modalFooterActions}><button type="button" className={styles.cancelButton} onClick={onClose}>Cancel</button><button type="button" className={styles.enterQueueButton} onClick={onSubmit}><AppIcon name="plus" width={14} height={14} />Enter into Queue</button></div>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function Checklist({ items, onToggle, title, tone, values }: { title: string; items: string[]; values: string[]; tone: 'risk' | 'medication'; onToggle: (item: string) => void }) {
+  return <div className={styles.checklistGroup}><span>{title}</span><div className={styles.checklistItems}>{items.map((item) => <label key={item} className={[styles.checkItem, values.includes(item) ? tone === 'risk' ? styles.riskItem : styles.medicationItem : ''].join(' ')}><input type="checkbox" checked={values.includes(item)} onChange={() => onToggle(item)} />{item}</label>)}</div></div>;
+}
+
+function EditField({ good, helper, label, onChange, strong, value }: { label: string; value: string; onChange: (value: string) => void; helper?: string; good?: boolean; strong?: boolean }) {
+  return <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} />{helper ? <small className={good ? styles.goodHelper : strong ? styles.strongHelper : undefined}>{helper}</small> : null}</label>;
 }

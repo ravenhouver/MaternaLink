@@ -508,7 +508,23 @@ export async function upsertStok(payload: { puskesmasId: string; obatId: string;
   return apiFetch('/inputs/stok', { method: 'POST', body: JSON.stringify(payload) });
 }
 
-export async function createQueue(payload: { patientId: string; pregnancyId: string; assignedDoctor?: string }): Promise<QueueRecord> {
+export async function createQueue(payload: {
+  patientId: string;
+  pregnancyId: string;
+  assignedDoctor?: string;
+  screening?: {
+    reason?: string;
+    complaint?: string;
+    ancVisit?: string;
+    gestationalAge?: number;
+    vitalSigns?: Record<string, unknown>;
+    riskFactors?: string[];
+    routineMedication?: string[];
+    responsibleDoctor?: string;
+    priority?: string;
+    riskSummary?: Record<string, unknown>;
+  };
+}): Promise<QueueRecord> {
   return apiFetch('/queue', { method: 'POST', body: JSON.stringify(payload) });
 }
 

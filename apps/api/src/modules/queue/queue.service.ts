@@ -1,5 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { QueueStatus, UserRole } from '@prisma/client';
+import { Prisma, QueueStatus, UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateQueueDto, UpdateQueueStatusDto } from './queue.dto';
@@ -31,15 +31,58 @@ export class QueueService {
     const count = await this.prisma.patientQueue.count({ where: { puskesmasId, queuedAt: { gte: start, lt: end } } });
     const queueNo = `A-${String(count + 1).padStart(3, '0')}`;
 
-    return this.prisma.patientQueue.create({
-      data: {
-        patientId: data.patientId,
-        pregnancyId: data.pregnancyId,
-        puskesmasId,
-        queueNo,
-        assignedDoctor: data.assignedDoctor ?? user.username,
-      },
-      include: { patient: true, pregnancy: true },
+    return this.prisma.$transaction(async (tx) => {
+      const queue = await tx.patientQueue.create({
+        data: {
+          patientId: data.patientId,
+          pregnancyId: data.pregnancyId,
+          puskesmasId,
+          queueNo,
+          assignedDoctor: data.assignedDoctor ?? data.screening?.responsibleDoctor ?? user.username,
+        },
+        include: { patient: true, pregnancy: true },
+      });
+
+      if (data.screening) {
+        await tx.pregnancy.update({
+          where: { id: data.pregnancyId },
+          data: {
+            visitReason: data.screening.reason,
+            chiefComplaint: data.screening.complaint,
+            ancVisit: data.screening.ancVisit,
+            gestationalAge: data.screening.gestationalAge,
+            vitalSigns: data.screening.vitalSigns as Prisma.InputJsonValue | undefined,
+            riskFactors: data.screening.riskFactors as Prisma.InputJsonValue | undefined,
+            routineMedication: data.screening.routineMedication as Prisma.InputJsonValue | undefined,
+            responsibleDoctor: data.screening.responsibleDoctor,
+            priority: data.screening.priority,
+          },
+        });
+
+        await tx.examination.create({
+          data: {
+            patientId: data.patientId,
+            pregnancyId: data.pregnancyId,
+            queueId: queue.id,
+            puskesmasId,
+            source: 'MANUAL',
+            complaint: data.screening.complaint,
+            vitalSigns: data.screening.vitalSigns as Prisma.InputJsonValue | undefined,
+            gestationalAge: data.screening.gestationalAge,
+            ancVisit: data.screening.ancVisit,
+            medication: data.screening.routineMedication as Prisma.InputJsonValue | undefined,
+            notes: data.screening.reason,
+            riskSummary: (data.screening.riskSummary ?? { riskLevel: pregnancy.riskLevel, priority: data.screening.priority }) as Prisma.InputJsonValue,
+            createdById: user.id,
+          },
+        });
+
+        await tx.auditLog.create({
+          data: { userId: user.id, action: 'queue.screening.create', entityType: 'PatientQueue', entityId: queue.id },
+        });
+      }
+
+      return queue;
     });
   }
 
