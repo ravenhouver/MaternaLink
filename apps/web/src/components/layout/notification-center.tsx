@@ -9,6 +9,7 @@ type NotificationTone = 'critical' | 'warning' | 'success' | 'info';
 
 type NotificationItem = {
   id: string;
+  legacyIds?: string[];
   title: string;
   body: string;
   tone: NotificationTone;
@@ -26,6 +27,30 @@ function getStorageKey(userId: string) {
   return `maternalink.notifications.${storageVersion}.${userId}`;
 }
 
+function readStoredIds(storageKey: string) {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const stored = window.localStorage.getItem(storageKey);
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredIds(storageKey: string, ids: string[]) {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(ids));
+  } catch {
+    // The UI state still updates even when storage is unavailable.
+  }
+}
+
+function isItemRead(item: NotificationItem, readIds: string[]) {
+  return [item.id, ...(item.legacyIds ?? [])].some((id) => readIds.includes(id));
+}
+
 function formatTime(value?: string) {
   if (!value) return 'Baru saja';
   return new Date(value).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
@@ -35,23 +60,23 @@ function buildSummaryItems(summary: DashboardSummary): NotificationItem[] {
   const items: NotificationItem[] = [];
 
   if (summary.queue?.waiting) {
-    items.push({ id: `queue-waiting-${summary.queue.waiting}`, title: 'Antrean pasien menunggu', body: `${summary.queue.waiting} pasien perlu dipanggil atau diproses.`, tone: 'info', time: 'Hari ini' });
+    items.push({ id: 'queue-waiting', legacyIds: [`queue-waiting-${summary.queue.waiting}`], title: 'Antrean pasien menunggu', body: `${summary.queue.waiting} pasien perlu dipanggil atau diproses.`, tone: 'info', time: 'Hari ini' });
   }
 
   if (summary.medicine?.criticalCount) {
-    items.push({ id: `medicine-critical-${summary.medicine.criticalCount}`, title: 'Stok obat kritis', body: `${summary.medicine.criticalCount} item obat butuh perhatian.`, tone: 'critical', time: 'Hari ini' });
+    items.push({ id: 'medicine-critical', legacyIds: [`medicine-critical-${summary.medicine.criticalCount}`], title: 'Stok obat kritis', body: `${summary.medicine.criticalCount} item obat butuh perhatian.`, tone: 'critical', time: 'Hari ini' });
   }
 
   if (summary.recommendations?.pending) {
-    items.push({ id: `recommendation-pending-${summary.recommendations.pending}`, title: 'Rekomendasi menunggu review', body: `${summary.recommendations.pending} rekomendasi distribusi belum diputuskan.`, tone: 'warning', time: 'Hari ini' });
+    items.push({ id: 'recommendation-pending', legacyIds: [`recommendation-pending-${summary.recommendations.pending}`], title: 'Rekomendasi menunggu review', body: `${summary.recommendations.pending} rekomendasi distribusi belum diputuskan.`, tone: 'warning', time: 'Hari ini' });
   }
 
   if (summary.deliveries?.active) {
-    items.push({ id: `delivery-active-${summary.deliveries.active}`, title: 'Pengiriman aktif', body: `${summary.deliveries.active} pengiriman sedang berjalan.`, tone: 'success', time: 'Hari ini' });
+    items.push({ id: 'delivery-active', legacyIds: [`delivery-active-${summary.deliveries.active}`], title: 'Pengiriman aktif', body: `${summary.deliveries.active} pengiriman sedang berjalan.`, tone: 'success', time: 'Hari ini' });
   }
 
   if (summary.masterData?.inactiveAccounts) {
-    items.push({ id: `inactive-accounts-${summary.masterData.inactiveAccounts}`, title: 'Akun tidak aktif', body: `${summary.masterData.inactiveAccounts} akun perlu ditinjau super admin.`, tone: 'warning', time: 'Hari ini' });
+    items.push({ id: 'inactive-accounts', legacyIds: [`inactive-accounts-${summary.masterData.inactiveAccounts}`], title: 'Akun tidak aktif', body: `${summary.masterData.inactiveAccounts} akun perlu ditinjau super admin.`, tone: 'warning', time: 'Hari ini' });
   }
 
   return items;
@@ -83,17 +108,12 @@ export function NotificationCenter({ user, buttonClassName }: NotificationCenter
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
   const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
-  const [readIds, setReadIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const storageKey = getStorageKey(user.id);
+  const [readIds, setReadIds] = useState<string[]>(() => readStoredIds(storageKey));
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(storageKey);
-      setReadIds(stored ? JSON.parse(stored) as string[] : []);
-    } catch {
-      setReadIds([]);
-    }
+    setReadIds(readStoredIds(storageKey));
   }, [storageKey]);
 
   useEffect(() => {
@@ -134,12 +154,12 @@ export function NotificationCenter({ user, buttonClassName }: NotificationCenter
     return [...buildAlertItems(alerts), ...buildRecommendationItems(recommendations), ...summaryItems].slice(0, 8);
   }, [alerts, recommendations, summary]);
 
-  const unreadCount = items.filter((item) => !readIds.includes(item.id)).length;
+  const unreadCount = items.filter((item) => !isItemRead(item, readIds)).length;
 
   const markAllRead = () => {
     const nextReadIds = Array.from(new Set([...readIds, ...items.map((item) => item.id)]));
     setReadIds(nextReadIds);
-    window.localStorage.setItem(storageKey, JSON.stringify(nextReadIds));
+    writeStoredIds(storageKey, nextReadIds);
   };
 
   return (
@@ -162,7 +182,7 @@ export function NotificationCenter({ user, buttonClassName }: NotificationCenter
           {items.length ? (
             <div className={styles.list}>
               {items.map((item) => {
-                const isUnread = !readIds.includes(item.id);
+                const isUnread = !isItemRead(item, readIds);
                 return (
                   <article className={[styles.item, styles[item.tone], isUnread ? styles.unread : ''].filter(Boolean).join(' ')} key={item.id}>
                     <span className={styles.dot} />
