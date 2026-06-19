@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { getCurrentUser, getDashboardSummary, getQueue, getRecommendations, type CurrentUser, type DashboardSummary } from '@/lib/api';
+import { NotificationCenter } from '@/components/layout/notification-center';
+import { getCurrentUser, getDashboardSummary, getPuskesmas, getQueue, getRecommendations, type CurrentUser, type DashboardSummary } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { buildDashboardActivities, getDashboardAttentionCount, type DashboardActivity } from './dashboard-activities';
 import styles from './dashboard.module.css';
@@ -25,25 +26,50 @@ type QuickAction = {
 };
 
 const quickActions: QuickAction[] = [
-  { label: 'New Patient', icon: 'users', href: routes.newPatient },
-  { label: 'Calendar', icon: 'calendar', href: routes.forecastCalendar },
-  { label: 'Add Medicines', icon: 'plus', href: routes.medicineNeeds },
-  { label: 'Delivering', icon: 'package', href: routes.deliveries },
+  { label: 'Pasien Baru', icon: 'users', href: routes.newPatient },
+  { label: 'Kalender Prediksi', icon: 'calendar', href: routes.forecastCalendar },
+  { label: 'Kebutuhan Obat', icon: 'plus', href: routes.medicineNeeds },
+  { label: 'Pengiriman', icon: 'package', href: routes.deliveries },
 ];
+
+function getAlertHref(summary: DashboardSummary | null) {
+  if (!summary) return routes.patients;
+  if (summary.role === 'IFK_ADMIN') return routes.ifkRecommendations;
+  if ((summary.queue?.waiting ?? 0) + (summary.queue?.examining ?? 0) > 0) return routes.queue;
+  if ((summary.medicine?.criticalCount ?? 0) > 0) return routes.medicineNeeds;
+  return routes.patients;
+}
+
+function getAlertCopy(summary: DashboardSummary | null) {
+  if (!summary) return 'Memuat ringkasan aktivitas puskesmas.';
+  if (summary.role === 'IFK_ADMIN') return 'Tinjau rekomendasi distribusi yang masih menunggu keputusan.';
+  if ((summary.queue?.waiting ?? 0) + (summary.queue?.examining ?? 0) > 0) return 'Proses pasien yang sedang menunggu atau dalam pemeriksaan.';
+  if ((summary.medicine?.criticalCount ?? 0) > 0) return 'Periksa kebutuhan obat yang sudah masuk ambang kritis.';
+  return 'Belum ada item prioritas; lanjutkan pemantauan pasien dan stok.';
+}
 
 export function DashboardContent() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [clinicName, setClinicName] = useState<string>('Puskesmas');
   const [activities, setActivities] = useState<DashboardActivity[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([getDashboardSummary(), getCurrentUser(), getQueue().catch(() => []), getRecommendations().catch(() => [])])
-      .then(([nextSummary, nextUser, queueRows, recommendations]) => {
+    Promise.all([getDashboardSummary(), getCurrentUser()])
+      .then(async ([nextSummary, nextUser]) => {
+        const isBidan = nextSummary.role === 'BIDAN_PUSKESMAS';
+        const [queueRows, recommendations, puskesmasRows] = await Promise.all([
+          isBidan ? getQueue({ puskesmasId: nextUser?.puskesmasId ?? undefined }).catch(() => []) : Promise.resolve([]),
+          nextSummary.role === 'IFK_ADMIN' ? getRecommendations().catch(() => []) : Promise.resolve([]),
+          isBidan && nextUser?.puskesmasId ? getPuskesmas().catch(() => []) : Promise.resolve([]),
+        ]);
         if (!mounted) return;
         setSummary(nextSummary);
         setUser(nextUser);
+        const puskesmas = puskesmasRows.find((row) => row.id === nextUser?.puskesmasId);
+        setClinicName(puskesmas?.nama ?? nextUser?.puskesmasId ?? 'Puskesmas');
         setActivities(buildDashboardActivities(queueRows, recommendations));
       })
       .catch((loadError) => {
@@ -63,46 +89,51 @@ export function DashboardContent() {
       ];
     }
     return [
-      { label: 'Total Registered Patients', value: String(summary?.patients?.total ?? 0), tag: 'Database', icon: 'users', accent: '#1a73e8' },
-      { label: 'Waiting Queue', value: String(summary?.queue?.waiting ?? 0), tag: 'Today', icon: 'calendar', accent: '#006948' },
-      { label: 'In Examination', value: String(summary?.queue?.examining ?? 0), tag: 'Active', icon: 'clipboard', accent: '#a33d23' },
-      { label: 'Medications To Restock', value: String(summary?.medicine?.criticalCount ?? 0), tag: 'Critical', icon: 'package', accent: '#f59e0b' },
+      { label: 'Total Pasien Terdaftar', value: String(summary?.patients?.total ?? 0), tag: 'Data Pasien', icon: 'users', accent: '#1a73e8' },
+      { label: 'Antrean Menunggu', value: String(summary?.queue?.waiting ?? 0), tag: 'Antrean', icon: 'calendar', accent: '#006948' },
+      { label: 'Sedang Diperiksa', value: String(summary?.queue?.examining ?? 0), tag: 'Aktif', icon: 'clipboard', accent: '#a33d23' },
+      { label: 'Obat Perlu Restok', value: String(summary?.medicine?.criticalCount ?? 0), tag: 'Kritis', icon: 'package', accent: '#f59e0b' },
     ];
   }, [summary]);
 
   const attentionCount = getDashboardAttentionCount(summary);
+  const alertHref = getAlertHref(summary);
+  const clinicInitials = clinicName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join('') || 'PKM';
 
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h1>Welcome, {user?.displayName ?? user?.username ?? 'User'}</h1>
-          <p>{summary?.role === 'IFK_ADMIN' ? 'IFK distribution report from live data' : 'Puskesmas activity report from live data'}</p>
+          <h1>Selamat datang, {user?.displayName ?? user?.username ?? 'Bidan'}</h1>
+          <p>{summary?.role === 'IFK_ADMIN' ? 'Ringkasan distribusi IFK dari data terbaru.' : `Ringkasan aktivitas ${clinicName} dari data terbaru.`}</p>
         </div>
         <div className={styles.headerActions}>
-          <button type="button" className={styles.bellButton} aria-label="Notifications">
-            <AppIcon name="bell" width={20} height={20} />
-          </button>
-          <button type="button" className={styles.clinicPill} aria-label="Current clinic: Sejahtera Clinic">
-            <span>{user?.puskesmasId ?? 'IFK'}</span>
-            <strong>{summary?.role === 'IFK_ADMIN' ? 'IFK' : 'PKM'}</strong>
-          </button>
+          {user ? <NotificationCenter user={user} buttonClassName={styles.bellButton} /> : null}
+          <div className={styles.clinicPill} aria-label={`Puskesmas aktif: ${clinicName}`}>
+            <span>{summary?.role === 'IFK_ADMIN' ? 'IFK' : clinicName}</span>
+            <strong>{summary?.role === 'IFK_ADMIN' ? 'IFK' : clinicInitials}</strong>
+          </div>
         </div>
       </header>
 
       {error ? <p className={styles.dashboardError}>{error}</p> : null}
 
-      <section className={styles.alertBanner} aria-label="Delivery date alert">
+      <section className={styles.alertBanner} aria-label="Ringkasan item prioritas">
         <div className={styles.alertCopy}>
           <span className={styles.alertIcon}>
             <AppIcon name="alert" width={28} height={28} />
           </span>
           <div>
-            <h2>{attentionCount} items need attention</h2>
-            <p>{summary?.role === 'IFK_ADMIN' ? 'Review pending distribution recommendations.' : 'Check queue and medication availability now.'}</p>
+            <h2>{attentionCount} item perlu perhatian</h2>
+            <p>{getAlertCopy(summary)}</p>
           </div>
         </div>
-        <button type="button" className={styles.alertButton}>Check Now</button>
+        <Link href={alertHref} className={styles.alertButton}>Cek Sekarang</Link>
       </section>
 
       <section className={styles.statsGrid} aria-label="Dashboard metrics">
@@ -120,7 +151,7 @@ export function DashboardContent() {
 
       <section className={styles.lowerGrid}>
         <div className={styles.quickColumn}>
-          <h2 className={styles.sectionTitle}><AppIcon name="zap" width={18} height={18} />Quick Actions</h2>
+          <h2 className={styles.sectionTitle}><AppIcon name="zap" width={18} height={18} />Aksi Cepat</h2>
           <div className={styles.quickGrid}>
             {quickActions.map((action) => (
               <Link href={action.href} className={styles.quickAction} key={action.label}>
@@ -133,13 +164,13 @@ export function DashboardContent() {
 
         <div className={styles.activityColumn}>
           <div className={styles.activityHeader}>
-            <h2 className={styles.sectionTitle}>Recent Activity</h2>
-            <button type="button">View All</button>
+            <h2 className={styles.sectionTitle}>Aktivitas Terkini</h2>
+            <Link href={routes.queue}>Lihat Semua</Link>
           </div>
           <div className={styles.activityCard}>
-            {activities.length === 0 ? <button type="button" className={styles.activityRow}><span className={[styles.activityIcon, styles.blue].join(' ')}><AppIcon name="clipboard" width={22} height={22} /></span><span className={styles.activityText}><span><strong>No activity</strong> - database kosong</span><small>Tambah pasien atau rekomendasi untuk melihat aktivitas.</small></span></button> : null}
+            {activities.length === 0 ? <div className={styles.activityRow}><span className={[styles.activityIcon, styles.blue].join(' ')}><AppIcon name="clipboard" width={22} height={22} /></span><span className={styles.activityText}><span><strong>Belum ada aktivitas</strong></span><small>Aktivitas antrean pasien akan tampil di sini.</small></span></div> : null}
             {activities.map((activity) => (
-              <button type="button" className={styles.activityRow} key={activity.key}>
+              <Link href={activity.href} className={styles.activityRow} key={activity.key}>
                 <span className={[styles.activityIcon, styles[activity.tone]].join(' ')}>
                   <AppIcon name={activity.icon} width={22} height={22} />
                 </span>
@@ -148,15 +179,15 @@ export function DashboardContent() {
                   <small>{activity.meta}</small>
                 </span>
                 <AppIcon name="chevronRight" width={18} height={18} />
-              </button>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      <button type="button" className={styles.fab} aria-label="Tambah data">
+      <Link href={routes.newPatient} className={styles.fab} aria-label="Tambah pasien">
         <AppIcon name="plus" width={28} height={28} />
-      </button>
+      </Link>
     </PageContainer>
   );
 }

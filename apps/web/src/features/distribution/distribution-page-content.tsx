@@ -152,31 +152,6 @@ function averageDeliveryDuration(shipments: Shipment[]) {
   return durations.reduce((total, value) => total + value, 0) / durations.length;
 }
 
-function csvCell(value: unknown) {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
-}
-
-function downloadShipmentsCsv(shipments: Shipment[]) {
-  const header = ['ID', 'Medicine', 'Quantity', 'Status', 'Puskesmas', 'Period', 'Latest Tracking'];
-  const rows = shipments.map((shipment) => [
-    shipment.id,
-    shipment.medicine,
-    shipment.quantity,
-    shipment.statusLabel,
-    shipment.source.puskesmas?.nama ?? '-',
-    formatDate(shipment.source.periode),
-    shipment.statusMeta,
-  ]);
-  const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `deliveries-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 function printShipmentsReport(shipments: Shipment[], analytics: { activeShipments: number; averageDuration: string; completionRate: string; totalItems: number }) {
   const rows = shipments.map((shipment) => `<tr><td>${shipment.id}</td><td>${shipment.medicine}</td><td>${shipment.quantity}</td><td>${shipment.statusLabel}</td><td>${shipment.source.puskesmas?.nama ?? '-'}</td><td>${shipment.statusMeta}</td></tr>`).join('');
   const popup = window.open('', '_blank', 'width=960,height=720');
@@ -262,10 +237,6 @@ export function DistributionPageContent() {
           <h1>Medicine Shipping</h1>
           <p>Monitor the status of medicine requests and shipments to your health center</p>
         </div>
-        <button type="button" className={styles.exportButton} onClick={() => downloadShipmentsCsv(recommendations.map(mapRecommendation))}>
-          <AppIcon name="upload" width={16} height={16} />
-          Export
-        </button>
         <button type="button" className={styles.exportButton} onClick={() => printShipmentsReport(recommendations.map(mapRecommendation), analytics)}>
           <AppIcon name="fileText" width={16} height={16} />
           Print Report

@@ -55,15 +55,15 @@
 }
 
 .bellButton,
-.clinicPill,
 .alertButton,
 .quickAction,
-.activityHeader button,
+.activityHeader a,
 .activityRow,
 .fab {
   border: 0;
   font-family: inherit;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .bellButton {
@@ -300,12 +300,13 @@
   gap: 16px;
 }
 
-.activityHeader button {
+.activityHeader a {
   background: transparent;
   color: #1a73e8;
   font-size: 14px;
   font-weight: 700;
   line-height: 20px;
+  text-decoration: none;
 }
 
 .activityCard {
@@ -326,6 +327,11 @@
   background: #ffffff;
   color: #cbd5e1;
   text-align: left;
+  text-decoration: none;
+}
+
+div.activityRow {
+  cursor: default;
 }
 
 .activityRow:first-child {
@@ -405,18 +411,20 @@
 }
 
 .bellButton:hover,
-.clinicPill:hover,
 .quickAction:hover,
 .activityRow:hover,
 .fab:hover {
   transform: translateY(-1px);
 }
 
+div.activityRow:hover {
+  transform: none;
+}
+
 .bellButton:focus-visible,
-.clinicPill:focus-visible,
 .alertButton:focus-visible,
 .quickAction:focus-visible,
-.activityHeader button:focus-visible,
+.activityHeader a:focus-visible,
 .activityRow:focus-visible,
 .fab:focus-visible {
   outline: 3px solid rgb(26 115 232 / 0.28);

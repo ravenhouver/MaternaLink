@@ -1,5 +1,6 @@
 import type { AppIconName } from '@/components/ui/app-icon';
 import type { DashboardSummary, DistributionRecommendation, QueueRecord } from '@/lib/api';
+import { routes } from '@/lib/routes';
 
 export type DashboardActivity = {
   key: string;
@@ -8,6 +9,14 @@ export type DashboardActivity = {
   meta: string;
   icon: AppIconName;
   tone: 'blue' | 'green' | 'red';
+  href: string;
+};
+
+const queueStatusLabels: Record<QueueRecord['status'], string> = {
+  WAITING: 'Menunggu Pemeriksaan',
+  EXAMINING: 'Sedang Diperiksa',
+  COMPLETED: 'Pemeriksaan Selesai',
+  CANCELLED: 'Antrian Dibatalkan',
 };
 
 export function buildDashboardActivities(
@@ -18,10 +27,11 @@ export function buildDashboardActivities(
     ...queueRows.slice(0, 2).map((row): DashboardActivity => ({
       key: `queue-${row.id}`,
       name: row.patient.fullName,
-      title: `Queue ${row.status}`,
+      title: queueStatusLabels[row.status],
       meta: `${row.queueNo} - ${new Date(row.queuedAt).toLocaleString('id-ID')}`,
       icon: 'clipboard',
       tone: row.status === 'WAITING' ? 'blue' : 'green',
+      href: routes.patientDetail(row.patient.id),
     })),
     ...recommendations.slice(0, 2).map((row): DashboardActivity => ({
       key: `recommendation-${row.id}`,
@@ -30,6 +40,7 @@ export function buildDashboardActivities(
       meta: row.justification ?? row.source,
       icon: row.urgency === 'CRITICAL' ? 'alert' : 'package',
       tone: row.urgency === 'CRITICAL' ? 'red' : 'green',
+      href: routes.ifkRecommendations,
     })),
   ];
 }
