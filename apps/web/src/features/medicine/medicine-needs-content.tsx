@@ -35,7 +35,7 @@ function isMedicationRow(row: MedicationRow | null | undefined): row is Medicati
 }
 
 export function MedicineNeedsContent() {
-  const [activeModal, setActiveModal] = useState<'edit' | 'shipment' | 'upload' | null>(null);
+  const [activeModal, setActiveModal] = useState<'edit' | 'shipment' | null>(null);
   const [rows, setRows] = useState<MedicationRow[]>([]);
   const [obatRows, setObatRows] = useState<ObatRecord[]>([]);
   const [selectedMedication, setSelectedMedication] = useState<MedicationRow | null>(null);
@@ -138,13 +138,6 @@ export function MedicineNeedsContent() {
       </header>
 
       <section className={styles.inputCard} aria-label="Update medication stock">
-        <button type="button" className={styles.uploadBox} onClick={() => setActiveModal('upload')}>
-          <AppIcon name="fileText" width={18} height={18} />
-          Upload Medication List Document
-        </button>
-
-        <div className={styles.divider}><span>Or</span></div>
-
         <div className={styles.formGrid}>
           <label className={styles.fieldGroup}>
             <span>Medication Name</span>
@@ -245,7 +238,6 @@ export function MedicineNeedsContent() {
 
       {activeModal === 'edit' && selectedMedication ? <EditStockModal item={selectedMedication} onClose={closeModal} onSave={saveMedicationStock} /> : null}
       {activeModal === 'shipment' && selectedMedication ? <RequestShipmentModal item={selectedMedication} onClose={closeModal} onUnavailable={explainUnavailable} /> : null}
-      {activeModal === 'upload' ? <UploadMedicationModal onClose={closeModal} onUnavailable={explainUnavailable} /> : null}
     </PageContainer>
   );
 }
@@ -343,47 +335,3 @@ function RequestShipmentModal({ item, onClose, onUnavailable }: { item: Medicati
   );
 }
 
-function UploadMedicationModal({ onClose, onUnavailable }: { onClose: () => void; onUnavailable: (feature: string) => void }) {
-  return (
-    <ModalShell>
-      <section className={styles.uploadModal} role="dialog" aria-modal="true" aria-labelledby="upload-title">
-        <header className={styles.uploadModalHeader}>
-          <h2 id="upload-title">Upload &amp; Extract Document</h2>
-          <ModalCloseButton onClose={onClose} />
-        </header>
-        <div className={styles.uploadModalBody}>
-          <section className={styles.uploadStep}>
-            <h3>Step 1: Upload Integration</h3>
-            <div className={styles.uploadSuccessCard}>
-              <span><AppIcon name="fileText" width={24} height={24} /></span>
-              <div><strong>Document upload belum tersambung backend</strong><small>Gunakan input stok manual untuk data tersimpan.</small></div>
-              <AppIcon name="info" width={24} height={24} />
-            </div>
-          </section>
-          <section className={styles.uploadStep}>
-            <div className={styles.stepHeader}><h3>Step 2: Extraction</h3><strong>0%</strong></div>
-            <div className={styles.progressTrack}><span style={{ width: 0 }} /></div>
-            <em>Extraction service is not connected in this batch.</em>
-          </section>
-          <section className={styles.uploadStep}>
-            <div className={styles.stepHeader}><h3>Step 3: Extraction Result</h3><b>AI Assisted</b></div>
-            <div className={styles.extractTableWrap}>
-              <table className={styles.extractTable}>
-                <thead><tr><th>Medication Name</th><th>Total</th></tr></thead>
-                <tbody>
-                  <tr><td>Oxytocin</td><td>50 units</td></tr>
-                  <tr><td>MgSO4</td><td>18 units</td></tr>
-                  <tr><td>Tablet Fe</td><td>5 units</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-        <footer className={styles.uploadFooter}>
-          <button type="button" className={styles.modalGhostButton} onClick={onClose}>Cancel</button>
-          <button type="button" className={styles.modalPrimaryButton} onClick={() => { onClose(); onUnavailable('Document extraction'); }}>Confirm &amp; Enter into Form</button>
-        </footer>
-      </section>
-    </ModalShell>
-  );
-}

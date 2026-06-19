@@ -15,15 +15,6 @@ const methods = [
     icon: 'edit' as const,
     action: 'Start Typing',
   },
-  {
-    key: 'upload',
-    title: 'Upload KIA Book Photo',
-    subtitle: 'AI helps read the photo, you check the result',
-    description: 'Just upload a photo of the KIA book. The system will automatically extract information and fill the form for you—you just need to verify.',
-    icon: 'camera' as const,
-    action: 'Capture / Upload Photo',
-    featured: true,
-  },
 ];
 
 export function AddPatientMethodContent() {
@@ -36,10 +27,9 @@ export function AddPatientMethodContent() {
 
       <section className={styles.methodGrid} aria-label="Patient registration methods">
         {methods.map((method) => (
-          <article className={`${styles.methodCard} ${method.featured ? styles.featuredMethod : ''}`} key={method.key}>
+          <article className={styles.methodCard} key={method.key}>
             <div className={styles.methodTopline}>
               <span className={styles.methodIcon}><AppIcon name={method.icon} width={26} height={26} /></span>
-              {method.featured ? <span className={styles.popularPill}>Popular</span> : null}
             </div>
 
             <div className={styles.methodCopy}>
@@ -48,17 +38,10 @@ export function AddPatientMethodContent() {
               <p>{method.description}</p>
             </div>
 
-            {method.featured ? (
-              <Link href={routes.kiaUpload} className={styles.methodAction}>
-                <AppIcon name="camera" width={20} height={20} />
-                {method.action}
-              </Link>
-            ) : (
-              <Link href={routes.manualPatient} className={styles.methodAction}>
-                {method.action}
-                <AppIcon name="arrowRight" width={14} height={14} />
-              </Link>
-            )}
+            <Link href={routes.manualPatient} className={styles.methodAction}>
+              {method.action}
+              <AppIcon name="arrowRight" width={14} height={14} />
+            </Link>
           </article>
         ))}
       </section>

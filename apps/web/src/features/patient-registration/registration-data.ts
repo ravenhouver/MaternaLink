@@ -1,7 +1,7 @@
 import type { AppIconName } from '@/components/ui/app-icon';
 
 export type InputMethod = {
-  key: 'manual' | 'photo' | 'voice';
+  key: 'manual' | 'voice';
   title: string;
   subtitle: string;
   description: string;
@@ -22,16 +22,6 @@ export const inputMethods: InputMethod[] = [
     visual: 'softOrb',
     button: 'Mulai Mengetik',
     buttonIcon: 'arrowRight',
-  },
-  {
-    key: 'photo',
-    title: 'Upload Foto KIA',
-    subtitle: 'AI bantu baca foto, kamu cek hasilnya',
-    description: 'Cukup unggah foto buku KIA. Sistem AI kami akan mengekstraksi informasi secara otomatis.',
-    icon: 'camera',
-    button: 'Ambil Foto',
-    buttonIcon: 'upload',
-    featured: true,
   },
   {
     key: 'voice',

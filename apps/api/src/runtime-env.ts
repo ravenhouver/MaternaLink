@@ -9,8 +9,6 @@ const API_ENV_KEYS = new Set([
   'AI_SERVICE_BASE_URL',
   'AI_SERVICE_TIMEOUT_MS',
   'AI_LAYER2_TIMEOUT_MS',
-  'KIA_OCR_SERVICE_URL',
-  'KIA_OCR_TIMEOUT_MS',
   'SPEECH_STT_SERVICE_URL',
   'SPEECH_STT_TIMEOUT_MS',
   'PORT',
@@ -24,8 +22,6 @@ const ROOT_ENV_KEYS = new Set([
   'AI_SERVICE_BASE_URL',
   'AI_SERVICE_TIMEOUT_MS',
   'AI_LAYER2_TIMEOUT_MS',
-  'KIA_OCR_SERVICE_URL',
-  'KIA_OCR_TIMEOUT_MS',
   'SPEECH_STT_SERVICE_URL',
   'SPEECH_STT_TIMEOUT_MS',
   'SESSION_COOKIE_SECURE',
@@ -67,8 +63,6 @@ export function loadRuntimeEnv() {
   process.env.AI_SERVICE_BASE_URL ??= 'https://azrilfahmiardi-maternalink-ai.hf.space';
   process.env.AI_SERVICE_TIMEOUT_MS ??= '30000';
   process.env.AI_LAYER2_TIMEOUT_MS ??= '600000';
-  process.env.KIA_OCR_SERVICE_URL ??= 'http://localhost:8001';
-  process.env.KIA_OCR_TIMEOUT_MS ??= '60000';
   process.env.SPEECH_STT_SERVICE_URL ??= 'http://localhost:8002';
   process.env.SPEECH_STT_TIMEOUT_MS ??= '120000';
 }

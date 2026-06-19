@@ -14,8 +14,6 @@ services:
       AI_MODE: remote
       AI_SERVICE_TIMEOUT_MS: 30000
       AI_LAYER2_TIMEOUT_MS: 600000
-      KIA_OCR_SERVICE_URL: http://kia-ocr:8001
-      KIA_OCR_TIMEOUT_MS: 60000
       SPEECH_STT_SERVICE_URL: http://speech-stt:8002
       SPEECH_STT_TIMEOUT_MS: 120000
       RUN_SEED: "true"
@@ -30,18 +28,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      kia-ocr:
-        condition: service_started
       speech-stt:
         condition: service_started
-    restart: unless-stopped
-
-  kia-ocr:
-    build:
-      context: .
-      dockerfile: services/kia-ocr/Dockerfile
-    ports:
-      - "8001:8001"
     restart: unless-stopped
 
   speech-stt:

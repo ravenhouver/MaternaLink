@@ -10,7 +10,6 @@ export const routes = {
   patientDetail: (id: string) => `/patients/${encodeURIComponent(id)}`,
   newPatient: '/patients/new',
   manualPatient: '/patients/new/manual',
-  kiaUpload: '/patients/new/kia-upload',
   queue: '/queue',
   examination: '/queue/examination',
   forecastCalendar: '/forecast-calendar',

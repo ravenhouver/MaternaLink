@@ -220,7 +220,7 @@ function PersonalInfoTab({ patient, pregnancy }: { patient: PatientRecord; pregn
         <InfoCard title="Main Identity">
           <div className={styles.infoGrid}>
             <KeyValue label="Full Name" value={patient.fullName} />
-            <KeyValue label="NIK" value={patient.nik} badge="From KIA" />
+            <KeyValue label="NIK" value={patient.nik} />
             <KeyValue label="Date of Birth" value={formatDate(patient.dateOfBirth)} />
             <KeyValue label="Phone Number" value={patient.phone ?? '-'} />
             <KeyValue label="Address" value={patient.address ?? '-'} wide />

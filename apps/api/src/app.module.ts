@@ -6,7 +6,6 @@ import { ExaminationsModule } from './modules/examinations/examinations.module';
 import { ForecastModule } from './modules/forecast/forecast.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { InputsModule } from './modules/inputs/inputs.module';
-import { KiaModule } from './modules/kia/kia.module';
 import { LplpoModule } from './modules/lplpo/lplpo.module';
 import { MasterModule } from './modules/master/master.module';
 import { PatientsModule } from './modules/patients/patients.module';
@@ -16,6 +15,6 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, AiModule, MasterModule, PatientsModule, QueueModule, ExaminationsModule, InputsModule, ForecastModule, LplpoModule, DistributionModule, WorkflowModule, DashboardModule, KiaModule, SpeechModule],
+  imports: [PrismaModule, AuthModule, AiModule, MasterModule, PatientsModule, QueueModule, ExaminationsModule, InputsModule, ForecastModule, LplpoModule, DistributionModule, WorkflowModule, DashboardModule, SpeechModule],
 })
 export class AppModule {}

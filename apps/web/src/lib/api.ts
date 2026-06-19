@@ -230,26 +230,6 @@ export type ObatRecord = {
 export type KondisiRecord = { id: string; nama: string; deskripsi?: string | null };
 export type GejalaRecord = { id: string; nama: string; deskripsi?: string | null };
 
-export type KiaExtractionResult = {
-  fullName?: string | null;
-  nik?: string | null;
-  dateOfBirth?: string | null;
-  address?: string | null;
-  phone?: string | null;
-  bloodType?: string | null;
-  lmp?: string | null;
-  edd?: string | null;
-  gestationalAge?: number | null;
-  ancVisit?: string | null;
-  gravida?: number | null;
-  para?: number | null;
-  abortus?: number | null;
-  riskFactors?: string[];
-  rawText?: string;
-  confidence: Record<string, number>;
-  needsReview: boolean;
-};
-
 export type SpeechTranscriptionResult = {
   transcript: string;
   language: string;
@@ -495,12 +475,6 @@ export async function getUsers(): Promise<AdminUserRecord[]> {
 
 export async function createPatient(payload: CreatePatientPayload): Promise<{ patient: PatientRecord; pregnancy: PregnancyRecord }> {
   return apiFetch('/patients', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Pasien berhasil dibuat', errorMessage: 'Gagal membuat pasien' });
-}
-
-export async function extractKiaBook(file: File): Promise<KiaExtractionResult> {
-  const form = new FormData();
-  form.append('file', file);
-  return apiFetch('/kia/extract', { method: 'POST', body: form, successMessage: 'Buku KIA berhasil diproses', errorMessage: 'Gagal memproses Buku KIA' });
 }
 
 export async function transcribeSpeech(file: Blob): Promise<SpeechTranscriptionResult> {

@@ -5,19 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
-import { createPatient, createQueue, getCurrentUser, type KiaExtractionResult, type PregnancyRiskLevel } from '@/lib/api';
+import { createPatient, createQueue, getCurrentUser, type PregnancyRiskLevel } from '@/lib/api';
 import { routes } from '@/lib/routes';
-import { kiaExtractionStorageKey } from './kia-extraction-storage';
 import styles from './patient-registration.module.css';
 
-type ManualStage = 'manual-personal' | 'autofill-personal' | 'pregnancy' | 'screening';
-type ManualEntryMode = 'manual' | 'kia';
+type ManualStage = 'manual-personal' | 'pregnancy' | 'screening';
 type RequiredPersonalField = 'address' | 'dateOfBirth' | 'emergencyName' | 'emergencyPhone' | 'fullName' | 'nik' | 'phone';
 type RequiredPregnancyField = 'ancVisit' | 'emergencySigns' | 'pregnancyType' | 'visitReason';
 type RequiredField = RequiredPersonalField | RequiredPregnancyField;
 
 const manualStages: ManualStage[] = ['manual-personal', 'pregnancy', 'screening'];
-const kiaStages: ManualStage[] = ['autofill-personal', 'pregnancy', 'screening'];
 
 const stepLabels = ['Personal Data', 'Pregnancy Data', 'Screening & Risk'];
 
@@ -125,28 +122,6 @@ const emptyForm: ManualRegistrationForm = {
   responsibleDoctor: '',
   riskLevel: 'LOW',
 };
-
-const kiaExtractedForm: ManualRegistrationForm = emptyForm;
-
-function applyKiaExtraction(current: ManualRegistrationForm, extraction: KiaExtractionResult): ManualRegistrationForm {
-  return {
-    ...current,
-    address: extraction.address ?? current.address,
-    abortus: extraction.abortus != null ? String(extraction.abortus) : current.abortus,
-    ancVisit: extraction.ancVisit ?? current.ancVisit,
-    bloodType: extraction.bloodType ?? current.bloodType,
-    dateOfBirth: extraction.dateOfBirth ?? current.dateOfBirth,
-    edd: extraction.edd ?? current.edd,
-    fullName: extraction.fullName ?? current.fullName,
-    gestationalAge: extraction.gestationalAge != null ? String(extraction.gestationalAge) : current.gestationalAge,
-    gravida: extraction.gravida != null ? String(extraction.gravida) : current.gravida,
-    lmp: extraction.lmp ?? current.lmp,
-    nik: extraction.nik ?? current.nik,
-    para: extraction.para != null ? String(extraction.para) : current.para,
-    phone: extraction.phone ?? current.phone,
-    riskFactors: extraction.riskFactors?.length ? extraction.riskFactors : current.riskFactors,
-  };
-}
 
 function toOptionalNumber(value: string) {
   return value.trim() ? Number(value) : undefined;
@@ -292,16 +267,16 @@ function getPregnancyValidationErrors(form: ManualRegistrationForm) {
   return errors;
 }
 
-export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntryMode }) {
+export function ManualEntryFlowContent() {
   const router = useRouter();
-  const stages = mode === 'kia' ? kiaStages : manualStages;
-  const [stage, setStage] = useState<ManualStage>(mode === 'kia' ? 'autofill-personal' : 'manual-personal');
-  const [form, setForm] = useState<ManualRegistrationForm>(mode === 'kia' ? kiaExtractedForm : emptyForm);
+  const stages = manualStages;
+  const [stage, setStage] = useState<ManualStage>('manual-personal');
+  const [form, setForm] = useState<ManualRegistrationForm>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<RequiredField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const stageIndex = stages.indexOf(stage);
-  const visualStep = stage === 'manual-personal' || stage === 'autofill-personal' ? 1 : stage === 'pregnancy' ? 2 : 3;
+  const visualStep = stage === 'manual-personal' ? 1 : stage === 'pregnancy' ? 2 : 3;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -314,20 +289,9 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
     }).catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    if (mode !== 'kia') return;
-    const stored = window.sessionStorage.getItem(kiaExtractionStorageKey);
-    if (!stored) return;
-    try {
-      setForm((current) => applyKiaExtraction(current, JSON.parse(stored) as KiaExtractionResult));
-    } catch {
-      window.sessionStorage.removeItem(kiaExtractionStorageKey);
-    }
-  }, [mode]);
-
   function goNext() {
     setError(null);
-    if (stage === 'manual-personal' || stage === 'autofill-personal') {
+    if (stage === 'manual-personal') {
       const validationErrors = getPersonalValidationErrors(form);
       setFieldErrors(validationErrors);
       if (Object.keys(validationErrors).length > 0) {
@@ -429,7 +393,6 @@ export function ManualEntryFlowContent({ mode = 'manual' }: { mode?: ManualEntry
       {error ? <p className={styles.formError}>{error}</p> : null}
 
       {stage === 'manual-personal' ? <ManualPersonalPanel fieldErrors={fieldErrors} form={form} onFieldChange={updateField} onNext={goNext} /> : null}
-      {stage === 'autofill-personal' ? <AutofillPersonalPanel fieldErrors={fieldErrors} form={form} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'pregnancy' ? <PregnancyPanel fieldErrors={fieldErrors} form={form} onBack={goBack} onFieldChange={updateField} onNext={goNext} /> : null}
       {stage === 'screening' ? <ScreeningPanel form={form} isSubmitting={isSubmitting} onFieldChange={updateField} onBack={goBack} onSubmit={submitRegistration} /> : null}
     </PageContainer>
@@ -443,7 +406,6 @@ function ManualInfoBanner() {
         <AppIcon name="edit" width={18} height={18} />
         <strong>Manual input — fill all fields below</strong>
       </span>
-      <Link href={routes.kiaUpload}>Use KIA Upload instead?</Link>
     </div>
   );
 }
@@ -508,51 +470,6 @@ function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fie
   );
 }
 
-function AutofillPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
-  return (
-    <section className={styles.manualCard} aria-label="Auto-filled patient identity review">
-      <div className={styles.autoBanner}>
-        <span><AppIcon name="checkCircle" width={20} height={20} /></span>
-        <div>
-          <strong>Data from KIA Book has been auto-filled</strong>
-          <p>Review and correct if anything is not as expected.</p>
-        </div>
-        <Link href={routes.kiaUpload}>Change KIA photo</Link>
-      </div>
-
-      <div className={styles.manualFormBody}>
-        <FormSection icon="user" title="Main Identity" tone="blue">
-          <div className={styles.manualFormGrid}>
-            <ManualField error={fieldErrors.fullName} label="Full Name *" placeholder="Patient name" value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
-            <ManualField error={fieldErrors.nik} label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
-            <ManualField error={fieldErrors.dateOfBirth} label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
-            <ManualField error={fieldErrors.phone} label="Phone Number *" placeholder="Example: 08123456789" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
-            <ManualField error={fieldErrors.address} label="Residential Address *" placeholder="Enter complete address based on current residence..." wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
-            <ManualField label="BPJS Number (Optional)" placeholder="13-digit BPJS card number" value={form.bpjsNumber} onChange={(value) => onFieldChange('bpjsNumber', value)} />
-          </div>
-        </FormSection>
-
-        <FormSection icon="users" title="Next of Kin" tone="blue">
-          <div className={styles.manualFormGrid}>
-            <ManualField error={fieldErrors.emergencyName} label="Next of Kin Name *" placeholder="Husband or guardian name" value={form.emergencyName} onChange={(value) => onFieldChange('emergencyName', value)} />
-            <ManualField error={fieldErrors.emergencyPhone} label="Next of Kin Phone No. *" placeholder="Example: 08123456789" value={form.emergencyPhone} onChange={(value) => onFieldChange('emergencyPhone', value)} />
-          </div>
-        </FormSection>
-
-        <FormSection icon="briefcase" title="Medical Information" tone="blue">
-          <div className={`${styles.manualFormGrid} ${styles.threeColumnGrid}`}>
-            <ManualField label="Blood Type" placeholder="Select Type" select options={bloodTypeOptions} value={form.bloodType} onChange={(value) => onFieldChange('bloodType', value)} />
-            <ManualField label="Allergy" placeholder="Food/medicine allergy" value={form.allergy} onChange={(value) => onFieldChange('allergy', value)} />
-            <ManualField label="Chronic History" placeholder="Asthma, Hypertension, etc." value={form.chronicDiseases.join(', ')} onChange={(value) => onFieldChange('chronicDiseases', value.split(',').map((item) => item.trim()).filter(Boolean))} />
-          </div>
-        </FormSection>
-      </div>
-
-      <ActionFooter backHref={routes.kiaUpload} backLabel="Back" nextLabel="Continue to Pregnancy Data" onNext={onNext} />
-    </section>
-  );
-}
-
 function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredField, string>>; form: ManualRegistrationForm; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
   const gestationalProgress = `${Math.min(Number(form.gestationalAge) || 0, 40) * 2.5}%`;
 
@@ -566,7 +483,7 @@ function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { 
   return (
     <section className={styles.manualCard} aria-label="Pregnancy data form">
       <div className={styles.manualFormBody}>
-        <FormSection icon="user" title="I. PREGNANCY IDENTITY (AUTO-FILLED)">
+        <FormSection icon="user" title="I. PREGNANCY IDENTITY">
           <div className={styles.manualFormGrid}>
             <ManualField label="LMP (Last Menstrual Period)" placeholder="Select date" type="date" value={form.lmp} onChange={(value) => onFieldChange('lmp', value)} />
             <ManualField label="EDD (Estimated Due Date)" placeholder="Select date" type="date" value={form.edd} onChange={(value) => onFieldChange('edd', value)} />
@@ -717,25 +634,6 @@ function ManualField({ alert, error, label, onChange, options, placeholder, pref
         <input placeholder={placeholder} type={type} value={value} onChange={(event) => onChange?.(event.target.value)} />
       )}
       {error ? <span className={styles.manualFieldError}>{error}</span> : null}
-    </label>
-  );
-}
-
-type AutoFieldProps = {
-  fromKia?: boolean;
-  hint?: string;
-  label: string;
-  textarea?: boolean;
-  value: string;
-  wide?: boolean;
-};
-
-function AutoField({ fromKia, hint, label, textarea, value, wide }: AutoFieldProps) {
-  return (
-    <label className={`${styles.manualField} ${wide ? styles.wideManualField : ''} ${fromKia ? styles.fromKiaField : ''}`}>
-      <span className={styles.manualLabel}>{label}</span>
-      <span className={textarea ? styles.autoTextarea : styles.autoInput}>{value}{fromKia ? <small>FROM KIA</small> : null}</span>
-      {hint ? <em>{hint}</em> : null}
     </label>
   );
 }

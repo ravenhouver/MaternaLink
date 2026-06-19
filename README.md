@@ -171,8 +171,6 @@ File: `apps/api/.env`
 | `AI_SERVICE_BASE_URL` | No | `https://azrilfahmiardi-maternalink-ai.hf.space` | Hosted MaternaLink AI base URL. |
 | `AI_SERVICE_TIMEOUT_MS` | No | `30000` | Timeout for health, Layer 0, and Layer 1 AI calls. |
 | `AI_LAYER2_TIMEOUT_MS` | No | `600000` | Timeout for long Layer 2 allocation calls. |
-| `KIA_OCR_SERVICE_URL` | No | `http://localhost:8001` | Python OCR service used to extract KIA book photo fields. |
-| `KIA_OCR_TIMEOUT_MS` | No | `60000` | Timeout for KIA OCR extraction calls. |
 | `SPEECH_STT_SERVICE_URL` | No | `http://localhost:8002` | Python speech-to-text service used for voice examination recording. |
 | `SPEECH_STT_TIMEOUT_MS` | No | `120000` | Timeout for speech-to-text transcription calls. |
 
@@ -212,7 +210,6 @@ Do not commit real production credentials or secrets.
 | `/patients` | Patient list. |
 | `/patients/new` | Add patient method selection. |
 | `/patients/new/manual` | Manual patient registration. |
-| `/patients/new/kia-upload` | KIA upload extraction flow. |
 | `/queue` | Patient queue. |
 | `/queue/examination` | Patient examination form. |
 | `/forecast-calendar` | Prediction calendar and demo workflow runner. |
@@ -236,8 +233,6 @@ The backend calls the hosted MaternaLink AI API directly. The frontend never cal
 | `POST` | `/api/v1/layer0/extract` | Symptom extraction and condition estimates. |
 | `POST` | `/api/v1/layer1/forecast` | Drug demand forecast per facility and medicine. |
 | `POST` | `/api/v1/layer2/allocate` | Equitable allocation and justifications. |
-
-KIA book photo extraction is handled by a separate local Python service at `services/kia-ocr`. The web app uploads photos to the Nest API (`POST /api/kia/extract`), then the API proxies the image to `KIA_OCR_SERVICE_URL/v1/kia/extract` and returns normalized patient and pregnancy fields for review.
 
 Voice examination recording is handled by a separate local Python service at `services/speech-stt`. The web app records audio with `MediaRecorder`, uploads it to the Nest API (`POST /api/speech/transcribe`), then the API proxies the audio to `SPEECH_STT_SERVICE_URL/v1/stt/transcribe` and returns a transcript plus draft examination fields for review.
 
@@ -468,7 +463,7 @@ classDiagram
 Recommended demo order:
 
 1. Login as `bidan/password123`.
-2. Open `/patients/new/manual` or `/patients/new/kia-upload`.
+2. Open `/patients/new/manual`.
 3. Register patient and confirm patient enters `/queue`.
 4. Call patient, open `/queue/examination`, and save examination.
 5. Open `/forecast-calendar` and run workflow.
