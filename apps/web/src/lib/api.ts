@@ -351,6 +351,41 @@ export type CreateExaminationPayload = {
   riskSummary?: Record<string, unknown>;
 };
 
+export type ForecastCalendarEventType = 'anc' | 'delivery' | 'risk';
+
+export type ForecastCalendarDay = {
+  date: string;
+  day: number;
+  muted?: boolean;
+  shaded?: boolean;
+  selected?: boolean;
+  events: ForecastCalendarEventType[];
+};
+
+export type ForecastCalendarEvent = {
+  id: string;
+  date: string;
+  type: ForecastCalendarEventType;
+  title: string;
+  label: string;
+  time?: string;
+  priority?: boolean;
+  prepItems?: string[];
+};
+
+export type ForecastCalendarResponse = {
+  month: string;
+  selectedDate: string;
+  summary: {
+    deliveriesThisMonth: number;
+    ancThisMonth: number;
+    highRiskPatients: number;
+  };
+  days: ForecastCalendarDay[];
+  events: ForecastCalendarEvent[];
+  note: string;
+};
+
 export type ApiReachability = {
   ok: boolean;
   status?: number;
@@ -599,6 +634,12 @@ export async function getAiWorkflowState(payload: AiWorkflowRunPayload): Promise
 
 export async function getForecastRuns(): Promise<ForecastRun[]> {
   return apiFetch('/forecast/runs');
+}
+
+export async function getForecastCalendar(params: { month: string; selectedDate?: string }): Promise<ForecastCalendarResponse> {
+  const query = new URLSearchParams({ month: params.month });
+  if (params.selectedDate) query.set('selectedDate', params.selectedDate);
+  return apiFetch(`/forecast/calendar?${query.toString()}`);
 }
 
 export async function getLplpoRows(params?: { puskesmasId?: string; periode?: string }): Promise<LplpoRow[]> {

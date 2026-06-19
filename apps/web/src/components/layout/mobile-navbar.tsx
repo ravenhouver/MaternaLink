@@ -64,8 +64,8 @@ export function MobileNavbar({ user }: MobileNavbarProps) {
         open={isOpen}
         placement="left"
         rootClassName={styles.drawerRoot}
+        size={304}
         title={null}
-        width={304}
       >
         <div className={styles.drawerHeader}>
           <Link href={brandHref} className={styles.drawerBrand} aria-label="MaternaLink beranda">
