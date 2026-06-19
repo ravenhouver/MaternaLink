@@ -614,6 +614,8 @@
 
 .tacticalMapShell {
   position: relative;
+  z-index: 0;
+  isolation: isolate;
   min-height: 400px;
 }
 
@@ -907,6 +909,8 @@
 
 .mapShell {
   position: relative;
+  z-index: 0;
+  isolation: isolate;
   min-height: 765px;
   overflow: hidden;
   background: #eef2f3;
@@ -4706,4 +4710,55 @@
   .confirmBox strong { font-size: 15px; line-height: 18px; }
   .confirmBox footer { gap: 10px; }
   .confirmBox footer button { min-height: 46px; padding: 10px 16px; font-size: 15px; letter-spacing: 1.5px; }
+}
+
+.senderShell,
+.recoShell,
+.clinicsShell {
+  display: block;
+  min-height: auto;
+  background: transparent;
+}
+
+.roleSidebar,
+.roleTopbar,
+.recoSidebar,
+.recoTopbar,
+.clinicsSidebar,
+.clinicsTopbar {
+  display: none;
+}
+
+.roleWorkspace,
+.recoWorkspace,
+.clinicsWorkspace {
+  min-width: 0;
+}
+
+.page,
+.recoPage,
+.clinicsPage,
+.clinicDetailPage {
+  width: min(100%, 1180px);
+  min-height: auto;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.senderNotice {
+  margin: 16px 32px 0;
+}
+
+@media (max-width: 991px) {
+  .page,
+  .recoPage,
+  .clinicsPage,
+  .clinicDetailPage {
+    width: 100%;
+    padding: 24px 20px 96px;
+  }
+
+  .senderNotice {
+    margin: 16px 20px 0;
+  }
 }

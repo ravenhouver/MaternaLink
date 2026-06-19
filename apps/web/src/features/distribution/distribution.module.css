@@ -511,6 +511,9 @@
 }
 
 .mapShell {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
   overflow: hidden;
   margin-top: 16px;
   background: #eceef3;

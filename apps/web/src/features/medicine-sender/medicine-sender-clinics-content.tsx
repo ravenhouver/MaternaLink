@@ -139,18 +139,18 @@ function ClinicTable({ onUnavailable, onView, rows }: { onUnavailable: (feature:
           {rows.map((clinic) => (
             <tr key={clinic.id}>
               <td>
-                <strong>{splitName(clinic.name).map((part) => <span key={part}>{part}</span>)}</strong>
+                <strong>{splitName(clinic.name).map((part, index) => <span key={`${clinic.id}-name-${index}`}>{part}</span>)}</strong>
                 <small>{clinic.id}</small>
               </td>
-              <td>{clinic.location.split(', ').map((part) => <span key={part}>{part}</span>)}</td>
-              <td className={styles.mono}>{clinic.logisticDate.split(' - ').map((part, index) => <span key={`${clinic.id}-${part}`}>{index < 2 ? `${part} -` : part}</span>)}</td>
+              <td>{clinic.location.split(', ').map((part, index) => <span key={`${clinic.id}-location-${index}`}>{part}</span>)}</td>
+              <td className={styles.mono}>{clinic.logisticDate.split(' - ').map((part, index) => <span key={`${clinic.id}-date-${index}`}>{index < 2 ? `${part} -` : part}</span>)}</td>
               <td><b className={styles[`stockout${clinic.risk}`]}>{clinic.stockout}</b><small>{clinic.stockItem}</small></td>
               <td><b>{clinic.deliveries}</b></td>
               <td><span className={[styles.clinicRisk, styles[clinic.risk]].join(' ')}>{clinic.riskLabel}</span></td>
               <td>
                 <span className={[styles.weatherCell, styles[clinic.weatherTone]].join(' ')}>
                   <AppIcon name={clinic.weatherIcon} width={16} height={16} />
-                  <em>{clinic.weather.split(' ').map((part) => <span key={part}>{part}</span>)}</em>
+                  <em>{clinic.weather.split(' ').map((part, index) => <span key={`${clinic.id}-weather-${index}`}>{part}</span>)}</em>
                 </span>
               </td>
               <td>

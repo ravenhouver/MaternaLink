@@ -27,12 +27,6 @@ export function AppShell({ children }: AppShellProps) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const isLogin = pathname === routes.login;
-  const isEmbeddedIfkPage =
-    pathname === routes.ifk ||
-    pathname === routes.ifkRecommendations ||
-    pathname === routes.ifkClinics ||
-    pathname === routes.ifkEnvironment ||
-    pathname === routes.ifkDecisionHistory;
   const isEmbeddedSuperAdminPage = pathname.startsWith(routes.admin);
   const hasTopbar = pathname !== routes.dashboard;
 
@@ -83,7 +77,7 @@ export function AppShell({ children }: AppShellProps) {
     );
   }
 
-  if (isEmbeddedIfkPage || isEmbeddedSuperAdminPage) {
+  if (isEmbeddedSuperAdminPage) {
     if (isAuthLoading || !user) {
       return (
         <ConfigProvider theme={themeConfig}>

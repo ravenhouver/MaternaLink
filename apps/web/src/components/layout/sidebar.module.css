@@ -1,7 +1,7 @@
 .sider:global(.ant-layout-sider) {
   position: fixed !important;
   inset: 0 auto 0 0;
-  z-index: 20;
+  z-index: 1190;
   height: 100vh;
   padding: 16px;
   background: #f8fafc !important;

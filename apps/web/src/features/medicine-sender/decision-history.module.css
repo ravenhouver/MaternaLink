@@ -1000,3 +1000,31 @@
   .dhBars span,
   .dhBars b { width: 42px; }
 }
+
+.dhShell {
+  display: block;
+  min-height: auto;
+  background: transparent;
+}
+
+.dhSidebar,
+.dhTopbar {
+  display: none;
+}
+
+.dhWorkspace {
+  min-width: 0;
+}
+
+.dhPage {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: 32px;
+}
+
+@media (max-width: 991px) {
+  .dhPage {
+    width: 100%;
+    padding: 24px 20px 96px;
+  }
+}

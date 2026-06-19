@@ -402,6 +402,8 @@
 
 .mapCanvas {
   position: relative;
+  z-index: 0;
+  isolation: isolate;
   height: 400px;
   overflow: hidden;
   border-radius: 12px;
@@ -903,5 +905,34 @@
   .mapPanel,
   .forecastCard {
     padding: 16px;
+  }
+}
+
+.shell {
+  display: block;
+  min-height: auto;
+  background: transparent;
+}
+
+.sidebar,
+.topbar {
+  display: none;
+}
+
+.workspace {
+  min-width: 0;
+}
+
+.page {
+  width: min(100%, 1180px);
+  min-height: auto;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+@media (max-width: 991px) {
+  .page {
+    width: 100%;
+    padding: 24px 20px 96px;
   }
 }
