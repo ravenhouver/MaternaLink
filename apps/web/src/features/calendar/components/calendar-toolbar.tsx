@@ -6,16 +6,14 @@ import styles from '../calendar.module.css';
 export type CalendarViewMode = 'month' | 'week';
 
 type CalendarToolbarProps = {
-  isRunning: boolean;
   monthLabel: string;
   view: CalendarViewMode;
   onNext: () => void;
   onPrev: () => void;
-  onRunWorkflow: () => void;
   onViewChange: (view: CalendarViewMode) => void;
 };
 
-export function CalendarToolbar({ isRunning, monthLabel, onNext, onPrev, onRunWorkflow, onViewChange, view }: CalendarToolbarProps) {
+export function CalendarToolbar({ monthLabel, onNext, onPrev, onViewChange, view }: CalendarToolbarProps) {
   return (
     <section className={styles.toolbar} aria-label="Kontrol kalender">
       <div className={styles.monthControl}>
@@ -36,9 +34,6 @@ export function CalendarToolbar({ isRunning, monthLabel, onNext, onPrev, onRunWo
         </button>
         <button type="button" className={view === 'week' ? styles.activeView : undefined} role="tab" aria-selected={view === 'week'} onClick={() => onViewChange('week')}>
           Mingguan
-        </button>
-        <button type="button" disabled={isRunning} onClick={onRunWorkflow}>
-          {isRunning ? 'Running...' : 'Run Workflow'}
         </button>
       </div>
     </section>
