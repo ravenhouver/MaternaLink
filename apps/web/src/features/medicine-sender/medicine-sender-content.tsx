@@ -7,9 +7,8 @@ import Typography from 'antd/es/typography';
 import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
-import { getAlerts, getCurrentUser, getDashboardSummary, getPuskesmas, getRecommendations, type AlertRecord, type CurrentUser, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
+import { getCurrentUser, getIfkDashboard, type CurrentUser, type IfkDashboardResponse } from '@/lib/api';
 import { routes } from '@/lib/routes';
-import type { DashboardAction, DashboardKpi, TacticalPoint } from './medicine-sender-data';
 import styles from './medicine-sender.module.css';
 
 const SenderMap = dynamic(() => import('./components/sender-map').then((module) => module.SenderMap), {
@@ -25,60 +24,22 @@ const statusLabels = {
 
 export function MedicineSenderContent() {
   const [mapMode, setMapMode] = useState<'map' | 'satellite'>('map');
-  const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
-  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
-  const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
-  const [summary, setSummary] = useState<Awaited<ReturnType<typeof getDashboardSummary>> | null>(null);
+  const [dashboard, setDashboard] = useState<IfkDashboardResponse | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getRecommendations(), getAlerts(), getPuskesmas(), getDashboardSummary(), getCurrentUser()])
-      .then(([nextRecommendations, nextAlerts, nextPuskesmas, nextSummary, nextUser]) => {
-        setRecommendations(nextRecommendations);
-        setAlerts(nextAlerts);
-        setPuskesmas(nextPuskesmas);
-        setSummary(nextSummary);
+    Promise.all([getIfkDashboard(), getCurrentUser()])
+      .then(([nextDashboard, nextUser]) => {
+        setDashboard(nextDashboard);
         setUser(nextUser);
       })
       .catch(() => undefined);
   }, []);
 
-  const dashboardKpis = useMemo<DashboardKpi[]>(() => [
-    { label: 'Critical clinics', value: String(summary?.recommendations?.critical ?? recommendations.filter((item) => item.urgency === 'CRITICAL').length), delta: 'live DB', tone: 'critical', progress: 45 },
-    { label: 'Warning clinics', value: String(recommendations.filter((item) => item.urgency === 'WARNING').length), delta: 'live DB', tone: 'warning', progress: 30 },
-    { label: 'Safe clinics', value: String(Math.max(0, puskesmas.length - recommendations.length)), delta: 'registered', tone: 'safe', progress: 85 },
-    { label: 'Pending approval', value: String(summary?.recommendations?.pending ?? recommendations.filter((item) => item.status === 'PENDING').length), delta: 'review queue', tone: 'primary', progress: 54, icon: 'clipboardCheck' },
-  ], [puskesmas.length, recommendations, summary]);
-
-  const dashboardActions = useMemo<DashboardAction[]>(() => recommendations.slice(0, 3).map((item, index) => {
-    const alert = alerts.find((row) => row.puskesmasId === item.puskesmasId);
-    return {
-      id: item.id,
-      name: item.puskesmas?.nama ?? item.puskesmasId,
-      status: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'warning' : 'safe',
-      statusLabel: item.urgency,
-      updatedAt: new Date(item.periode).toLocaleDateString('id-ID'),
-      weather: alert?.type.replaceAll('_', ' ') ?? 'No active alert',
-      supply: item.items.map((row) => `${row.obat?.nama ?? row.obatId} ${row.finalQuantity}`).join(', '),
-      pointStatus: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'anticipatory' : 'regular',
-      position: item.puskesmas?.latitude != null && item.puskesmas.longitude != null ? [item.puskesmas.latitude, item.puskesmas.longitude] : undefined,
-    };
-  }), [alerts, recommendations]);
-
-  const dashboardMapPoints = useMemo<TacticalPoint[]>(() => dashboardActions.flatMap((item) => item.position ? [{ id: item.id, name: item.name, status: item.pointStatus, position: item.position }] : []), [dashboardActions]);
-
-  const dashboardApprovalLogs = useMemo(() => recommendations.slice(0, 5).map((item) => ({
-    timestamp: item.trackingEvents?.[0] ? new Date(item.trackingEvents[0].createdAt).toLocaleString('id-ID') : new Date(item.periode).toLocaleDateString('id-ID'),
-    entity: item.puskesmas?.nama ?? item.puskesmasId,
-    action: item.items.map((row) => row.obat?.nama ?? row.obatId).join(', ') || item.source,
-    operator: item.trackingEvents?.[0]?.actor?.username ?? 'SYSTEM',
-    status: item.status === 'APPROVED' || item.status === 'DISPATCHED' || item.status === 'RECEIVED' ? 'approved' as const : item.status === 'REJECTED' ? 'rejected' as const : 'pending' as const,
-  })), [recommendations]);
-
-  function explainUnavailable(feature: string) {
-    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
-  }
+  const kpis = useMemo(() => dashboard?.kpis ?? [], [dashboard]);
+  const actions = useMemo(() => dashboard?.actions ?? [], [dashboard]);
+  const mapPoints = useMemo(() => dashboard?.mapPoints ?? [], [dashboard]);
+  const approvalLogs = useMemo(() => dashboard?.approvalLogs ?? [], [dashboard]);
 
   return (
     <div className={styles.senderShell}>
@@ -131,11 +92,11 @@ export function MedicineSenderContent() {
           </nav>
           <div className={styles.topbarActions}>
             {user ? <NotificationCenter user={user} /> : null}
-            <button type="button" aria-label="Pengaturan" onClick={() => explainUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
+            <button type="button" aria-label="Pengaturan" disabled><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.topbarProfile}>
               <div>
-                <strong>{user?.displayName ?? user?.username ?? 'Pharmacy Management'}</strong>
-                <small>{user?.role ?? 'Administrator'}</small>
+                <strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong>
+                <small>{user?.role ?? 'IFK_ADMIN'}</small>
               </div>
               <img src="/figma-dashboard/profil-bidan.png" alt="Pharmacy administrator" />
             </div>
@@ -143,13 +104,12 @@ export function MedicineSenderContent() {
         </header>
 
         <main id="sender-dashboard" className={styles.page}>
-          {notice ? <p role="status" className={styles.senderNotice}>{notice}</p> : null}
           <section className={styles.kpiGrid} aria-label="Ringkasan status klinik">
-            {dashboardKpis.map((item) => (
+            {kpis.map((item) => (
               <article className={[styles.kpiCard, styles[item.tone]].join(' ')} key={item.label}>
                 <Typography.Text className={styles.kpiLabel}>{item.label}</Typography.Text>
                 <div className={styles.kpiValueRow}>
-                  <strong>{item.value}</strong>
+                  <strong>{String(item.value).padStart(2, '0')}</strong>
                   <span>{item.delta}</span>
                   {item.icon ? <AppIcon name={item.icon} width={24} height={24} /> : null}
                 </div>
@@ -172,18 +132,18 @@ export function MedicineSenderContent() {
                 </div>
               </div>
               <div className={styles.mapShell}>
-                <SenderMap points={dashboardMapPoints} mode={mapMode} center={[-7.7906, 110.377]} zoom={12} />
+                <SenderMap points={mapPoints} mode={mapMode} center={mapPoints[0]?.position ?? [-7.7906, 110.377]} zoom={12} />
                 <aside className={styles.mapOverlay} aria-label="Cuaca dan rute">
                   <div className={styles.overlayHeader}>
                     <Typography.Text>Route overlay</Typography.Text>
                     <span />
                   </div>
                   <div>
-                    <span><AppIcon name="cloudRain" width={18} height={18} /> {alerts.length} Alerts</span>
-                    <span><AppIcon name="zap" width={18} height={18} /> {recommendations.length} Routes</span>
+                    <span><AppIcon name="cloudRain" width={18} height={18} /> {dashboard?.alertCount ?? 0} Alerts</span>
+                    <span><AppIcon name="zap" width={18} height={18} /> {dashboard?.routeCount ?? 0} Routes</span>
                   </div>
                 </aside>
-                <strong className={styles.mapCaption}>{dashboardMapPoints.length ? 'Facility coordinates loaded' : 'Koordinat fasilitas belum tersedia di database'}</strong>
+                <strong className={styles.mapCaption}>{mapPoints.length ? 'Facility coordinates loaded' : 'Koordinat fasilitas belum tersedia di database'}</strong>
               </div>
             </article>
 
@@ -192,12 +152,12 @@ export function MedicineSenderContent() {
                 <Typography.Title id="urgent-actions-title" level={2}>Urgent actions required</Typography.Title>
               </div>
               <div className={styles.actionList}>
-                {dashboardActions.length === 0 ? <section className={styles.actionItem}><Typography.Title level={3}>No urgent actions</Typography.Title><div className={styles.actionFacts}><span><AppIcon name="package" width={18} height={18} /><small>Supply</small>All clear</span></div></section> : null}
-                {dashboardActions.map((clinic) => (
+                {actions.length === 0 ? <section className={styles.actionItem}><Typography.Title level={3}>No urgent actions</Typography.Title><div className={styles.actionFacts}><span><AppIcon name="package" width={18} height={18} /><small>Supply</small>All clear</span></div></section> : null}
+                {actions.map((clinic) => (
                   <section className={styles.actionItem} key={clinic.id}>
                     <div className={styles.actionTopline}>
                       <span className={[styles.riskBadge, styles[clinic.status]].join(' ')}>{clinic.statusLabel}</span>
-                      <Typography.Text>Last updated: {clinic.updatedAt}</Typography.Text>
+                      <Typography.Text>Last updated: {new Date(clinic.updatedAt).toLocaleString('id-ID')}</Typography.Text>
                     </div>
                     <Typography.Title level={3}>{clinic.name}</Typography.Title>
                     <div className={styles.actionFacts}>
@@ -213,7 +173,7 @@ export function MedicineSenderContent() {
           <section className={styles.logPanel} aria-labelledby="approval-log-title">
             <div className={styles.panelHeader}>
               <Typography.Title id="approval-log-title" level={2}>Recent Approval Activity</Typography.Title>
-              <Typography.Text>Sync frequency: 30s</Typography.Text>
+              <Typography.Text>Sync frequency: {dashboard?.syncFrequencySeconds ?? 30}s</Typography.Text>
             </div>
             <div className={styles.tableWrap}>
               <table className={styles.logTable}>
@@ -221,10 +181,10 @@ export function MedicineSenderContent() {
                   <tr><th>Timestamp</th><th>Entity</th><th>Action type</th><th>Operator</th><th>Status</th></tr>
                 </thead>
                 <tbody>
-                  {dashboardApprovalLogs.length === 0 ? <tr><td colSpan={5}>Belum ada aktivitas approval.</td></tr> : null}
-                  {dashboardApprovalLogs.map((log) => (
+                  {approvalLogs.length === 0 ? <tr><td colSpan={5}>Belum ada aktivitas approval.</td></tr> : null}
+                  {approvalLogs.map((log) => (
                     <tr key={`${log.timestamp}-${log.entity}`}>
-                      <td>{log.timestamp}</td><td>{log.entity}</td><td>{log.action}</td><td>{log.operator}</td>
+                      <td>{new Date(log.timestamp).toLocaleString('id-ID')}</td><td>{log.entity}</td><td>{log.action}</td><td>{log.operator}</td>
                       <td><span className={[styles.logStatus, styles[log.status]].join(' ')}>{statusLabels[log.status]}</span></td>
                     </tr>
                   ))}

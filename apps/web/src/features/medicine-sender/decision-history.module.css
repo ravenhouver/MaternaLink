@@ -908,6 +908,8 @@
 .dhTableHeader div { gap: 16px; }
 .dhTableHeader label,
 .dhTableHeader button { gap: 8px; min-height: 40px; border: 1px solid #dadce0; border-radius: 8px; background: #fff; color: #697586; padding: 9px 13px; font-size: 14px; }
+.dhTableHeader label input { border: 0; outline: 0; min-width: 220px; color: #202124; background: transparent; font: inherit; }
+.dhTableHeader label input::placeholder { color: #697586; }
 .dhScroller { overflow-x: auto; }
 .dhTable { width: 100%; min-width: 840px; border-collapse: collapse; }
 .dhTable th,

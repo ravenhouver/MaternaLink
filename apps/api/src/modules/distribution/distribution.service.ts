@@ -11,6 +11,37 @@ import {
 
 const toDate = (value: string) => new Date(value);
 
+type LiveWeather = {
+  source: 'OPEN_METEO';
+  temperatureC?: number | null;
+  humidityPct?: number | null;
+  precipitationMm?: number | null;
+  rainMm?: number | null;
+  windKph?: number | null;
+  weatherCode?: number | null;
+  maxPrecipitationProbabilityPct: number;
+  maxDailyPrecipitationMm: number;
+  bars: Array<'low' | 'medium' | 'high' | 'critical'>;
+  fetchedAt: string;
+};
+
+type OpenMeteoResponse = {
+  current?: {
+    temperature_2m?: number;
+    relative_humidity_2m?: number;
+    precipitation?: number;
+    rain?: number;
+    weather_code?: number;
+    wind_speed_10m?: number;
+  };
+  hourly?: {
+    time?: string[];
+    precipitation_probability?: number[];
+    precipitation?: number[];
+    rain?: number[];
+  };
+};
+
 @Injectable()
 export class DistributionService {
   constructor(private readonly prisma: PrismaService) {}
@@ -169,6 +200,211 @@ export class DistributionService {
     return this.prisma.alert.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
+  async getIfkDashboard() {
+    const [recommendations, puskesmas, alerts] = await Promise.all([
+      this.prisma.distributionRecommendation.findMany({
+        include: { puskesmas: true, items: { include: { obat: true } }, trackingEvents: { include: { actor: true }, orderBy: { createdAt: 'desc' } } },
+        orderBy: [{ priorityRank: 'asc' }, { createdAt: 'desc' }],
+      }),
+      this.prisma.puskesmas.findMany({ select: { id: true, nama: true, latitude: true, longitude: true } }),
+      this.prisma.alert.findMany({ where: { resolved: false }, orderBy: { createdAt: 'desc' } }),
+    ]);
+
+    const critical = recommendations.filter((item) => item.urgency === 'CRITICAL').length;
+    const warning = recommendations.filter((item) => item.urgency === 'WARNING').length;
+    const pending = recommendations.filter((item) => item.status === RecommendationStatus.PENDING).length;
+    const activeFacilityIds = new Set(recommendations.filter((item) => item.status !== RecommendationStatus.RECEIVED && item.status !== RecommendationStatus.CANCELLED).map((item) => item.puskesmasId));
+    const safe = puskesmas.filter((item) => !activeFacilityIds.has(item.id)).length;
+    const totalRisk = Math.max(1, critical + warning + safe + pending);
+
+    const actions = recommendations.slice(0, 3).map((item) => {
+      const alert = alerts.find((row) => row.puskesmasId === item.puskesmasId);
+      return {
+        id: item.id,
+        name: item.puskesmas.nama,
+        status: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'warning' : 'safe',
+        statusLabel: item.urgency,
+        updatedAt: item.updatedAt,
+        weather: alert?.message ?? item.puskesmas.rainyAccess,
+        supply: item.items.map((row) => `${row.obat.nama} ${row.finalQuantity} ${row.obat.satuan}`).join(', '),
+        pointStatus: item.urgency === 'CRITICAL' ? 'critical' : item.urgency === 'WARNING' ? 'anticipatory' : 'regular',
+        position: item.puskesmas.latitude != null && item.puskesmas.longitude != null ? [item.puskesmas.latitude, item.puskesmas.longitude] : null,
+      };
+    });
+
+    const approvalLogs = recommendations.slice(0, 5).flatMap((item) => {
+      const event = item.trackingEvents[0];
+      if (!event) return [];
+      return [{
+        timestamp: event.createdAt,
+        entity: item.puskesmas.nama,
+        action: item.items.map((row) => row.obat.nama).join(', ') || item.source,
+        operator: event.actor?.username ?? 'SYSTEM',
+        status: event.status === TrackingStatus.REJECTED ? 'rejected' : event.status === TrackingStatus.REQUESTED ? 'pending' : 'approved',
+      }];
+    });
+
+    return {
+      kpis: [
+        { label: 'Critical clinics', value: critical, delta: `${alerts.filter((item) => item.severity === 'CRITICAL').length} active alerts`, tone: 'critical', progress: Math.round((critical / totalRisk) * 100) },
+        { label: 'Warning clinics', value: warning, delta: `${alerts.filter((item) => item.severity === 'HIGH').length} high alerts`, tone: 'warning', progress: Math.round((warning / totalRisk) * 100) },
+        { label: 'Safe clinics', value: safe, delta: `${puskesmas.length} registered`, tone: 'safe', progress: Math.round((safe / Math.max(1, puskesmas.length)) * 100) },
+        { label: 'Pending approval', value: pending, delta: 'review queue', tone: 'primary', progress: Math.round((pending / Math.max(1, recommendations.length)) * 100), icon: 'clipboardCheck' },
+      ],
+      actions,
+      mapPoints: actions.flatMap((item) => item.position ? [{ id: item.id, name: item.name, status: item.pointStatus, position: item.position }] : []),
+      approvalLogs,
+      syncFrequencySeconds: 30,
+      alertCount: alerts.length,
+      routeCount: recommendations.length,
+    };
+  }
+
+  async getIfkFacilities() {
+    const facilities = await this.prisma.puskesmas.findMany({
+      include: {
+        users: { where: { active: true }, select: { displayName: true, username: true }, take: 1 },
+        pregnancies: { where: { active: true }, select: { id: true, riskLevel: true } },
+        stok: { include: { obat: true }, orderBy: { periode: 'desc' } },
+        recommendations: { include: { items: { include: { obat: true } }, trackingEvents: { include: { actor: true }, orderBy: { createdAt: 'desc' } } }, orderBy: { updatedAt: 'desc' } },
+        alerts: { where: { resolved: false }, orderBy: { createdAt: 'desc' } },
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    return facilities.map((facility) => {
+      const latestStocks = this.latestStockByDrug(facility.stok);
+      const criticalStocks = latestStocks.filter((row) => row.stokSaatIni <= 5);
+      const activeRecommendation = facility.recommendations.find((row) => row.status !== RecommendationStatus.RECEIVED && row.status !== RecommendationStatus.CANCELLED);
+      const delivered = facility.recommendations.filter((row) => row.status === RecommendationStatus.RECEIVED).length;
+      const alert = facility.alerts[0];
+      const risk = alert?.severity === 'CRITICAL' || activeRecommendation?.urgency === 'CRITICAL' ? 'critical' : alert || activeRecommendation?.urgency === 'WARNING' || criticalStocks.length ? 'warning' : 'routine';
+      const lastStockDate = latestStocks[0]?.periode ?? null;
+      return {
+        id: facility.id,
+        name: facility.nama,
+        location: [facility.kecamatan, facility.kabupatenKota, facility.provinsi].filter(Boolean).join(', '),
+        headOfClinic: facility.users[0]?.displayName ?? facility.users[0]?.username ?? null,
+        activePregnancies: facility.pregnancies.length,
+        highRiskPregnancies: facility.pregnancies.filter((row) => row.riskLevel === 'HIGH').length,
+        logisticDate: lastStockDate,
+        criticalStockCount: criticalStocks.length,
+        criticalStockItems: criticalStocks.map((row) => `${row.obat.nama} (${row.stokSaatIni} ${row.obat.satuan})`),
+        deliveries: delivered,
+        risk,
+        riskLabel: risk === 'critical' ? 'Critical' : risk === 'warning' ? 'Warning' : 'Routine',
+        rainyAccess: facility.rainyAccess,
+        weatherAlert: alert?.message ?? null,
+        coldChainReady: facility.coldChainReady,
+        leadTimeHari: facility.leadTimeHari,
+        jarakKeIfkKm: facility.jarakKeIfkKm,
+        kapasitasSimpanObat: facility.kapasitasSimpanObat,
+        statusEndemisMalaria: facility.statusEndemisMalaria,
+        latitude: facility.latitude,
+        longitude: facility.longitude,
+        activeRecommendation,
+        nearbyCandidates: [],
+      };
+    }).map((facility, _index, allFacilities) => ({
+      ...facility,
+      nearbyCandidates: allFacilities
+        .filter((candidate) => candidate.id !== facility.id && candidate.risk === 'routine')
+        .sort((a, b) => (a.jarakKeIfkKm ?? Number.MAX_SAFE_INTEGER) - (b.jarakKeIfkKm ?? Number.MAX_SAFE_INTEGER))
+        .slice(0, 3)
+        .map((candidate) => ({ id: candidate.id, name: candidate.name, distance: candidate.jarakKeIfkKm, riskLabel: candidate.riskLabel })),
+    }));
+  }
+
+  async getIfkDecisionHistory() {
+    const recommendations = await this.prisma.distributionRecommendation.findMany({
+      where: { status: { not: RecommendationStatus.PENDING } },
+      include: { puskesmas: true, items: { include: { obat: true } }, trackingEvents: { include: { actor: true }, orderBy: { createdAt: 'desc' } } },
+      orderBy: { updatedAt: 'desc' },
+    });
+    const rows = recommendations.map((recommendation) => {
+      const lastEvent = recommendation.trackingEvents[0];
+      return {
+        id: recommendation.id,
+        date: lastEvent?.createdAt ?? recommendation.updatedAt,
+        officer: lastEvent?.actor?.username ?? 'SYSTEM',
+        clinic: recommendation.puskesmas.nama,
+        action: recommendation.items.map((item) => `${item.obat.nama} (${item.finalQuantity} ${item.obat.satuan})`).join(', '),
+        prediction: recommendation.justification ?? recommendation.source,
+        decision: recommendation.status,
+        tone: recommendation.status === RecommendationStatus.REJECTED ? 'red' : 'green',
+      };
+    });
+    const approvedStatuses: RecommendationStatus[] = [RecommendationStatus.APPROVED, RecommendationStatus.DISPATCHED, RecommendationStatus.RECEIVED];
+    const approved = recommendations.filter((item) => approvedStatuses.includes(item.status)).length;
+    const rejected = recommendations.filter((item) => item.status === RecommendationStatus.REJECTED).length;
+    const criticalHandled = recommendations.filter((item) => item.urgency === 'CRITICAL' && item.status !== RecommendationStatus.REJECTED).length;
+    const matchedRate = recommendations.length ? Math.round((approved / recommendations.length) * 1000) / 10 : 0;
+    return {
+      metrics: [
+        { label: 'Stockouts Prevented', value: String(criticalHandled), note: 'Critical recommendations handled', icon: 'settings', tone: 'green' },
+        { label: 'Approved Decisions', value: String(approved), note: 'IFK recommendations', icon: 'clock', tone: 'blue' },
+        { label: 'Total Dispatches', value: String(recommendations.length), note: 'Distribution records', icon: 'truck', tone: 'blue' },
+      ],
+      rows,
+      bars: this.weekdayDecisionBars(rows),
+      compliance: {
+        rating: matchedRate,
+        primaryDeviationFactor: rejected ? 'Rejected distribution recommendations' : 'No deviation recorded',
+        summary: `IFK accepted ${approved} of ${recommendations.length} completed decisions. ${rejected} rejected recommendations remain auditable.`,
+      },
+    };
+  }
+
+  async getIfkEnvironment() {
+    const [facilities, alerts] = await Promise.all([
+      this.prisma.puskesmas.findMany({ orderBy: { id: 'asc' } }),
+      this.prisma.alert.findMany({ where: { resolved: false }, orderBy: { createdAt: 'desc' } }),
+    ]);
+    const weatherByFacility = new Map<string, LiveWeather>();
+    await Promise.all(facilities.map(async (facility) => {
+      if (facility.latitude == null || facility.longitude == null) return;
+      const weather = await this.fetchLiveWeather(facility.latitude, facility.longitude);
+      if (weather) weatherByFacility.set(facility.id, weather);
+    }));
+
+    const points = facilities.flatMap((facility) => {
+      if (facility.latitude == null || facility.longitude == null) return [];
+      const alert = alerts.find((row) => row.puskesmasId === facility.id);
+      const weather = weatherByFacility.get(facility.id);
+      const risk = this.environmentPointRisk(alert?.severity, facility.rainyAccess, weather);
+      const metric = weather ? this.weatherMetric(weather) : alert?.message ?? facility.rainyAccess;
+      return [{ id: facility.id, name: facility.nama, position: [facility.latitude, facility.longitude], risk, metric }];
+    });
+    const forecasts = facilities.slice(0, 6).map((facility) => {
+      const alert = alerts.find((row) => row.puskesmasId === facility.id);
+      const weather = weatherByFacility.get(facility.id);
+      const risk = this.forecastRisk(alert?.severity, facility.rainyAccess, weather);
+      return {
+        location: facility.nama,
+        risk,
+        status: risk === 'blocked' ? 'Blocked risk' : risk === 'warning' ? 'Elevated' : 'Stable',
+        temperature: weather?.temperatureC == null ? '-' : `${Math.round(weather.temperatureC)}°C`,
+        metric: weather ? `Rain ${this.round1(weather.rainMm ?? weather.precipitationMm ?? 0)}mm · Prob ${weather.maxPrecipitationProbabilityPct}%` : `Lead time - ${facility.rainyAccess}`,
+        bars: weather?.bars ?? this.forecastBars(risk),
+      };
+    });
+    const routes = facilities.map((facility) => {
+      const alert = alerts.find((row) => row.puskesmasId === facility.id);
+      const weather = weatherByFacility.get(facility.id);
+      const risk = this.routeWeatherRisk(alert?.severity, facility.rainyAccess, weather);
+      return {
+        id: facility.id,
+        route: `IFK-${facility.id}`,
+        clinics: facility.nama,
+        risk,
+        status: risk >= 80 ? 'critical' : risk >= 50 ? 'elevated' : 'operational',
+        blockedAt: alert?.createdAt ?? null,
+        confidence: weather ? 'OPEN_METEO' : alert?.severity ?? 'LOW',
+      };
+    });
+    return { points, forecasts, routes, alerts, weatherSource: weatherByFacility.size ? 'OPEN_METEO' : 'DATABASE_FALLBACK' };
+  }
+
   createPlan(data: CreateAllocationPlanDto) {
     return this.prisma.allocationPlan.create({
       data: {
@@ -274,5 +510,117 @@ export class DistributionService {
       throw new BadRequestException('Only pending recommendations can be approved or rejected');
     }
     return recommendation;
+  }
+
+  private latestStockByDrug(rows: Array<{ obatId: string; periode: Date; stokSaatIni: number; obat: { nama: string; satuan: string } }>) {
+    const byDrug = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      const existing = byDrug.get(row.obatId);
+      if (!existing || row.periode > existing.periode) byDrug.set(row.obatId, row);
+    }
+    return [...byDrug.values()].sort((a, b) => b.periode.getTime() - a.periode.getTime());
+  }
+
+  private weekdayDecisionBars(rows: Array<{ date: Date; tone: string }>) {
+    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    return days.map((day, index) => {
+      const matched = rows.filter((row) => ((row.date.getDay() + 6) % 7) === index && row.tone === 'green').length;
+      const deviated = rows.filter((row) => ((row.date.getDay() + 6) % 7) === index && row.tone === 'red').length;
+      return { day, green: matched * 28, red: deviated * 24 };
+    });
+  }
+
+  private forecastBars(risk: 'stable' | 'warning' | 'blocked') {
+    if (risk === 'blocked') return ['high', 'critical', 'critical', 'high', 'medium', 'medium', 'high'];
+    if (risk === 'warning') return ['medium', 'medium', 'high', 'medium', 'low', 'medium', 'high'];
+    return ['low', 'low', 'medium', 'low', 'low', 'medium', 'low'];
+  }
+
+  private async fetchLiveWeather(latitude: number, longitude: number): Promise<LiveWeather | null> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Number(process.env.OPEN_METEO_TIMEOUT_MS ?? '7000'));
+    const baseUrl = process.env.OPEN_METEO_FORECAST_URL ?? 'https://api.open-meteo.com/v1/forecast';
+    const url = new URL(baseUrl);
+    url.searchParams.set('latitude', String(latitude));
+    url.searchParams.set('longitude', String(longitude));
+    url.searchParams.set('current', 'temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m');
+    url.searchParams.set('hourly', 'precipitation_probability,precipitation,rain');
+    url.searchParams.set('forecast_days', '7');
+    url.searchParams.set('timezone', 'auto');
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) return null;
+      const data = await response.json() as OpenMeteoResponse;
+      return this.mapOpenMeteoWeather(data);
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private mapOpenMeteoWeather(data: OpenMeteoResponse): LiveWeather {
+    const probability = data.hourly?.precipitation_probability ?? [];
+    const precipitation = data.hourly?.precipitation ?? [];
+    const rain = data.hourly?.rain ?? [];
+    const maxProbability = Math.max(0, ...probability.map((value) => Number(value) || 0));
+    const dailyPrecipitation = Array.from({ length: 7 }, (_, day) => {
+      const start = day * 24;
+      const end = start + 24;
+      const total = precipitation.slice(start, end).reduce((sum, value, index) => sum + (Number(value) || 0) + (Number(rain[start + index]) || 0), 0);
+      const dayProbability = Math.max(0, ...probability.slice(start, end).map((value) => Number(value) || 0));
+      return { total, probability: dayProbability };
+    });
+    const maxDailyPrecipitation = Math.max(0, ...dailyPrecipitation.map((item) => item.total));
+
+    return {
+      source: 'OPEN_METEO',
+      temperatureC: data.current?.temperature_2m ?? null,
+      humidityPct: data.current?.relative_humidity_2m ?? null,
+      precipitationMm: data.current?.precipitation ?? null,
+      rainMm: data.current?.rain ?? null,
+      windKph: data.current?.wind_speed_10m ?? null,
+      weatherCode: data.current?.weather_code ?? null,
+      maxPrecipitationProbabilityPct: Math.round(maxProbability),
+      maxDailyPrecipitationMm: this.round1(maxDailyPrecipitation),
+      bars: dailyPrecipitation.map((item) => this.weatherBar(item.probability, item.total)),
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  private weatherBar(probability: number, precipitationMm: number): 'low' | 'medium' | 'high' | 'critical' {
+    if (probability >= 85 || precipitationMm >= 30) return 'critical';
+    if (probability >= 65 || precipitationMm >= 15) return 'high';
+    if (probability >= 35 || precipitationMm >= 5) return 'medium';
+    return 'low';
+  }
+
+  private forecastRisk(severity: string | undefined, rainyAccess: string, weather?: LiveWeather): 'stable' | 'warning' | 'blocked' {
+    if (severity === 'CRITICAL' || rainyAccess === 'TERGANGGU' || (weather && (weather.maxPrecipitationProbabilityPct >= 85 || weather.maxDailyPrecipitationMm >= 30))) return 'blocked';
+    if (severity || rainyAccess === 'TERBATAS' || (weather && (weather.maxPrecipitationProbabilityPct >= 55 || weather.maxDailyPrecipitationMm >= 10))) return 'warning';
+    return 'stable';
+  }
+
+  private environmentPointRisk(severity: string | undefined, rainyAccess: string, weather?: LiveWeather): 'low' | 'medium' | 'high' | 'critical' {
+    const risk = this.forecastRisk(severity, rainyAccess, weather);
+    if (risk === 'blocked') return weather && weather.maxDailyPrecipitationMm < 30 && weather.maxPrecipitationProbabilityPct < 85 ? 'high' : 'critical';
+    if (risk === 'warning') return 'medium';
+    return 'low';
+  }
+
+  private routeWeatherRisk(severity: string | undefined, rainyAccess: string, weather?: LiveWeather) {
+    const alertRisk = severity === 'CRITICAL' ? 95 : severity === 'HIGH' ? 82 : 0;
+    const accessRisk = rainyAccess === 'TERGANGGU' ? 75 : rainyAccess === 'TERBATAS' ? 58 : 25;
+    const weatherRisk = weather ? Math.min(95, Math.max(weather.maxPrecipitationProbabilityPct, weather.maxDailyPrecipitationMm * 3)) : 0;
+    return Math.round(Math.max(alertRisk, accessRisk, weatherRisk));
+  }
+
+  private weatherMetric(weather: LiveWeather) {
+    return `${Math.round(weather.temperatureC ?? 0)}°C · Rain ${this.round1(weather.rainMm ?? weather.precipitationMm ?? 0)}mm · ${weather.maxPrecipitationProbabilityPct}%`;
+  }
+
+  private round1(value: number) {
+    return Math.round(value * 10) / 10;
   }
 }

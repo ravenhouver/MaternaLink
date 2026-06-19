@@ -5,55 +5,20 @@ import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import { getPuskesmas, getRecommendations, type DistributionRecommendation, type PuskesmasRecord } from '@/lib/api';
+import { getIfkFacilities, type DistributionRecommendation, type IfkFacilityRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
-type ClinicRisk = 'critical' | 'warning' | 'routine';
 type WeatherTone = 'danger' | 'neutral';
+type ClinicRow = IfkFacilityRecord;
 
-type ClinicRow = {
-  id: string;
-  name: string;
-  location: string;
-  logisticDate: string;
-  stockout: string;
-  stockItem: string;
-  deliveries: string;
-  risk: ClinicRisk;
-  riskLabel: string;
-  weather: string;
-  weatherTone: WeatherTone;
-  weatherIcon: AppIconName;
-  coldChainReady: boolean;
-  leadTime: string;
-  distance: string;
-  capacity: string;
-  endemicStatus: string;
-};
-
-function mapPuskesmasToClinic(row: PuskesmasRecord, index: number): ClinicRow {
-  const risk: ClinicRisk = row.rainyAccess === 'TERGANGGU' ? 'critical' : row.rainyAccess === 'TERBATAS' ? 'warning' : 'routine';
-  return {
-    id: row.id,
-    name: row.nama,
-    location: [row.kecamatan, row.kabupatenKota, row.provinsi].filter(Boolean).join(', '),
-    logisticDate: new Date().toLocaleDateString('id-ID'),
-    stockout: row.coldChainReady ? 'Safe' : 'Review',
-    stockItem: row.coldChainReady ? 'Cold chain ready' : 'Cold chain gap',
-    deliveries: String(Math.max(1, 20 - index * 3)).padStart(2, '0'),
-    risk,
-    riskLabel: risk === 'critical' ? 'Critical' : risk === 'warning' ? 'Warning' : 'Routine',
-    weather: row.rainyAccess,
-    weatherTone: risk === 'critical' ? 'danger' : 'neutral',
-    weatherIcon: risk === 'critical' ? 'alert' : 'sun',
-    coldChainReady: row.coldChainReady,
-    leadTime: row.leadTimeHari == null ? 'Belum tersedia' : `${row.leadTimeHari} hari`,
-    distance: row.jarakKeIfkKm == null ? 'Belum tersedia' : `${row.jarakKeIfkKm} km`,
-    capacity: row.kapasitasSimpanObat == null ? 'Belum tersedia' : `${row.kapasitasSimpanObat} unit`,
-    endemicStatus: row.statusEndemisMalaria ? 'Endemis malaria' : 'Non-endemis',
-  };
-}
+function leadTime(clinic: ClinicRow) { return clinic.leadTimeHari == null ? 'Belum tersedia' : `${clinic.leadTimeHari} hari`; }
+function distance(clinic: ClinicRow) { return clinic.jarakKeIfkKm == null ? 'Belum tersedia' : `${clinic.jarakKeIfkKm} km`; }
+function capacity(clinic: ClinicRow) { return clinic.kapasitasSimpanObat == null ? 'Belum tersedia' : `${clinic.kapasitasSimpanObat} unit`; }
+function stockStatus(clinic: ClinicRow) { return clinic.criticalStockCount ? `${clinic.criticalStockCount} critical` : 'Safe'; }
+function stockItems(clinic: ClinicRow) { return clinic.criticalStockItems.length ? clinic.criticalStockItems.join(', ') : clinic.coldChainReady ? 'Cold chain ready' : 'Cold chain gap'; }
+function weatherTone(clinic: ClinicRow): WeatherTone { return clinic.risk === 'critical' ? 'danger' : 'neutral'; }
+function weatherIcon(clinic: ClinicRow): AppIconName { return clinic.risk === 'critical' ? 'alert' : 'sun'; }
 
 function splitName(name: string) {
   const words = name.split(' ');
@@ -62,8 +27,8 @@ function splitName(name: string) {
 }
 
 function downloadClinicCsv(rows: ClinicRow[]) {
-  const header = ['id', 'name', 'location', 'risk', 'weather', 'deliveries'].join(',');
-  const body = rows.map((row) => [row.id, row.name, row.location, row.riskLabel, row.weather, row.deliveries].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const header = ['id', 'name', 'location', 'risk', 'rainy_access', 'active_pregnancies', 'critical_stock'].join(',');
+  const body = rows.map((row) => [row.id, row.name, row.location, row.riskLabel, row.rainyAccess, row.activePregnancies, row.criticalStockCount].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
   const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -96,7 +61,7 @@ function ClinicsSidebar({ detail }: { detail: boolean }) {
   );
 }
 
-function ClinicsTopbar({ detail, onUnavailable }: { detail: boolean; onUnavailable: (feature: string) => void }) {
+function ClinicsTopbar({ detail }: { detail: boolean }) {
   return (
     <header className={styles.clinicsTopbar}>
       <div className={styles.clinicsCrumbs}>
@@ -104,23 +69,23 @@ function ClinicsTopbar({ detail, onUnavailable }: { detail: boolean; onUnavailab
         <AppIcon name="chevronRight" width={14} height={14} />
         <span>Rekomendasi Distribusi</span>
         <AppIcon name="chevronRight" width={14} height={14} />
-        <strong>{detail ? 'Detail: Puskesmas Cangkringan' : 'Clinic List'}</strong>
+        <strong>{detail ? 'Detail Fasilitas' : 'Clinic List'}</strong>
       </div>
       <div className={styles.clinicsTopbarActions}>
         <strong>Petugas IFK</strong>
-        <button type="button" aria-label="Notifikasi" onClick={() => onUnavailable('Notifikasi')}><AppIcon name="bell" width={18} height={18} /></button>
-        <button type="button" aria-label="Bantuan" onClick={() => onUnavailable('Bantuan')}><AppIcon name="info" width={18} height={18} /></button>
+        <button type="button" aria-label="Notifikasi" disabled><AppIcon name="bell" width={18} height={18} /></button>
+        <button type="button" aria-label="Bantuan" disabled><AppIcon name="info" width={18} height={18} /></button>
         <span className={styles.clinicsAvatar}><AppIcon name="clipboard" width={16} height={16} /></span>
       </div>
     </header>
   );
 }
 
-function ClinicTable({ onUnavailable, onView, rows }: { onUnavailable: (feature: string) => void; onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
   return (
     <div className={styles.clinicTableCard}>
       <div className={styles.clinicFilters}>
-        <button type="button" onClick={() => onUnavailable('Clinic filters')}><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
+        <button type="button" disabled><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
       </div>
       <table className={styles.clinicTable}>
         <thead>
@@ -143,20 +108,20 @@ function ClinicTable({ onUnavailable, onView, rows }: { onUnavailable: (feature:
                 <small>{clinic.id}</small>
               </td>
               <td>{clinic.location.split(', ').map((part, index) => <span key={`${clinic.id}-location-${index}`}>{part}</span>)}</td>
-              <td className={styles.mono}>{clinic.logisticDate.split(' - ').map((part, index) => <span key={`${clinic.id}-date-${index}`}>{index < 2 ? `${part} -` : part}</span>)}</td>
-              <td><b className={styles[`stockout${clinic.risk}`]}>{clinic.stockout}</b><small>{clinic.stockItem}</small></td>
-              <td><b>{clinic.deliveries}</b></td>
+              <td className={styles.mono}>{clinic.logisticDate ? new Date(clinic.logisticDate).toLocaleDateString('id-ID') : 'Belum tersedia'}</td>
+              <td><b className={styles[`stockout${clinic.risk}`]}>{stockStatus(clinic)}</b><small>{stockItems(clinic)}</small></td>
+              <td><b>{clinic.activePregnancies}</b><small>{clinic.highRiskPregnancies} high-risk</small></td>
               <td><span className={[styles.clinicRisk, styles[clinic.risk]].join(' ')}>{clinic.riskLabel}</span></td>
               <td>
-                <span className={[styles.weatherCell, styles[clinic.weatherTone]].join(' ')}>
-                  <AppIcon name={clinic.weatherIcon} width={16} height={16} />
-                  <em>{clinic.weather.split(' ').map((part, index) => <span key={`${clinic.id}-weather-${index}`}>{part}</span>)}</em>
+                <span className={[styles.weatherCell, styles[weatherTone(clinic)]].join(' ')}>
+                  <AppIcon name={weatherIcon(clinic)} width={16} height={16} />
+                  <em>{(clinic.weatherAlert ?? clinic.rainyAccess).split(' ').map((part, index) => <span key={`${clinic.id}-weather-${index}`}>{part}</span>)}</em>
                 </span>
               </td>
               <td>
                 <span className={styles.clinicActions}>
                   <button type="button" aria-label={`Lihat ${clinic.name}`} onClick={() => onView(clinic)}><AppIcon name="eye" width={18} height={18} /></button>
-                  <button type="button" aria-label={`Menu ${clinic.name}`} onClick={() => onUnavailable(`Menu ${clinic.name}`)}><AppIcon name="moreVertical" width={18} height={18} /></button>
+                  <button type="button" aria-label={`Menu ${clinic.name}`} disabled><AppIcon name="moreVertical" width={18} height={18} /></button>
                 </span>
               </td>
             </tr>
@@ -175,7 +140,7 @@ function ClinicTable({ onUnavailable, onView, rows }: { onUnavailable: (feature:
   );
 }
 
-function ClinicsList({ onUnavailable, onView, rows }: { onUnavailable: (feature: string) => void; onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
   const stats: Array<{ label: string; value: string; tone: string; delta?: string }> = [
     { label: 'Total Facilities', value: String(rows.length), tone: 'clinicStatBlue' },
     { label: 'Critical (Stockout)', value: String(rows.filter((row) => row.risk === 'critical').length), tone: 'clinicStatRed' },
@@ -193,7 +158,7 @@ function ClinicsList({ onUnavailable, onView, rows }: { onUnavailable: (feature:
         </div>
         <div className={styles.clinicsHeaderActions}>
           <Button className={styles.clinicsGhostButton} icon={<AppIcon name="upload" width={16} height={16} />} onClick={() => downloadClinicCsv(rows)}>Export CSV</Button>
-          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="plus" width={16} height={16} />} onClick={() => onUnavailable('Add clinic')}>Add Clinic</Button>
+          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="plus" width={16} height={16} />} disabled>Add Clinic</Button>
         </div>
       </section>
 
@@ -207,7 +172,7 @@ function ClinicsList({ onUnavailable, onView, rows }: { onUnavailable: (feature:
       </section>
 
       <section className={styles.clinicRegistry} aria-label="Registry filters and table">
-        <ClinicTable rows={rows} onView={onView} onUnavailable={onUnavailable} />
+        <ClinicTable rows={rows} onView={onView} />
       </section>
     </main>
   );
@@ -224,7 +189,7 @@ function DetailMetric({ label, value, tone }: { label: string; value: string; to
 
 function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: ClinicRow; nearbyRows: ClinicRow[]; onBack: () => void; recommendation?: DistributionRecommendation }) {
   const itemSummary = recommendation?.items.map((item) => `${item.obat?.nama ?? item.obatId}: ${item.finalQuantity} ${item.obat?.satuan ?? 'unit'}`).join(', ') ?? 'Belum ada rekomendasi distribusi aktif.';
-  const urgencyScore = recommendation?.urgency === 'CRITICAL' ? '95/100' : recommendation?.urgency === 'WARNING' ? '65/100' : recommendation ? '35/100' : '-';
+  const urgencyScore = `${Math.min(100, clinic.criticalStockCount * 25 + clinic.highRiskPregnancies * 10 + (clinic.risk === 'critical' ? 40 : clinic.risk === 'warning' ? 20 : 0))}/100`;
   const history = recommendation?.trackingEvents ?? [];
   return (
     <main className={styles.clinicDetailPage}>
@@ -238,7 +203,7 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
 
       <section className={styles.criticalAlert}>
         <span><AppIcon name="alert" width={24} height={24} /></span>
-        <p>{recommendation?.justification ?? `${clinic.stockItem}; status akses hujan ${clinic.weather}.`}</p>
+        <p>{recommendation?.justification ?? `${stockItems(clinic)}; status akses hujan ${clinic.rainyAccess}.`}</p>
       </section>
 
       <section className={styles.detailGrid}>
@@ -246,17 +211,17 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
           <article className={styles.detailCard}>
             <h2><AppIcon name="idCard" width={18} height={18} />Clinic Profile</h2>
             <div className={styles.profileGrid}>
-              <DetailMetric label="Head of Clinic" value="Belum tersedia di database" />
+              <DetailMetric label="Head of Clinic" value={clinic.headOfClinic ?? 'Belum tersedia di database'} />
               <DetailMetric label="Confirmation Status" value={clinic.riskLabel} tone={clinic.risk === 'routine' ? 'safe' : 'danger'} />
               <DetailMetric label="Cold Chain Facilities" value={clinic.coldChainReady ? 'Ready' : 'Gap'} />
-              <DetailMetric label="Endemic Status" value={clinic.endemicStatus} />
+              <DetailMetric label="Endemic Status" value={clinic.statusEndemisMalaria ? 'Endemis malaria' : 'Non-endemis'} />
             </div>
           </article>
 
           <article className={styles.detailCard}>
             <div className={styles.detailCardHeader}>
               <h2>Medication & Supplies</h2>
-              <small>Last Update: {clinic.logisticDate}</small>
+              <small>Last Update: {clinic.logisticDate ? new Date(clinic.logisticDate).toLocaleDateString('id-ID') : 'Belum tersedia'}</small>
             </div>
             <div className={styles.suppliesTableWrap}>
               <table className={styles.suppliesTable}>
@@ -266,9 +231,9 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
                 <tbody>
                   <tr>
                     <td>{recommendation?.items[0]?.obat?.nama ?? 'Cold chain facility'}</td>
-                    <td className={clinic.risk === 'critical' ? styles.danger : styles.safe}>{clinic.stockItem}</td>
-                    <td>{recommendation?.items[0]?.finalQuantity ?? clinic.deliveries}</td>
-                    <td><span>{clinic.stockout}</span></td>
+                    <td className={clinic.risk === 'critical' ? styles.danger : styles.safe}>{stockItems(clinic)}</td>
+                    <td>{recommendation?.items[0]?.finalQuantity ?? clinic.criticalStockCount}</td>
+                    <td><span>{stockStatus(clinic)}</span></td>
                     <td><b className={styles[clinic.risk === 'critical' ? 'critical' : clinic.risk === 'warning' ? 'warning' : 'safe']}>{clinic.riskLabel}</b></td>
                   </tr>
                 </tbody>
@@ -281,9 +246,9 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
             <div className={styles.analysisGrid}>
               <ul>
                 <li><AppIcon name="info" width={16} height={16} />Distribution items: {itemSummary}</li>
-                <li><AppIcon name="users" width={16} height={16} />Active pregnancy count belum tersedia di endpoint fasilitas.</li>
+                <li><AppIcon name="users" width={16} height={16} />Active pregnancy count: {clinic.activePregnancies}; high-risk: {clinic.highRiskPregnancies}.</li>
                 <li><AppIcon name="activity" width={16} height={16} />Recommendation source: {recommendation?.source ?? 'Belum ada rekomendasi aktif'}.</li>
-                <li><AppIcon name="mapPin" width={16} height={16} />Lead time: {clinic.leadTime}; distance to IFK: {clinic.distance}.</li>
+                <li><AppIcon name="mapPin" width={16} height={16} />Lead time: {leadTime(clinic)}; distance to IFK: {distance(clinic)}.</li>
               </ul>
               <div className={styles.urgencyBox}>
                 <DetailMetric label="Urgency Score" value={urgencyScore} tone={clinic.risk === 'routine' ? 'safe' : 'danger'} />
@@ -299,9 +264,9 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
           <article className={styles.routeCard}>
             <h2><AppIcon name="route" width={20} height={20} />Optimized Logistics Route</h2>
             <div className={styles.routeImage}>
-              <span><b>Jarak: {clinic.distance}</b><b>Lead time: {clinic.leadTime}</b></span>
+              <span><b>Jarak: {distance(clinic)}</b><b>Lead time: {leadTime(clinic)}</b></span>
             </div>
-            <p>Storage capacity: <strong>{clinic.capacity}</strong></p>
+            <p>Storage capacity: <strong>{capacity(clinic)}</strong></p>
           </article>
 
           <article className={styles.detailCard}>
@@ -318,7 +283,7 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
           <article className={styles.detailCard}>
             <h2><AppIcon name="mapPin" width={20} height={20} />Nearby Clinics (Alt. Sourcing)</h2>
             {nearbyRows.length === 0 ? <p>Belum ada fasilitas alternatif.</p> : null}
-            {nearbyRows.slice(0, 2).map((row) => <div className={styles.nearbyClinic} key={row.id}><span><strong>{row.name}</strong><small>{row.distance}</small></span><b className={row.risk === 'warning' ? styles.warningText : undefined}>{row.riskLabel}</b></div>)}
+            {nearbyRows.slice(0, 2).map((row) => <div className={styles.nearbyClinic} key={row.id}><span><strong>{row.name}</strong><small>{distance(row)}</small></span><b className={row.risk === 'warning' ? styles.warningText : undefined}>{row.riskLabel}</b></div>)}
           </article>
         </aside>
       </section>
@@ -329,32 +294,22 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
 export function MedicineSenderClinicsContent() {
   const [selectedClinic, setSelectedClinic] = useState<ClinicRow | null>(null);
   const [rows, setRows] = useState<ClinicRow[]>([]);
-  const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  function explainUnavailable(feature: string) {
-    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
-  }
 
   useEffect(() => {
-    Promise.all([getPuskesmas(), getRecommendations()])
-      .then(([records, nextRecommendations]) => {
-        if (records.length) setRows(records.map(mapPuskesmasToClinic));
-        setRecommendations(nextRecommendations);
-      })
+    getIfkFacilities()
+      .then(setRows)
       .catch(() => setRows([]));
   }, []);
 
-  const selectedRecommendation = selectedClinic ? recommendations.find((item) => item.puskesmasId === selectedClinic.id) : undefined;
-  const nearbyRows = selectedClinic ? rows.filter((row) => row.id !== selectedClinic.id && row.risk === 'routine') : [];
+  const selectedRecommendation = selectedClinic?.activeRecommendation ?? undefined;
+  const nearbyRows = selectedClinic ? rows.filter((row) => selectedClinic.nearbyCandidates.some((candidate) => candidate.id === row.id)) : [];
 
   return (
     <div className={styles.clinicsShell}>
       <ClinicsSidebar detail={Boolean(selectedClinic)} />
       <div className={styles.clinicsWorkspace}>
-        <ClinicsTopbar detail={Boolean(selectedClinic)} onUnavailable={explainUnavailable} />
-        {notice ? <p role="status" className={styles.senderNotice}>{notice}</p> : null}
-        {selectedClinic ? <ClinicDetail clinic={selectedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onView={setSelectedClinic} onUnavailable={explainUnavailable} />}
+        <ClinicsTopbar detail={Boolean(selectedClinic)} />
+        {selectedClinic ? <ClinicDetail clinic={selectedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onView={setSelectedClinic} />}
       </div>
     </div>
   );

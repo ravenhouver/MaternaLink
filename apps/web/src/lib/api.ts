@@ -227,6 +227,57 @@ export type ObatRecord = {
   durasiPengobatanHari?: number | null;
 };
 
+export type IfkDashboardResponse = {
+  kpis: Array<{ label: string; value: number; delta: string; tone: 'critical' | 'warning' | 'safe' | 'primary'; progress: number; icon?: 'clipboardCheck' }>;
+  actions: Array<{ id: string; name: string; status: 'critical' | 'warning' | 'safe'; statusLabel: string; updatedAt: string; weather: string; supply: string; pointStatus: 'critical' | 'anticipatory' | 'regular'; position?: [number, number] | null }>;
+  mapPoints: Array<{ id: string; name: string; status: 'critical' | 'anticipatory' | 'regular'; position: [number, number] }>;
+  approvalLogs: Array<{ timestamp: string; entity: string; action: string; operator: string; status: 'approved' | 'rejected' | 'pending' }>;
+  syncFrequencySeconds: number;
+  alertCount: number;
+  routeCount: number;
+};
+
+export type IfkFacilityRecord = {
+  id: string;
+  name: string;
+  location: string;
+  headOfClinic?: string | null;
+  activePregnancies: number;
+  highRiskPregnancies: number;
+  logisticDate?: string | null;
+  criticalStockCount: number;
+  criticalStockItems: string[];
+  deliveries: number;
+  risk: 'critical' | 'warning' | 'routine';
+  riskLabel: string;
+  rainyAccess: string;
+  weatherAlert?: string | null;
+  coldChainReady: boolean;
+  leadTimeHari?: number | null;
+  jarakKeIfkKm?: number | null;
+  kapasitasSimpanObat?: number | null;
+  statusEndemisMalaria: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  activeRecommendation?: DistributionRecommendation | null;
+  nearbyCandidates: Array<{ id: string; name: string; distance?: number | null; riskLabel: string }>;
+};
+
+export type IfkDecisionHistoryResponse = {
+  metrics: Array<{ label: string; value: string; note: string; icon: string; tone: 'green' | 'blue' }>;
+  rows: Array<{ id: string; date: string; officer: string; clinic: string; action: string; prediction: string; decision: string; tone: 'red' | 'green' }>;
+  bars: Array<{ day: string; green: number; red: number }>;
+  compliance: { rating: number; primaryDeviationFactor: string; summary: string };
+};
+
+export type IfkEnvironmentResponse = {
+  points: Array<{ id: string; name: string; metric: string; risk: 'low' | 'medium' | 'high' | 'critical'; position: [number, number] }>;
+  forecasts: Array<{ location: string; risk: 'stable' | 'warning' | 'blocked'; status: string; temperature: string; metric: string; bars: Array<'low' | 'medium' | 'high' | 'critical'> }>;
+  routes: Array<{ id: string; route: string; clinics: string; risk: number; status: 'critical' | 'operational' | 'elevated'; blockedAt?: string | null; confidence: string }>;
+  alerts: AlertRecord[];
+  weatherSource?: 'OPEN_METEO' | 'DATABASE_FALLBACK';
+};
+
 export type KondisiRecord = { id: string; nama: string; deskripsi?: string | null };
 export type GejalaRecord = { id: string; nama: string; deskripsi?: string | null };
 
@@ -529,6 +580,22 @@ export async function deleteObat(id: string): Promise<{ id: string; deleted: boo
 
 export async function getAlerts(): Promise<AlertRecord[]> {
   return apiFetch('/distribution/alerts');
+}
+
+export async function getIfkDashboard(): Promise<IfkDashboardResponse> {
+  return apiFetch('/distribution/ifk/dashboard');
+}
+
+export async function getIfkFacilities(): Promise<IfkFacilityRecord[]> {
+  return apiFetch('/distribution/ifk/facilities');
+}
+
+export async function getIfkDecisionHistory(): Promise<IfkDecisionHistoryResponse> {
+  return apiFetch('/distribution/ifk/decision-history');
+}
+
+export async function getIfkEnvironment(): Promise<IfkEnvironmentResponse> {
+  return apiFetch('/distribution/ifk/environment');
 }
 
 export async function getStokRows(params?: { puskesmasId?: string; periode?: string }): Promise<StokRow[]> {

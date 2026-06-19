@@ -1,15 +1,18 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import {
   approveRecommendation,
+  getCurrentUser,
   getRecommendationTracking,
   getRecommendations,
   rejectRecommendation,
   reorderRecommendations,
   updateRecommendationItem,
+  type CurrentUser,
   type DistributionRecommendation,
   type RecommendationStatus,
   type RecommendationUrgency,
@@ -50,7 +53,7 @@ function RecommendationsSidebar() {
   );
 }
 
-function RecommendationsTopbar() {
+function RecommendationsTopbar({ user }: { user: CurrentUser | null }) {
   return (
     <header className={styles.recoTopbar}>
       <div className={styles.recoCrumbs}>
@@ -61,11 +64,11 @@ function RecommendationsTopbar() {
         <strong>Distribution Recommendations</strong>
       </div>
       <div className={styles.recoTopActions}>
-        <button type="button" aria-label="Notifikasi"><AppIcon name="bell" width={18} height={18} /><i /></button>
-        <button type="button" aria-label="Pengaturan"><AppIcon name="settings" width={18} height={18} /></button>
+        {user ? <NotificationCenter user={user} /> : null}
+        <button type="button" aria-label="Pengaturan" disabled><AppIcon name="settings" width={18} height={18} /></button>
         <span />
-        <div><strong>Pharmacy Management</strong><small>Administrator</small></div>
-        <b>PM</b>
+        <div><strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong><small>{user?.role ?? 'IFK_ADMIN'}</small></div>
+        <b>{(user?.displayName ?? user?.username ?? 'IF').slice(0, 2).toUpperCase()}</b>
       </div>
     </header>
   );
@@ -79,6 +82,7 @@ export function MedicineSenderRecommendationsContent() {
   const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'ALL'>('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
 
   async function refreshRows() {
     setIsLoading(true);
@@ -95,6 +99,10 @@ export function MedicineSenderRecommendationsContent() {
   useEffect(() => {
     void refreshRows();
   }, [statusFilter]);
+
+  useEffect(() => {
+    getCurrentUser().then(setUser).catch(() => setUser(null));
+  }, []);
 
   const stats = useMemo(() => {
     const critical = rows.filter((row) => row.urgency === 'CRITICAL').length;
@@ -158,7 +166,7 @@ export function MedicineSenderRecommendationsContent() {
     <div className={styles.recoShell}>
       <RecommendationsSidebar />
       <div className={styles.recoWorkspace}>
-        <RecommendationsTopbar />
+        <RecommendationsTopbar user={user} />
         <main className={styles.recoPage}>
           <section className={styles.recoTitleRow}>
             <div><p>Logistics Intelligence</p><h1>Distribution Recommendations</h1></div>

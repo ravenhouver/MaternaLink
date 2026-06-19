@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
-import { getAlerts, getCurrentUser, getPuskesmas, type AlertRecord, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
+import { getCurrentUser, getIfkEnvironment, type AlertRecord, type CurrentUser, type IfkEnvironmentResponse } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { getNextAlertFeedState } from './alert-feed-state';
 import type { EnvironmentalPoint } from './environment-monitoring-data';
@@ -20,7 +20,7 @@ const EnvironmentMap = dynamic(() => import('./components/environment-map').then
 
 type ForecastRisk = 'stable' | 'warning' | 'blocked';
 type ForecastItem = { location: string; risk: ForecastRisk; status: string; temperature: string; metric: string; bars: Array<'low' | 'medium' | 'high' | 'critical'> };
-type RouteRow = { id: string; route: string; clinics: string; risk: number; status: 'critical' | 'operational' | 'elevated'; blockedAt: string; confidence: string };
+type RouteRow = IfkEnvironmentResponse['routes'][number];
 
 const riskIcon: Record<ForecastRisk, 'activity' | 'alert'> = {
   stable: 'activity',
@@ -64,7 +64,7 @@ function RoleSidebar({ user }: { user: CurrentUser | null }) {
   );
 }
 
-function Topbar({ onUnavailable, user }: { onUnavailable: (feature: string) => void; user: CurrentUser | null }) {
+function Topbar({ user }: { user: CurrentUser | null }) {
   return (
     <header className={styles.topbar}>
       <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
@@ -76,11 +76,11 @@ function Topbar({ onUnavailable, user }: { onUnavailable: (feature: string) => v
       </nav>
       <div className={styles.topbarActions}>
         {user ? <NotificationCenter user={user} /> : null}
-        <button type="button" aria-label="Pengaturan" onClick={() => onUnavailable('Pengaturan')}><AppIcon name="settings" width={20} height={20} /></button>
+        <button type="button" aria-label="Pengaturan" disabled><AppIcon name="settings" width={20} height={20} /></button>
         <div className={styles.topbarProfile}>
           <div>
-            <strong>{user?.displayName ?? user?.username ?? 'Pharmacy Management'}</strong>
-            <small>{user?.role ?? 'Administrator'}</small>
+            <strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong>
+            <small>{user?.role ?? 'IFK_ADMIN'}</small>
           </div>
           <img src="/figma-dashboard/profil-bidan.png" alt="Pharmacy administrator" />
         </div>
@@ -111,13 +111,8 @@ function ForecastCard({ item }: { item: ForecastItem }) {
   );
 }
 
-function AlertFeed() {
+function AlertFeed({ alerts }: { alerts: AlertRecord[] }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
-
-  useEffect(() => {
-    getAlerts().then(setAlerts).catch(() => setAlerts([]));
-  }, []);
 
   return (
     <aside className={[styles.alertFeed, isCollapsed ? styles.alertFeedCollapsed : ''].filter(Boolean).join(' ')} aria-label="Live environmental alert feed">
@@ -175,7 +170,7 @@ function RiskTable({ rows }: { rows: RouteRow[] }) {
                   </div>
                 </td>
                 <td><span className={[styles.routeStatus, styles[item.status]].join(' ')}>{statusLabel[item.status]}</span></td>
-                <td><strong>{item.blockedAt}</strong></td>
+                <td><strong>{item.blockedAt ? new Date(item.blockedAt).toLocaleDateString('id-ID') : '-'}</strong></td>
                 <td>{item.confidence}</td>
               </tr>
             ))}
@@ -188,50 +183,29 @@ function RiskTable({ rows }: { rows: RouteRow[] }) {
 
 export function EnvironmentMonitoringContent() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
-  const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
+  const [environment, setEnvironment] = useState<IfkEnvironmentResponse | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  function explainUnavailable(feature: string) {
-    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
-  }
 
   useEffect(() => {
-    Promise.all([getAlerts(), getPuskesmas(), getCurrentUser()])
-      .then(([nextAlerts, nextPuskesmas, nextUser]) => {
-        setAlerts(nextAlerts);
-        setPuskesmas(nextPuskesmas);
+    Promise.all([getIfkEnvironment(), getCurrentUser()])
+      .then(([nextEnvironment, nextUser]) => {
+        setEnvironment(nextEnvironment);
+        setAlerts(nextEnvironment.alerts);
         setUser(nextUser);
       })
       .catch(() => undefined);
   }, []);
 
-  const environmentalPoints = useMemo<EnvironmentalPoint[]>(() => puskesmas.flatMap((item) => {
-    if (item.latitude == null || item.longitude == null) return [];
-    const alert = alerts.find((row) => row.puskesmasId === item.id);
-    const risk = alert?.severity === 'CRITICAL' ? 'critical' : alert?.severity === 'HIGH' ? 'high' : item.rainyAccess === 'TERBATAS' ? 'medium' : 'low';
-    return [{ id: item.id, name: item.nama, position: [item.latitude, item.longitude], risk, metric: alert?.message ?? item.rainyAccess }];
-  }), [alerts, puskesmas]);
-
-  const forecasts = useMemo<ForecastItem[]>(() => puskesmas.slice(0, 3).map((item) => {
-    const alert = alerts.find((row) => row.puskesmasId === item.id);
-    const risk: ForecastRisk = alert?.severity === 'CRITICAL' || item.rainyAccess === 'TERGANGGU' ? 'blocked' : alert ? 'warning' : 'stable';
-    return { location: item.nama, risk, status: risk === 'blocked' ? 'Blocked risk' : risk === 'warning' ? 'Elevated' : 'Stable', temperature: `${item.leadTimeHari ?? 0}d`, metric: `Lead time - ${item.rainyAccess}`, bars: risk === 'blocked' ? ['high', 'critical', 'critical', 'high', 'medium', 'medium', 'high'] : risk === 'warning' ? ['medium', 'medium', 'high', 'medium', 'low', 'medium', 'high'] : ['low', 'low', 'medium', 'low', 'low', 'medium', 'low'] };
-  }), [alerts, puskesmas]);
-
-  const routeRows = useMemo<RouteRow[]>(() => puskesmas.map((item) => {
-    const alert = alerts.find((row) => row.puskesmasId === item.id);
-    const risk = alert?.severity === 'CRITICAL' ? 95 : alert?.severity === 'HIGH' ? 82 : item.rainyAccess === 'TERBATAS' ? 58 : 25;
-    return { id: item.id, route: `IFK-${item.id}`, clinics: item.nama, risk, status: risk >= 80 ? 'critical' : risk >= 50 ? 'elevated' : 'operational', blockedAt: alert ? new Date(alert.createdAt).toLocaleDateString('id-ID') : '-', confidence: alert ? alert.severity : 'LOW' };
-  }), [alerts, puskesmas]);
+  const environmentalPoints = useMemo<EnvironmentalPoint[]>(() => environment?.points ?? [], [environment]);
+  const forecasts = useMemo<ForecastItem[]>(() => environment?.forecasts ?? [], [environment]);
+  const routeRows = useMemo<RouteRow[]>(() => environment?.routes ?? [], [environment]);
 
   return (
     <div className={styles.shell}>
       <RoleSidebar user={user} />
       <div className={styles.workspace}>
-        <Topbar onUnavailable={explainUnavailable} user={user} />
+        <Topbar user={user} />
         <main className={styles.page}>
-          {notice ? <p role="status" className={styles.environmentNotice}>{notice}</p> : null}
           <section className={styles.pageHeader} aria-labelledby="environment-title">
             <div>
               <Typography.Text className={styles.eyebrow}>Intelligence Hub / Regional Sector 04</Typography.Text>
@@ -272,7 +246,7 @@ export function EnvironmentMonitoringContent() {
             </div>
             <RiskTable rows={routeRows} />
           </section>
-          <AlertFeed />
+          <AlertFeed alerts={alerts} />
         </main>
       </div>
     </div>

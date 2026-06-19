@@ -23,6 +23,30 @@ import { DistributionService } from './distribution.service';
 export class DistributionController {
   constructor(private readonly service: DistributionService) {}
 
+  @ApiOperation({ summary: 'Get IFK dashboard operations summary' })
+  @ApiResponse({ status: 200, description: 'IFK dashboard summary returned' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
+  @Get('ifk/dashboard')
+  getIfkDashboard() { return this.service.getIfkDashboard(); }
+
+  @ApiOperation({ summary: 'Get IFK facility operational registry' })
+  @ApiResponse({ status: 200, description: 'IFK facility registry returned' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
+  @Get('ifk/facilities')
+  getIfkFacilities() { return this.service.getIfkFacilities(); }
+
+  @ApiOperation({ summary: 'Get IFK decision history ledger' })
+  @ApiResponse({ status: 200, description: 'IFK decision history returned' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
+  @Get('ifk/decision-history')
+  getIfkDecisionHistory() { return this.service.getIfkDecisionHistory(); }
+
+  @ApiOperation({ summary: 'Get IFK environment risk summary' })
+  @ApiResponse({ status: 200, description: 'IFK environment summary returned' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
+  @Get('ifk/environment')
+  getIfkEnvironment() { return this.service.getIfkEnvironment(); }
+
   @ApiOperation({ summary: 'List distribution recommendations' })
   @ApiResponse({ status: 200, description: 'Recommendations returned' })
   @UseGuards(AuthGuard, RolesGuard)
