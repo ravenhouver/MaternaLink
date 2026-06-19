@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { defaultLocale, isAppLocale, localeCookieName } from './i18n/config';
 
 type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN' | 'SUPER_ADMIN';
 
@@ -78,19 +79,37 @@ function redirect(request: NextRequest, pathname: string) {
   return NextResponse.redirect(new URL(pathname, request.url));
 }
 
+function detectLocale(request: NextRequest) {
+  const cookieLocale = request.cookies.get(localeCookieName)?.value;
+  if (isAppLocale(cookieLocale)) return cookieLocale;
+  const accepted = request.headers
+    .get('accept-language')
+    ?.split(',')
+    .map((item) => item.trim().split(';')[0]?.toLowerCase().split('-')[0])
+    .find(isAppLocale);
+  return accepted ?? defaultLocale;
+}
+
+function withLocaleCookie(request: NextRequest, response: NextResponse) {
+  if (!request.cookies.get(localeCookieName)?.value) {
+    response.cookies.set(localeCookieName, detectLocale(request), { path: '/', maxAge: 60 * 60 * 24 * 365 });
+  }
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const role = await verifySessionRole(request.cookies.get(SESSION_COOKIE)?.value);
   const pathname = request.nextUrl.pathname;
 
   if (pathname === '/login') {
-    return role ? redirect(request, defaultRoute(role)) : NextResponse.next();
+    return withLocaleCookie(request, role ? redirect(request, defaultRoute(role)) : NextResponse.next());
   }
 
   const roles = routeRoles(pathname);
-  if (!roles) return NextResponse.next();
-  if (!role) return redirect(request, '/login');
-  if (!roles.includes(role)) return redirect(request, defaultRoute(role));
-  return NextResponse.next();
+  if (!roles) return withLocaleCookie(request, NextResponse.next());
+  if (!role) return withLocaleCookie(request, redirect(request, '/login'));
+  if (!roles.includes(role)) return withLocaleCookie(request, redirect(request, defaultRoute(role)));
+  return withLocaleCookie(request, NextResponse.next());
 }
 
 export const config = {

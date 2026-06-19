@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { NotificationCenter } from '@/components/layout/notification-center';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import type { CurrentUser } from '@/lib/api';
@@ -11,16 +13,19 @@ import styles from './super-admin-dashboard.module.css';
 
 type AdminPageKey = 'dashboard' | 'health-centers' | 'users' | 'medicines' | 'facility-profiles';
 
-const navItems: Array<{ key: AdminPageKey; label: string; icon: AppIconName; href: string }> = [
-  { key: 'dashboard', label: 'Dashboard', icon: 'grid', href: routes.admin },
-  { key: 'health-centers', label: 'Health Centers', icon: 'briefcase', href: routes.adminHealthCenters },
-  { key: 'users', label: 'User Accounts', icon: 'users', href: routes.adminUsers },
-  { key: 'medicines', label: 'Medicine List', icon: 'clipboard', href: routes.adminMedicines },
-  { key: 'facility-profiles', label: 'Facility Profiles', icon: 'archive', href: routes.adminFacilityProfiles },
+const navItems: Array<{ key: AdminPageKey; labelKey: string; icon: AppIconName; href: string }> = [
+  { key: 'dashboard', labelKey: 'dashboard', icon: 'grid', href: routes.admin },
+  { key: 'health-centers', labelKey: 'healthCenters', icon: 'briefcase', href: routes.adminHealthCenters },
+  { key: 'users', labelKey: 'users', icon: 'users', href: routes.adminUsers },
+  { key: 'medicines', labelKey: 'medicines', icon: 'clipboard', href: routes.adminMedicines },
+  { key: 'facility-profiles', labelKey: 'facilityProfiles', icon: 'archive', href: routes.adminFacilityProfiles },
 ];
 
 export function AdminShell({ active, breadcrumb, user, children }: { active: AdminPageKey; breadcrumb: string; user: CurrentUser | null; children: ReactNode }) {
   const [panel, setPanel] = useState<'settings' | 'help' | null>(null);
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
+  const tNav = useTranslations('nav');
   const displayName = user?.displayName ?? user?.username ?? 'Super Admin';
   const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'SA';
 
@@ -29,20 +34,20 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
       <aside className={styles.sidebar} aria-label="Super admin navigation">
         <Link href={routes.admin} className={styles.brand} aria-label="MaternaLink super admin dashboard">
           <span className={styles.brandIcon}><AppIcon name="briefcase" width={20} height={20} /></span>
-          <span className={styles.brandText}><strong>MaternaLink</strong><small>SUPER ADMIN</small></span>
+          <span className={styles.brandText}><strong>MaternaLink</strong><small>{t('superAdmin')}</small></span>
         </Link>
 
         <nav className={styles.nav}>
           {navItems.map((item) => (
             <Link href={item.href} className={[styles.navItem, item.key === active ? styles.activeNav : ''].filter(Boolean).join(' ')} key={item.key}>
               <AppIcon name={item.icon} width={20} height={20} />
-              <span>{item.label}</span>
+              <span>{tNav(item.labelKey)}</span>
             </Link>
           ))}
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <button type="button" className={styles.navItem} onClick={() => setPanel('help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
+          <button type="button" className={styles.navItem} onClick={() => setPanel('help')}><AppIcon name="info" width={20} height={20} /><span>{tCommon('help')}</span></button>
           <RoleLogoutButton className={styles.navItem} />
         </div>
       </aside>
@@ -56,7 +61,8 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
           </nav>
           <div className={styles.topbarActions}>
             {user ? <NotificationCenter user={user} /> : null}
-            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => setPanel('settings')}><AppIcon name="settings" width={20} height={20} /></button>
+            <LanguageSwitcher className={styles.adminLanguageSwitcher} />
+            <button className={styles.iconButton} type="button" aria-label={tCommon('settings')} onClick={() => setPanel('settings')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>Superadmin</small></span>
               <span className={styles.avatar} aria-hidden="true">{initials}</span>
@@ -71,7 +77,7 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
         <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setPanel(null)}>
           <section className={styles.sideDrawer} role="dialog" aria-modal="true" aria-label={panel === 'settings' ? 'Admin settings' : 'Admin help'} onMouseDown={(event) => event.stopPropagation()}>
             <header className={styles.drawerHeader}>
-              <h2>{panel === 'settings' ? 'Admin Settings' : 'Admin Help'}</h2>
+              <h2>{panel === 'settings' ? t('settingsTitle') : t('helpTitle')}</h2>
               <button type="button" aria-label="Close" onClick={() => setPanel(null)}><AppIcon name="circleStop" width={18} height={18} /></button>
             </header>
             {panel === 'settings' ? <AdminSettings user={user} /> : <AdminHelp />}
@@ -83,12 +89,14 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
 }
 
 function AdminSettings({ user }: { user: CurrentUser | null }) {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
   return (
     <div className={styles.drawerBody}>
       <dl className={styles.settingsList}>
-        <div><dt>Username</dt><dd>{user?.username ?? '-'}</dd></div>
-        <div><dt>Role</dt><dd>{user?.role ?? '-'}</dd></div>
-        <div><dt>Session</dt><dd>Cookie login aktif</dd></div>
+        <div><dt>{tCommon('username')}</dt><dd>{user?.username ?? '-'}</dd></div>
+        <div><dt>{tCommon('role')}</dt><dd>{user?.role ?? '-'}</dd></div>
+        <div><dt>Session</dt><dd>{t('settingsSession')}</dd></div>
       </dl>
       <RoleLogoutButton className={styles.primaryButton} />
     </div>
@@ -96,9 +104,10 @@ function AdminSettings({ user }: { user: CurrentUser | null }) {
 }
 
 function AdminHelp() {
+  const t = useTranslations('admin');
   return (
     <div className={styles.drawerBody}>
-      <p>Semua data admin tersimpan langsung ke backend. Gunakan tombol tambah, edit, hapus, sinkronisasi, filter, dan ekspor sesuai modul.</p>
+      <p>{t('helpBody')}</p>
       <ul className={styles.helpList}>
         <li>User terhubung ke akun login dan role.</li>
         <li>Health center dan facility profile memakai tabel puskesmas yang sama.</li>

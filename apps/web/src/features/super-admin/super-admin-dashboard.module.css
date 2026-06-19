@@ -138,6 +138,27 @@
   gap: 24px;
 }
 
+.adminLanguageSwitcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
+.adminLanguageSwitcher select {
+  height: 34px;
+  min-width: 116px;
+  border: 1px solid #c1c6d6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #191c20;
+  font: inherit;
+  font-weight: 700;
+}
+
 .iconButton,
 .panelHeader button,
 .panelFooter button,

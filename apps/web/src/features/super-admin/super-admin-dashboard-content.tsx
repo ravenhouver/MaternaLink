@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getCurrentUser, getDashboardSummary, type CurrentUser, type DashboardSummary } from '@/lib/api';
@@ -35,6 +36,7 @@ export function SuperAdminDashboardContent() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activityLimit, setActivityLimit] = useState(5);
+  const t = useTranslations('admin');
 
   useEffect(() => {
     let mounted = true;
@@ -55,11 +57,11 @@ export function SuperAdminDashboardContent() {
 
   const masterData = summary?.masterData;
   const stats = useMemo<Stat[]>(() => [
-    { label: 'Total Health Centers', value: masterData?.healthCenters ?? 0, tag: `+${masterData?.newHealthCenters ?? 0} / 30 hari`, icon: 'briefcase', tone: 'blue' },
-    { label: 'Total Users', value: masterData?.users ?? 0, tag: `+${masterData?.newUsers ?? 0} / 30 hari`, icon: 'users', tone: 'green' },
-    { label: 'Total Medicines', value: masterData?.medicines ?? 0, tag: `+${masterData?.newMedicines ?? 0} / 30 hari`, icon: 'clipboard', tone: 'neutral' },
-    { label: 'Inactive Accounts', value: masterData?.inactiveAccounts ?? 0, tag: masterData?.inactiveAccounts ? 'Perlu review' : 'Aman', icon: 'alert', tone: 'red' },
-  ], [masterData]);
+    { label: t('totalHealthCenters'), value: masterData?.healthCenters ?? 0, tag: t('last30Days', { count: masterData?.newHealthCenters ?? 0 }), icon: 'briefcase', tone: 'blue' },
+    { label: t('totalUsers'), value: masterData?.users ?? 0, tag: t('last30Days', { count: masterData?.newUsers ?? 0 }), icon: 'users', tone: 'green' },
+    { label: t('totalMedicines'), value: masterData?.medicines ?? 0, tag: t('last30Days', { count: masterData?.newMedicines ?? 0 }), icon: 'clipboard', tone: 'neutral' },
+    { label: t('inactiveAccounts'), value: masterData?.inactiveAccounts ?? 0, tag: masterData?.inactiveAccounts ? t('needsReview') : t('safe'), icon: 'alert', tone: 'red' },
+  ], [masterData, t]);
 
   const recentActivity = summary?.recentActivity ?? [];
   const healthyPercent = masterData?.users ? Math.round(((masterData.users - masterData.inactiveAccounts) / masterData.users) * 100) : 0;
@@ -68,8 +70,8 @@ export function SuperAdminDashboardContent() {
     <AdminShell active="dashboard" breadcrumb="Dashboard" user={user}>
       <div className={styles.content}>
         <section className={styles.pageHeader}>
-          <div><h1>Admin Dashboard</h1><p>Ringkasan master data MaternaLink dari database aktif</p></div>
-          <div className={styles.updatedAt}><span>Last updated</span><strong>{updatedAt ? formatUpdatedAt(updatedAt) : '-'}</strong></div>
+          <div><h1>{t('dashboardTitle')}</h1><p>{t('dashboardSubtitle')}</p></div>
+          <div className={styles.updatedAt}><span>{t('lastUpdated')}</span><strong>{updatedAt ? formatUpdatedAt(updatedAt) : '-'}</strong></div>
         </section>
 
         {error ? <p className={styles.error}>{error}</p> : null}
@@ -86,8 +88,8 @@ export function SuperAdminDashboardContent() {
         <section className={styles.dashboardGrid}>
           <article className={styles.activityPanel}>
             <header className={styles.panelHeader}>
-              <h2>Recent Activity</h2>
-              <button type="button" onClick={() => setActivityLimit(recentActivity.length)}>All Activity</button>
+              <h2>{t('recentActivity')}</h2>
+              <button type="button" onClick={() => setActivityLimit(recentActivity.length)}>{t('allActivity')}</button>
             </header>
             <div className={styles.activityList}>
               {recentActivity.slice(0, activityLimit).map((activity) => (
@@ -100,18 +102,18 @@ export function SuperAdminDashboardContent() {
                   <time>{formatRelative(activity.createdAt)}</time>
                 </div>
               ))}
-              {recentActivity.length === 0 ? <p className={styles.emptyState}>Belum ada audit log admin.</p> : null}
+              {recentActivity.length === 0 ? <p className={styles.emptyState}>{t('noAuditLogs')}</p> : null}
             </div>
             <footer className={styles.panelFooter}>
-              <button type="button" disabled={activityLimit >= recentActivity.length} onClick={() => setActivityLimit((value) => value + 10)}>Load 10 More Activities</button>
+              <button type="button" disabled={activityLimit >= recentActivity.length} onClick={() => setActivityLimit((value) => value + 10)}>{t('loadMoreActivities')}</button>
             </footer>
           </article>
 
           <aside className={styles.sidePanel} style={{ '--panel-progress': `${healthyPercent}%` } as CSSProperties}>
-            <h2>Account Health</h2>
-            <p>{masterData?.inactiveAccounts ?? 0} inactive accounts dari {masterData?.users ?? 0} user aktif di database.</p>
+            <h2>{t('accountHealth')}</h2>
+            <p>{t('accountHealthBody', { inactive: masterData?.inactiveAccounts ?? 0, total: masterData?.users ?? 0 })}</p>
             <div className={styles.progressTrack}><span /></div>
-            <Link href={routes.adminUsers}><AppIcon name="userPlus" width={18} height={18} /> Review users</Link>
+            <Link href={routes.adminUsers}><AppIcon name="userPlus" width={18} height={18} /> {t('reviewUsers')}</Link>
           </aside>
         </section>
       </div>

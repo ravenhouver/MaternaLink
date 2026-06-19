@@ -7,26 +7,27 @@ type NavItem = {
   href: string;
   icon: AppIconName;
   label: string;
+  labelKey: string;
   roles: UserRole[];
 };
 
 export const navItems = [
-  { key: routes.admin, href: routes.admin, icon: 'grid', label: 'Dashboard', roles: ['SUPER_ADMIN'] },
-  { key: routes.adminHealthCenters, href: routes.adminHealthCenters, icon: 'briefcase', label: 'Health Centers', roles: ['SUPER_ADMIN'] },
-  { key: routes.adminUsers, href: routes.adminUsers, icon: 'users', label: 'User Accounts', roles: ['SUPER_ADMIN'] },
-  { key: routes.adminMedicines, href: routes.adminMedicines, icon: 'clipboard', label: 'Medicine List', roles: ['SUPER_ADMIN'] },
-  { key: routes.adminFacilityProfiles, href: routes.adminFacilityProfiles, icon: 'archive', label: 'Facility Profiles', roles: ['SUPER_ADMIN'] },
-  { key: routes.dashboard, href: routes.dashboard, icon: 'home', label: 'Dashboard', roles: ['BIDAN_PUSKESMAS'] },
-  { key: routes.queue, href: routes.queue, icon: 'userPlus', label: 'Patient Queue', roles: ['BIDAN_PUSKESMAS'] },
-  { key: routes.patients, href: routes.patients, icon: 'users', label: 'Patient List', roles: ['BIDAN_PUSKESMAS'] },
-  { key: routes.forecastCalendar, href: routes.forecastCalendar, icon: 'calendar', label: 'Prediction Calendar', roles: ['BIDAN_PUSKESMAS'] },
-  { key: routes.medicineNeeds, href: routes.medicineNeeds, icon: 'plus', label: 'Medicine Needs', roles: ['BIDAN_PUSKESMAS'] },
-  { key: routes.ifk, href: routes.ifk, icon: 'home', label: 'IFK Dashboard', roles: ['IFK_ADMIN'] },
-  { key: routes.ifkRecommendations, href: routes.ifkRecommendations, icon: 'package', label: 'Recommendations', roles: ['IFK_ADMIN'] },
-  { key: routes.ifkClinics, href: routes.ifkClinics, icon: 'users', label: 'Clinics', roles: ['IFK_ADMIN'] },
-  { key: routes.ifkEnvironment, href: routes.ifkEnvironment, icon: 'calendar', label: 'Environment', roles: ['IFK_ADMIN'] },
-  { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'settings', label: 'Decision History', roles: ['IFK_ADMIN'] },
-  { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', roles: ['BIDAN_PUSKESMAS'] },
+  { key: routes.admin, href: routes.admin, icon: 'grid', label: 'Dashboard', labelKey: 'dashboard', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminHealthCenters, href: routes.adminHealthCenters, icon: 'briefcase', label: 'Health Centers', labelKey: 'healthCenters', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminUsers, href: routes.adminUsers, icon: 'users', label: 'User Accounts', labelKey: 'users', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminMedicines, href: routes.adminMedicines, icon: 'clipboard', label: 'Medicine List', labelKey: 'medicines', roles: ['SUPER_ADMIN'] },
+  { key: routes.adminFacilityProfiles, href: routes.adminFacilityProfiles, icon: 'archive', label: 'Facility Profiles', labelKey: 'facilityProfiles', roles: ['SUPER_ADMIN'] },
+  { key: routes.dashboard, href: routes.dashboard, icon: 'home', label: 'Dashboard', labelKey: 'dashboard', roles: ['BIDAN_PUSKESMAS'] },
+  { key: routes.queue, href: routes.queue, icon: 'userPlus', label: 'Patient Queue', labelKey: 'patientQueue', roles: ['BIDAN_PUSKESMAS'] },
+  { key: routes.patients, href: routes.patients, icon: 'users', label: 'Patient List', labelKey: 'patients', roles: ['BIDAN_PUSKESMAS'] },
+  { key: routes.forecastCalendar, href: routes.forecastCalendar, icon: 'calendar', label: 'Prediction Calendar', labelKey: 'forecastCalendar', roles: ['BIDAN_PUSKESMAS'] },
+  { key: routes.medicineNeeds, href: routes.medicineNeeds, icon: 'plus', label: 'Medicine Needs', labelKey: 'medicineNeeds', roles: ['BIDAN_PUSKESMAS'] },
+  { key: routes.ifk, href: routes.ifk, icon: 'home', label: 'IFK Dashboard', labelKey: 'ifkDashboard', roles: ['IFK_ADMIN'] },
+  { key: routes.ifkRecommendations, href: routes.ifkRecommendations, icon: 'package', label: 'Recommendations', labelKey: 'recommendations', roles: ['IFK_ADMIN'] },
+  { key: routes.ifkClinics, href: routes.ifkClinics, icon: 'users', label: 'Clinics', labelKey: 'clinics', roles: ['IFK_ADMIN'] },
+  { key: routes.ifkEnvironment, href: routes.ifkEnvironment, icon: 'calendar', label: 'Environment', labelKey: 'environment', roles: ['IFK_ADMIN'] },
+  { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'settings', label: 'Decision History', labelKey: 'decisionHistory', roles: ['IFK_ADMIN'] },
+  { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', labelKey: 'deliveries', roles: ['BIDAN_PUSKESMAS'] },
 ] satisfies NavItem[];
 
 export function getVisibleNavItems(role: UserRole) {
