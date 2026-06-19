@@ -120,6 +120,26 @@ export class DistributionService {
     });
   }
 
+  async rerequestRecommendation(id: string, actorUserId: string) {
+    const recommendation = await this.prisma.distributionRecommendation.findUnique({ where: { id } });
+    if (!recommendation) throw new NotFoundException('Recommendation not found');
+    if (recommendation.status !== RecommendationStatus.REJECTED && recommendation.status !== RecommendationStatus.CANCELLED) {
+      throw new BadRequestException('Only rejected or cancelled recommendations can be re-requested');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.shipmentTrackingEvent.create({
+        data: { recommendationId: id, status: TrackingStatus.REQUESTED, actorUserId, note: 'Shipment re-requested by puskesmas.' },
+      });
+      const updated = await tx.distributionRecommendation.update({
+        where: { id },
+        data: { status: RecommendationStatus.PENDING },
+        include: { puskesmas: true, items: { include: { obat: true } }, trackingEvents: { include: { actor: true }, orderBy: { createdAt: 'desc' } } },
+      });
+      return updated;
+    });
+  }
+
   getTracking(id: string) {
     return this.prisma.shipmentTrackingEvent.findMany({
       where: { recommendationId: id },

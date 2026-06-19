@@ -8,7 +8,7 @@ import { createQueue, getPatients, updatePatient, type PatientRecord, type Pregn
 import { routes } from '@/lib/routes';
 import styles from './patients.module.css';
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 10;
 
 type PatientDraft = {
   fullName: string;
@@ -271,7 +271,7 @@ export function PatientsPageContent() {
           <p>Manage maternal data, monitor risk status, and pregnancy schedules in a unified view.</p>
         </div>
         <div className={styles.headerActions}>
-          <button type="button" aria-label="Refresh patient list" onClick={() => void refreshRows()}><AppIcon name="bell" width={20} height={20} /></button>
+          <button type="button" aria-label="Refresh patient list" onClick={() => void refreshRows()}><AppIcon name="clock" width={20} height={20} /></button>
           <Link href={routes.newPatient} aria-label="Add new patient"><AppIcon name="plus" width={20} height={20} /></Link>
         </div>
       </section>

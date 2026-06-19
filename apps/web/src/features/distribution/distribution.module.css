@@ -21,6 +21,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
+  flex-wrap: wrap;
 }
 
 .pageHeader h1,
@@ -75,9 +76,10 @@
 
 .filterRow {
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
   padding-top: 8px;
+  text-align: center;
 }
 
 .distributionError {
@@ -467,10 +469,15 @@
   color: #ba1a1a;
 }
 
-.rejectionNote a {
+.rejectionNote button {
+  border: 0;
+  background: transparent;
   color: #005bbf;
+  cursor: pointer;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 800;
+  text-decoration: underline;
 }
 
 .visualGrid {
@@ -478,6 +485,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 32px;
   padding-top: 24px;
+}
+
+.visualGrid .performanceCard:only-child {
+  grid-column: 1 / -1;
 }
 
 .mapCard {

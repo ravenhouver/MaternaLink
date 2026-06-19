@@ -648,6 +648,10 @@ export async function rejectRecommendation(id: string, note: string): Promise<Di
   return apiFetch(`/distribution/recommendations/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ note }), successMessage: 'Rekomendasi berhasil ditolak', errorMessage: 'Gagal menolak rekomendasi' });
 }
 
+export async function rerequestRecommendation(id: string): Promise<DistributionRecommendation> {
+  return apiFetch(`/distribution/recommendations/${id}/rerequest`, { method: 'POST', successMessage: 'Permintaan dikirim ulang', errorMessage: 'Gagal mengirim ulang permintaan' });
+}
+
 export async function getRecommendationTracking(id: string): Promise<TrackingEvent[]> {
   return apiFetch(`/distribution/recommendations/${id}/tracking`);
 }

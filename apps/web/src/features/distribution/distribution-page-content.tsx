@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { getRecommendations, type DistributionRecommendation, type RecommendationStatus, type TrackingEvent, type TrackingStatus } from '@/lib/api';
+import { getRecommendations, rerequestRecommendation, type DistributionRecommendation, type RecommendationStatus, type TrackingEvent, type TrackingStatus } from '@/lib/api';
 import styles from './distribution.module.css';
 
 const DistributionMap = dynamic(() => import('./distribution-map').then((module) => module.DistributionMap), {
@@ -68,7 +68,7 @@ function mapRecommendation(row: DistributionRecommendation): Shipment {
     statusLabel: mapped.statusLabel,
     statusMeta: latestEvent ? `${trackingStatusLabel(latestEvent.status)} ${formatDateTime(latestEvent.createdAt)}` : `Requested ${formatDate(row.periode)}`,
     icon: mapped.icon,
-    expanded: row.status === 'APPROVED' || row.status === 'DISPATCHED',
+    expanded: false,
     borderTone: mapped.borderTone,
     source: row,
     trackingEvents,
@@ -152,6 +152,39 @@ function averageDeliveryDuration(shipments: Shipment[]) {
   return durations.reduce((total, value) => total + value, 0) / durations.length;
 }
 
+function csvCell(value: unknown) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+function downloadShipmentsCsv(shipments: Shipment[]) {
+  const header = ['ID', 'Medicine', 'Quantity', 'Status', 'Puskesmas', 'Period', 'Latest Tracking'];
+  const rows = shipments.map((shipment) => [
+    shipment.id,
+    shipment.medicine,
+    shipment.quantity,
+    shipment.statusLabel,
+    shipment.source.puskesmas?.nama ?? '-',
+    formatDate(shipment.source.periode),
+    shipment.statusMeta,
+  ]);
+  const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `deliveries-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function printShipmentsReport(shipments: Shipment[], analytics: { activeShipments: number; averageDuration: string; completionRate: string; totalItems: number }) {
+  const rows = shipments.map((shipment) => `<tr><td>${shipment.id}</td><td>${shipment.medicine}</td><td>${shipment.quantity}</td><td>${shipment.statusLabel}</td><td>${shipment.source.puskesmas?.nama ?? '-'}</td><td>${shipment.statusMeta}</td></tr>`).join('');
+  const popup = window.open('', '_blank', 'width=960,height=720');
+  if (!popup) return;
+  popup.document.write(`<!doctype html><html><head><title>Delivery Report</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111827}h1{margin:0 0 6px;font-size:24px}.meta{color:#6b7280;margin:0 0 24px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}.summary div{border:1px solid #e5e7eb;border-radius:8px;padding:12px}.summary b{display:block;font-size:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;font-size:12px}th{background:#f9fafb}</style></head><body><h1>Medicine Delivery Report</h1><p class="meta">Generated ${new Date().toLocaleString('id-ID')}</p><section class="summary"><div><b>${analytics.activeShipments}</b><span>Active Shipments</span></div><div><b>${analytics.completionRate}</b><span>Completion Rate</span></div><div><b>${analytics.averageDuration}</b><span>Average Duration</span></div><div><b>${analytics.totalItems}</b><span>Total Items</span></div></section><table><thead><tr><th>ID</th><th>Medicine</th><th>Quantity</th><th>Status</th><th>Puskesmas</th><th>Latest Tracking</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No delivery data.</td></tr>'}</tbody></table><script>window.print();</script></body></html>`);
+  popup.document.close();
+}
+
 export function DistributionPageContent() {
   const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -183,7 +216,7 @@ export function DistributionPageContent() {
       totalItems,
       averageDuration: durationText(averageDeliveryDuration(allShipments)),
       mapLocations: allShipments
-        .filter((shipment) => shipment.source.puskesmas?.latitude != null && shipment.source.puskesmas?.longitude != null)
+        .filter((shipment) => shipment.source.status === 'DISPATCHED' && shipment.source.puskesmas?.latitude != null && shipment.source.puskesmas?.longitude != null)
         .map((shipment) => ({
           id: shipment.id,
           name: shipment.source.puskesmas?.nama ?? shipment.id,
@@ -212,6 +245,16 @@ export function DistributionPageContent() {
     });
   }
 
+  async function handleRerequest(id: string) {
+    setError(null);
+    try {
+      await rerequestRecommendation(id);
+      setRecommendations(await getRecommendations());
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Gagal mengirim ulang permintaan');
+    }
+  }
+
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.pageHeader}>
@@ -219,9 +262,13 @@ export function DistributionPageContent() {
           <h1>Medicine Shipping</h1>
           <p>Monitor the status of medicine requests and shipments to your health center</p>
         </div>
-        <button type="button" className={styles.exportButton}>
+        <button type="button" className={styles.exportButton} onClick={() => downloadShipmentsCsv(recommendations.map(mapRecommendation))}>
           <AppIcon name="upload" width={16} height={16} />
           Export
+        </button>
+        <button type="button" className={styles.exportButton} onClick={() => printShipmentsReport(recommendations.map(mapRecommendation), analytics)}>
+          <AppIcon name="fileText" width={16} height={16} />
+          Print Report
         </button>
       </header>
 
@@ -241,17 +288,19 @@ export function DistributionPageContent() {
       <section className={styles.shipmentList} aria-label="Medicine shipments">
         {shipments.length === 0 ? <article className={styles.shipmentCard}><div className={styles.cardContent}>Belum ada data pengiriman.</div></article> : null}
         {shipments.map((shipment) => (
-          <ShipmentCard expanded={openShipmentIds.has(shipment.id)} onToggle={() => toggleShipment(shipment.id)} shipment={shipment} key={shipment.id} />
+          <ShipmentCard expanded={openShipmentIds.has(shipment.id)} onRerequest={() => void handleRerequest(shipment.id)} onToggle={() => toggleShipment(shipment.id)} shipment={shipment} key={shipment.id} />
         ))}
       </section>
 
       <section className={styles.visualGrid} aria-label="Shipping analytics">
-        <article className={styles.mapCard}>
-          <h2>Active Shipping Locations</h2>
-          <div className={styles.mapShell}>
-            <DistributionMap locations={analytics.mapLocations} />
-          </div>
-        </article>
+        {analytics.mapLocations.length ? (
+          <article className={styles.mapCard}>
+            <h2>Active Shipping Locations</h2>
+            <div className={styles.mapShell}>
+              <DistributionMap locations={analytics.mapLocations} />
+            </div>
+          </article>
+        ) : null}
 
         <article className={styles.performanceCard}>
           <div>
@@ -268,7 +317,7 @@ export function DistributionPageContent() {
   );
 }
 
-function ShipmentCard({ expanded, onToggle, shipment }: { expanded: boolean; onToggle: () => void; shipment: Shipment }) {
+function ShipmentCard({ expanded, onRerequest, onToggle, shipment }: { expanded: boolean; onRerequest: () => void; onToggle: () => void; shipment: Shipment }) {
   return (
     <article className={`${styles.shipmentCard} ${styles[shipment.borderTone]}`}>
       <div className={styles.cardContent}>
@@ -299,7 +348,7 @@ function ShipmentCard({ expanded, onToggle, shipment }: { expanded: boolean; onT
         {shipment.status === 'rejected' ? (
           <div className={styles.rejectionNote}>
             <p><strong>Reason:</strong> {rejectionReason(shipment)}</p>
-            <a href="#rerequest">Re-request</a>
+            <button type="button" onClick={onRerequest}>Re-request</button>
           </div>
         ) : null}
       </div>

@@ -71,6 +71,15 @@ export class DistributionController {
     return this.service.rejectRecommendation(id, request.user.id, body.note);
   }
 
+  @ApiOperation({ summary: 'Re-request a rejected distribution recommendation' })
+  @ApiResponse({ status: 200, description: 'Recommendation moved back to pending review' })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.BIDAN_PUSKESMAS)
+  @Post('recommendations/:id/rerequest')
+  rerequestRecommendation(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
+    return this.service.rerequestRecommendation(id, request.user.id);
+  }
+
   @ApiOperation({ summary: 'List shipment tracking events' })
   @ApiResponse({ status: 200, description: 'Tracking events returned' })
   @UseGuards(AuthGuard, RolesGuard)
