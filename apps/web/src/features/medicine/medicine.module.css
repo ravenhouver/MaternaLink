@@ -810,13 +810,14 @@
 .predictionTitle span { border-radius: 4px; background: #f59e0b; color: #ffffff; font-size: 10px; font-weight: 800; line-height: 14px; padding: 2px 8px; text-transform: uppercase; }
 .predictionCard p { margin: 16px 0 20px; color: #92400e; font-size: 14px; line-height: 20px; }
 .predictionCard footer { align-items: center; justify-content: space-between; gap: 16px; color: #b45309; font-size: 12px; line-height: 16px; }
-.predictionCard footer button { align-items: center; border: 0; background: transparent; color: #92400e; cursor: pointer; font: inherit; font-weight: 800; }
+.predictionCard footer a { display: inline-flex; align-items: center; gap: 4px; color: #92400e; font: inherit; font-weight: 800; text-decoration: none; }
 
 .chartCard { min-height: 100%; }
-.chartCard header button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; color: #475569; cursor: pointer; font: inherit; font-size: 12px; padding: 4px 10px; }
+.chartSelect { border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; color: #475569; cursor: pointer; font: inherit; font-size: 12px; padding: 4px 10px; }
 .chartPlot { display: flex; height: 220px; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 28px 32px 10px; border-bottom: 1px dashed #e2e8f0; background: linear-gradient(#f8fafc 1px, transparent 1px) 0 25% / 100% 25%; }
 .chartPlot span { width: 16px; border-radius: 2px 2px 0 0; background: #eff6ff; }
 .chartPlot .highBar { background: #2563eb; }
+.chartEmpty { width: 100%; align-self: center; color: #64748b; font-size: 14px; font-weight: 700; text-align: center; }
 .chartAxis { display: flex; justify-content: space-between; margin: 0 32px; color: #94a3b8; font-size: 12px; line-height: 16px; }
 .chartLegend { justify-content: center; gap: 24px; margin: 26px 0; color: #64748b; font-size: 12px; line-height: 16px; }
 .chartLegend span { display: inline-flex; align-items: center; gap: 8px; }

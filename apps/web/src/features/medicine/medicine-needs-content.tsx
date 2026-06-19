@@ -4,7 +4,7 @@ import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { getObat, getStokRows, upsertStok, type ObatRecord } from '@/lib/api';
+import { getCurrentUser, getObat, getStokRows, upsertStok, type ObatRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
@@ -21,8 +21,10 @@ type MedicationRow = {
   lastUpdated: string;
 };
 
-const DEFAULT_PUSKESMAS_ID = 'PKM-001';
-const DEFAULT_PERIOD = '2026-06-01';
+function getCurrentPeriod() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
 
 const statusLabel: Record<MedicationStatus, string> = {
   safe: 'SAFE',
@@ -34,14 +36,14 @@ function isMedicationRow(row: MedicationRow | null | undefined): row is Medicati
   return Boolean(row?.slug && row.name && row.status);
 }
 
-function printMedicineReport(rows: MedicationRow[]) {
+function printMedicineReport(rows: MedicationRow[], puskesmasId: string | null, period: string) {
   const popup = window.open('', '_blank', 'width=960,height=720');
   if (!popup) return;
   const generatedAt = new Date().toLocaleString('id-ID');
   const totalStock = rows.reduce((total, row) => total + row.stock, 0);
   const criticalCount = rows.filter((row) => row.status === 'critical').length;
   const tableRows = rows.map((row) => `<tr><td>${row.name}</td><td>${row.stock}</td><td>${row.unit}</td><td>${row.estimatedEmpty}</td><td>${statusLabel[row.status]}</td><td>${row.lastUpdated}</td></tr>`).join('');
-  popup.document.write(`<!doctype html><html><head><title>Medicine Needs Report</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111827}h1{margin:0 0 6px;font-size:24px}.meta{color:#6b7280;margin:0 0 24px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}.summary div{border:1px solid #e5e7eb;border-radius:8px;padding:12px}.summary b{display:block;font-size:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;font-size:12px}th{background:#f9fafb}</style></head><body><h1>Medicine Needs Report</h1><p class="meta">Puskesmas ${DEFAULT_PUSKESMAS_ID} · Period ${DEFAULT_PERIOD} · Generated ${generatedAt}</p><section class="summary"><div><b>${rows.length}</b><span>Medicine Rows</span></div><div><b>${totalStock}</b><span>Total Stock</span></div><div><b>${criticalCount}</b><span>Critical Items</span></div></section><table><thead><tr><th>Medication</th><th>Stock</th><th>Unit</th><th>Estimated Empty</th><th>Status</th><th>Last Updated</th></tr></thead><tbody>${tableRows || '<tr><td colspan="6">No stock data.</td></tr>'}</tbody></table><script>window.print();</script></body></html>`);
+  popup.document.write(`<!doctype html><html><head><title>Medicine Needs Report</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111827}h1{margin:0 0 6px;font-size:24px}.meta{color:#6b7280;margin:0 0 24px}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}.summary div{border:1px solid #e5e7eb;border-radius:8px;padding:12px}.summary b{display:block;font-size:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #e5e7eb;padding:10px;text-align:left;font-size:12px}th{background:#f9fafb}</style></head><body><h1>Medicine Needs Report</h1><p class="meta">Puskesmas ${puskesmasId ?? '-'} · Period ${period} · Generated ${generatedAt}</p><section class="summary"><div><b>${rows.length}</b><span>Medicine Rows</span></div><div><b>${totalStock}</b><span>Total Stock</span></div><div><b>${criticalCount}</b><span>Critical Items</span></div></section><table><thead><tr><th>Medication</th><th>Stock</th><th>Unit</th><th>Estimated Empty</th><th>Status</th><th>Last Updated</th></tr></thead><tbody>${tableRows || '<tr><td colspan="6">No stock data.</td></tr>'}</tbody></table><script>window.print();</script></body></html>`);
   popup.document.close();
 }
 
@@ -49,6 +51,7 @@ export function MedicineNeedsContent() {
   const [activeModal, setActiveModal] = useState<'edit' | 'shipment' | null>(null);
   const [rows, setRows] = useState<MedicationRow[]>([]);
   const [obatRows, setObatRows] = useState<ObatRecord[]>([]);
+  const [puskesmasId, setPuskesmasId] = useState<string | null>(null);
   const [selectedMedication, setSelectedMedication] = useState<MedicationRow | null>(null);
   const [selectedObatId, setSelectedObatId] = useState('');
   const [quantity, setQuantity] = useState('0');
@@ -58,7 +61,11 @@ export function MedicineNeedsContent() {
   async function refreshRows() {
     setError(null);
     try {
-      const [stockRows, medicines] = await Promise.all([getStokRows({ puskesmasId: DEFAULT_PUSKESMAS_ID, periode: DEFAULT_PERIOD }), getObat()]);
+      const currentUser = await getCurrentUser();
+      if (!currentUser?.puskesmasId) throw new Error('Akun ini belum terhubung ke puskesmas.');
+      const period = getCurrentPeriod();
+      const [stockRows, medicines] = await Promise.all([getStokRows({ puskesmasId: currentUser.puskesmasId, periode: period }), getObat()]);
+      setPuskesmasId(currentUser.puskesmasId);
       setObatRows(medicines);
       const mappedRows = stockRows.map((row) => {
         const stock = row.stokSaatIni;
@@ -103,7 +110,8 @@ export function MedicineNeedsContent() {
       return;
     }
     try {
-      await upsertStok({ puskesmasId: DEFAULT_PUSKESMAS_ID, obatId: selectedObatId, periode: DEFAULT_PERIOD, stokAwal: value, konsumsiPeriode: 0, stokSaatIni: value });
+      if (!puskesmasId) throw new Error('Akun ini belum terhubung ke puskesmas.');
+      await upsertStok({ puskesmasId, obatId: selectedObatId, periode: getCurrentPeriod(), stokAwal: value, konsumsiPeriode: 0, stokSaatIni: value });
       setQuantity('0');
       await refreshRows();
     } catch (saveError) {
@@ -117,7 +125,8 @@ export function MedicineNeedsContent() {
       return;
     }
     try {
-      await upsertStok({ puskesmasId: DEFAULT_PUSKESMAS_ID, obatId: item.obatId, periode: DEFAULT_PERIOD, stokAwal: nextQuantity, konsumsiPeriode: 0, stokSaatIni: nextQuantity });
+      if (!puskesmasId) throw new Error('Akun ini belum terhubung ke puskesmas.');
+      await upsertStok({ puskesmasId, obatId: item.obatId, periode: getCurrentPeriod(), stokAwal: nextQuantity, konsumsiPeriode: 0, stokSaatIni: nextQuantity });
       closeModal();
       await refreshRows();
     } catch (saveError) {
@@ -141,7 +150,7 @@ export function MedicineNeedsContent() {
             <AppIcon name="clock" width={18} height={18} />
             Refresh
           </button>
-          <button type="button" className={styles.secondaryButton} onClick={() => printMedicineReport(safeRows)}>
+          <button type="button" className={styles.secondaryButton} onClick={() => printMedicineReport(safeRows, puskesmasId, getCurrentPeriod())}>
             <AppIcon name="upload" width={18} height={18} />
             Print Report
           </button>

@@ -2,37 +2,74 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { deleteObat, getObat, getStokRows, type ObatRecord, type StokRow } from '@/lib/api';
+import { getCurrentUser, getObat, getStokRows, upsertStok, type ObatRecord, type StokRow } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
-const DEFAULT_PUSKESMAS_ID = 'PKM-001';
+type ChartMode = 'recent6' | 'recent12' | 'all';
 
 function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+function getCurrentPeriod() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function getPeriodTime(row: StokRow) {
+  return new Date(row.periode).getTime();
+}
+
+function formatPeriod(value: string) {
+  return new Date(value).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+}
+
+function getChartRows(rows: StokRow[], mode: ChartMode) {
+  const sorted = [...rows].sort((left, right) => getPeriodTime(left) - getPeriodTime(right));
+  if (mode === 'recent6') return sorted.slice(-6);
+  if (mode === 'recent12') return sorted.slice(-12);
+  return sorted;
+}
+
 export function MedicationDetailContent() {
   const params = useParams<{ medicine?: string }>();
-  const router = useRouter();
   const [medicine, setMedicine] = useState<ObatRecord | null>(null);
   const [stockRows, setStockRows] = useState<StokRow[]>([]);
+  const [puskesmasId, setPuskesmasId] = useState<string | null>(null);
+  const [draftStock, setDraftStock] = useState('0');
+  const [draftUsage, setDraftUsage] = useState('0');
+  const [chartMode, setChartMode] = useState<ChartMode>('recent6');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [showAllHistory, setShowAllHistory] = useState(false);
 
   useEffect(() => {
-    Promise.all([getObat(), getStokRows({ puskesmasId: DEFAULT_PUSKESMAS_ID })])
-      .then(([medicines, stocks]) => {
+    let mounted = true;
+    async function loadDetail() {
+      setError(null);
+      const currentUser = await getCurrentUser();
+      if (!currentUser?.puskesmasId) throw new Error('Akun ini belum terhubung ke puskesmas.');
+      const [medicines, stocks] = await Promise.all([getObat(), getStokRows({ puskesmasId: currentUser.puskesmasId })]);
+      if (!mounted) return;
         const slug = params?.medicine ?? '';
-        const selected = medicines.find((item) => slugify(item.id) === slug || slugify(item.nama) === slug || item.id.toLowerCase() === slug) ?? medicines[0] ?? null;
+      const selected = medicines.find((item) => slugify(item.id) === slug || slugify(item.nama) === slug || item.id.toLowerCase() === slug.toLowerCase()) ?? null;
+      const nextRows = selected ? stocks.filter((row) => row.obatId === selected.id).sort((left, right) => getPeriodTime(right) - getPeriodTime(left)) : [];
+      const latest = nextRows[0];
+      setPuskesmasId(currentUser.puskesmasId);
         setMedicine(selected);
-        setStockRows(selected ? stocks.filter((row) => row.obatId === selected.id) : stocks);
-      })
+      setStockRows(nextRows);
+      setDraftStock(String(latest?.stokSaatIni ?? 0));
+      setDraftUsage(String(latest?.konsumsiPeriode ?? 0));
+      if (!selected) setError('Obat tidak ditemukan untuk URL ini.');
+    }
+
+    loadDetail()
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat detail obat'));
+    return () => { mounted = false; };
   }, [params?.medicine]);
 
   const latestStock = stockRows[0];
@@ -40,31 +77,42 @@ export function MedicationDetailContent() {
   const usage = latestStock?.konsumsiPeriode ?? 0;
   const dailyUse = usage > 0 ? usage / 30 : 0;
   const emptyDays = dailyUse > 0 ? Math.max(1, Math.round(currentStock / dailyUse)) : 0;
-  const bars = useMemo(() => Array.from({ length: 11 }, (_, index) => Math.max(24, Math.min(128, usage * (0.35 + ((index % 4) + 1) * 0.08)))), [usage]);
+  const chartRows = useMemo(() => getChartRows(stockRows, chartMode), [chartMode, stockRows]);
+  const maxUsage = Math.max(1, ...chartRows.map((row) => row.konsumsiPeriode));
+  const chartPoints = chartRows.map((row) => ({
+    key: `${row.obatId}-${row.periode}`,
+    label: formatPeriod(row.periode),
+    usage: row.konsumsiPeriode,
+    height: Math.max(12, Math.round((row.konsumsiPeriode / maxUsage) * 180)),
+    isHigh: row.konsumsiPeriode >= maxUsage * 0.75,
+  }));
   const historyRows = (showAllHistory ? stockRows : stockRows.slice(0, 5)).map((row) => ({
     date: new Date(row.periode).toLocaleDateString('id-ID'),
-    activity: 'Stock update',
-    amount: `${row.stokSaatIni} ${row.obat?.satuan ?? medicine?.satuan ?? 'unit'}`,
+    activity: row.konsumsiPeriode > 0 ? 'Update stok dan pemakaian' : 'Update stok',
+    amount: `${row.stokSaatIni} ${row.obat?.satuan ?? medicine?.satuan ?? 'unit'} tersisa / ${row.konsumsiPeriode} terpakai`,
     person: row.puskesmas?.nama ?? row.puskesmasId,
-    type: 'in',
+    status: row.konsumsiPeriode > 0 ? 'Dengan pemakaian' : 'Stok tersimpan',
+    type: row.konsumsiPeriode > 0 ? 'out' : 'in',
   }));
 
   const updatedLabel = latestStock ? new Date(latestStock.periode).toLocaleDateString('id-ID') : 'Belum ada update stok';
 
-  function explainUnavailable(feature: string) {
-    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
-  }
-
-  async function removeFromInventory() {
-    if (!medicine) return;
-    const confirmed = window.confirm(`Hapus ${medicine.nama} dari master obat? Data yang sudah memakai obat ini bisa menolak penghapusan dari backend.`);
-    if (!confirmed) return;
+  async function saveCurrentPeriodStock() {
+    if (!medicine || !puskesmasId) return;
+    const nextStock = Number(draftStock);
+    const nextUsage = Number(draftUsage);
+    if (!Number.isFinite(nextStock) || !Number.isFinite(nextUsage) || nextStock < 0 || nextUsage < 0) {
+      setError('Stok dan pemakaian harus angka valid.');
+      return;
+    }
+    setError(null);
     try {
-      await deleteObat(medicine.id);
-      setNotice(`${medicine.nama} berhasil dihapus dari master obat.`);
-      router.push(routes.medicineNeeds);
-    } catch (removeError) {
-      setNotice(removeError instanceof Error ? removeError.message : 'Gagal menghapus obat');
+      const saved = await upsertStok({ puskesmasId, obatId: medicine.id, periode: getCurrentPeriod(), stokAwal: nextStock + nextUsage, konsumsiPeriode: nextUsage, stokSaatIni: nextStock });
+      const nextRows = [saved, ...stockRows.filter((row) => row.id !== saved.id)].sort((left, right) => getPeriodTime(right) - getPeriodTime(left));
+      setStockRows(nextRows);
+      setNotice(`Stok ${medicine.nama} periode berjalan berhasil diperbarui.`);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan stok obat');
     }
   }
 
@@ -94,6 +142,27 @@ export function MedicationDetailContent() {
       {error ? <p className={styles.medicineError}>{error}</p> : null}
       {notice ? <p role="status" className={styles.medicineNotice}>{notice}</p> : null}
 
+      <section className={styles.inputCard} aria-label="Update stok periode berjalan">
+        <div className={styles.formGrid}>
+          <label className={styles.fieldGroup}>
+            <span>Stok Saat Ini</span>
+            <input value={draftStock} inputMode="numeric" disabled={!medicine} onChange={(event) => setDraftStock(event.target.value)} />
+          </label>
+          <label className={styles.fieldGroup}>
+            <span>Pemakaian Periode Ini</span>
+            <input value={draftUsage} inputMode="numeric" disabled={!medicine} onChange={(event) => setDraftUsage(event.target.value)} />
+          </label>
+          <label className={styles.fieldGroup}>
+            <span>Periode</span>
+            <input value={getCurrentPeriod()} disabled />
+          </label>
+          <button type="button" className={styles.addButton} disabled={!medicine || !puskesmasId} onClick={() => void saveCurrentPeriodStock()}>
+            <AppIcon name="save" width={18} height={18} />
+            Simpan Stok
+          </button>
+        </div>
+      </section>
+
       <section className={styles.detailGrid}>
         <div className={styles.infoStack}>
           <section className={styles.detailCard}>
@@ -110,21 +179,22 @@ export function MedicationDetailContent() {
           <section className={styles.predictionCard}>
             <div className={styles.predictionTitle}><span>AI Analysis</span><h2>Stock Prediction</h2></div>
             <p>Prediction: current stock is {currentStock} {medicine?.satuan ?? 'unit'} with period usage {usage}. {emptyDays ? `Estimated stock coverage is ${emptyDays} days.` : 'Usage trend is not available yet.'}</p>
-            <footer><span>Updated {updatedLabel}</span><button type="button" onClick={() => explainUnavailable('Detailed analytics')}>View Detailed Analytics <AppIcon name="chevronRight" width={14} height={14} /></button></footer>
+            <footer><span>Updated {updatedLabel}</span><a href="#stock-history">Lihat riwayat stok <AppIcon name="chevronRight" width={14} height={14} /></a></footer>
           </section>
         </div>
 
         <section className={styles.chartCard}>
-          <header><h2>Usage Chart (30 Days)</h2><button type="button" onClick={() => explainUnavailable('Chart interval selector')}>Daily <AppIcon name="chevronDown" width={14} height={14} /></button></header>
+          <header><h2>Usage Chart</h2><select className={styles.chartSelect} value={chartMode} onChange={(event) => setChartMode(event.target.value as ChartMode)}><option value="recent6">6 periode terakhir</option><option value="recent12">12 periode terakhir</option><option value="all">Semua periode</option></select></header>
           <div className={styles.chartPlot} aria-label="Usage bar chart">
-            {bars.map((height, index) => <span key={index} className={index === 3 || index === 6 || index === 10 ? styles.highBar : ''} style={{ height }} />)}
+            {chartPoints.length === 0 ? <p className={styles.chartEmpty}>Belum ada data pemakaian.</p> : null}
+            {chartPoints.map((point) => <span key={point.key} title={`${point.label}: ${point.usage}`} className={point.isHigh ? styles.highBar : ''} style={{ height: point.height }} />)}
           </div>
-          <div className={styles.chartAxis}><span>1 Oct</span><span>10 Oct</span><span>20 Oct</span><span>30 Oct</span></div>
+          <div className={styles.chartAxis}>{chartPoints.map((point) => <span key={point.key}>{point.label}</span>)}</div>
           <div className={styles.chartLegend}><span><i />High Usage</span><span><i />Average</span></div>
         </section>
       </section>
 
-      <section className={styles.historyCard}>
+      <section className={styles.historyCard} id="stock-history">
         <header><h2>Stock Update History</h2><button type="button" onClick={() => setShowAllHistory((current) => !current)}>{showAllHistory ? 'Show Recent History' : 'View All History'}</button></header>
         <div className={styles.historyScroll}>
           <table className={styles.historyTable}>
@@ -137,7 +207,7 @@ export function MedicationDetailContent() {
                   <td><span className={row.type === 'in' ? styles.historyInIcon : styles.historyOutIcon}>{row.type === 'in' ? '+' : '-'}</span>{row.activity}</td>
                   <td className={row.type === 'in' ? styles.amountIn : styles.amountOut}>{row.amount}</td>
                   <td>{row.person}</td>
-                  <td><span className={styles.verifiedPill}>Verified</span></td>
+                  <td><span className={styles.verifiedPill}>{row.status}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -146,10 +216,8 @@ export function MedicationDetailContent() {
       </section>
 
       <footer className={styles.detailFooter}>
-        <button type="button" className={styles.removeButton} onClick={() => void removeFromInventory()} disabled={!medicine}><AppIcon name="trash" width={18} height={18} />Remove from Inventory</button>
         <div>
           <Link href={routes.medicineNeeds} className={styles.backButton}>Back</Link>
-          <button type="button" className={styles.detailSaveButton} onClick={() => explainUnavailable('Save medicine changes')}><AppIcon name="save" width={18} height={18} />Save Changes</button>
         </div>
       </footer>
     </PageContainer>
