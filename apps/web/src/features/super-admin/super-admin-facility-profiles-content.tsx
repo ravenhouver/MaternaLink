@@ -1,223 +1,98 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { NotificationCenter } from '@/components/layout/notification-center';
-import { RoleLogoutButton } from '@/components/layout/role-logout-button';
-import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import { getCurrentUser, getPuskesmas, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
-import { routes } from '@/lib/routes';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { AppIcon } from '@/components/ui/app-icon';
+import { getCurrentUser, getPuskesmas, updatePuskesmas, type CurrentUser, type PuskesmasRecord } from '@/lib/api';
+import { AdminShell } from './admin-shell';
 import styles from './super-admin-dashboard.module.css';
 
-type NavItem = {
-  label: string;
-  icon: AppIconName;
-  href: string;
-  active?: boolean;
-};
+type ProfileForm = { id: string; nama: string; leadTimeHari: number; jarakKeIfkKm: number; kapasitasSimpanObat: number; skorAksesibilitas: number; coldChainReady: boolean; statusEndemisMalaria: boolean; ketersediaanLab: boolean; rainyAccess: 'AMAN' | 'TERBATAS' | 'TERGANGGU' };
 
-type ProfileRow = {
-  name: string;
-  leadTime: string;
-  access: string;
-  score?: string;
-  accessTone: 'easy' | 'medium' | 'missing';
-  coldChain?: boolean;
-  distance: string;
-  mmr: string;
-  capacity: string;
-  statusTone: 'green' | 'neutral';
-  action: 'Edit' | 'Complete now';
-  highlighted?: boolean;
-};
-
-const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'grid', href: routes.admin },
-  { label: 'Health Centers', icon: 'briefcase', href: routes.adminHealthCenters },
-  { label: 'User Accounts', icon: 'users', href: routes.adminUsers },
-  { label: 'Medicine List', icon: 'clipboard', href: routes.adminMedicines },
-  { label: 'Facility Profiles', icon: 'archive', href: routes.adminFacilityProfiles, active: true },
-];
-
-function mapAccess(score: number): Pick<ProfileRow, 'access' | 'accessTone' | 'score'> {
-  if (score >= 3) return { access: 'Easy', accessTone: 'easy', score: String(score) };
-  if (score >= 2) return { access: 'Medium', accessTone: 'medium', score: String(score) };
-  return { access: 'Difficult', accessTone: 'missing', score: String(score) };
+function mapAccess(score: number) {
+  if (score >= 3) return { access: 'Easy', accessTone: 'easy' as const, score: String(score) };
+  if (score >= 2) return { access: 'Medium', accessTone: 'medium' as const, score: String(score) };
+  return { access: 'Difficult', accessTone: 'missing' as const, score: String(score) };
 }
 
-function isIncomplete(row: PuskesmasRecord) {
-  return row.leadTimeHari == null || row.jarakKeIfkKm == null || row.kapasitasSimpanObat == null;
-}
-
-function mapProfileRows(rows: PuskesmasRecord[]): ProfileRow[] {
-  return rows.map((row) => {
-    const access = mapAccess(row.skorAksesibilitas);
-    const incomplete = isIncomplete(row);
-    return {
-      name: row.nama,
-      leadTime: row.leadTimeHari == null ? '-' : `${row.leadTimeHari} days`,
-      access: incomplete ? 'Not filled' : access.access,
-      score: incomplete ? undefined : access.score,
-      accessTone: incomplete ? 'missing' : access.accessTone,
-      coldChain: row.coldChainReady,
-      distance: row.jarakKeIfkKm == null ? '-' : `${row.jarakKeIfkKm} km`,
-      mmr: row.statusEndemisMalaria ? 'Endemic area' : 'Non-endemic',
-      capacity: row.kapasitasSimpanObat == null ? '-' : `${row.kapasitasSimpanObat} units`,
-      statusTone: incomplete ? 'neutral' : 'green',
-      action: incomplete ? 'Complete now' : 'Edit',
-      highlighted: incomplete,
-    };
-  });
-}
+function isIncomplete(row: PuskesmasRecord) { return row.leadTimeHari == null || row.jarakKeIfkKm == null || row.kapasitasSimpanObat == null; }
+function toForm(row: PuskesmasRecord): ProfileForm { return { id: row.id, nama: row.nama, leadTimeHari: row.leadTimeHari ?? 0, jarakKeIfkKm: row.jarakKeIfkKm ?? 0, kapasitasSimpanObat: row.kapasitasSimpanObat ?? 0, skorAksesibilitas: row.skorAksesibilitas, coldChainReady: row.coldChainReady, statusEndemisMalaria: row.statusEndemisMalaria, ketersediaanLab: row.ketersediaanLab, rainyAccess: row.rainyAccess as ProfileForm['rainyAccess'] }; }
 
 export function SuperAdminFacilityProfilesContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [rows, setRows] = useState<ProfileRow[]>([]);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [rows, setRows] = useState<PuskesmasRecord[]>([]);
+  const [form, setForm] = useState<ProfileForm | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
-    Promise.all([getCurrentUser(), getPuskesmas()])
-      .then(([nextUser, puskesmasRows]) => {
-        if (!mounted) return;
-        setUser(nextUser);
-        setRows(mapProfileRows(puskesmasRows));
-      })
-      .catch((loadError) => {
-        if (!mounted) return;
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load facility profiles');
-      });
+  async function reload() {
+    const [nextUser, puskesmasRows] = await Promise.all([getCurrentUser(), getPuskesmas()]);
+    setUser(nextUser); setRows(puskesmasRows);
+  }
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load facility profiles')); }, []);
+  const incompleteCount = useMemo(() => rows.filter(isIncomplete).length, [rows]);
 
-  const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
-  const incompleteCount = useMemo(() => rows.filter((row) => row.highlighted).length, [rows]);
-
-  function explainUnavailable(feature: string) {
-    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  async function submitForm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form) return;
+    await updatePuskesmas(form.id, { leadTimeHari: Number(form.leadTimeHari), jarakKeIfkKm: Number(form.jarakKeIfkKm), kapasitasSimpanObat: Number(form.kapasitasSimpanObat), skorAksesibilitas: Number(form.skorAksesibilitas), coldChainReady: form.coldChainReady, statusEndemisMalaria: form.statusEndemisMalaria, ketersediaanLab: form.ketersediaanLab, rainyAccess: form.rainyAccess });
+    setForm(null); await reload();
   }
 
   return (
-    <main className={styles.shell}>
-      <aside className={styles.sidebar} aria-label="Super admin navigation">
-        <Link href={routes.admin} className={styles.brand} aria-label="MaternaLink super admin dashboard">
-          <span className={styles.brandText}>
-            <strong>MaternaLink</strong>
-            <small>SUPER ADMIN</small>
-          </span>
-        </Link>
+    <AdminShell active="facility-profiles" breadcrumb="Facility Profiles" user={user}>
+      <div className={[styles.content, styles.profileContent].join(' ')}>
+        <section className={[styles.pageHeader, styles.registryHeader].join(' ')}>
+          <div><h1>Facility Profiles</h1><p>Logistics and accessibility configuration for each health center</p></div>
+          <span className={styles.incompletePill}><AppIcon name="alert" width={14} height={14} />{incompleteCount} profiles incomplete</span>
+        </section>
 
-        <nav className={styles.nav}>
-          {navItems.map((item) => (
-            <Link href={item.href} className={[styles.navItem, item.active ? styles.activeNav : ''].filter(Boolean).join(' ')} key={item.label}>
-              <AppIcon name={item.icon} width={20} height={20} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+        {error ? <p className={styles.error}>{error}</p> : null}
 
-        <div className={styles.sidebarFooter}>
-          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
-          <RoleLogoutButton className={styles.navItem} />
-        </div>
-      </aside>
-
-      <section className={styles.mainArea}>
-        <header className={styles.topbar}>
-          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href={routes.admin}>Home</Link>
-            <AppIcon name="chevronRight" width={14} height={14} />
-            <strong>Facility Profiles</strong>
-          </nav>
-          <div className={styles.topbarActions}>
-            {user ? <NotificationCenter user={user} /> : null}
-            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /></button>
-            <div className={styles.profile}>
-              <span><strong>{displayName}</strong><small>Superadmin</small></span>
-              <span className={styles.avatar} aria-hidden="true">SA</span>
-            </div>
-          </div>
-        </header>
-
-        <div className={[styles.content, styles.profileContent].join(' ')}>
-          <section className={[styles.pageHeader, styles.registryHeader].join(' ')}>
-            <div>
-              <h1>Facility Profiles</h1>
-              <p>Logistics and accessibility configuration for each health center</p>
-            </div>
-            <span className={styles.incompletePill}>
-              <AppIcon name="alert" width={14} height={14} />
-              {incompleteCount} profiles incomplete
-            </span>
-          </section>
-
-          {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
-          {error ? <p className={styles.error}>{error}. Facility profile list unavailable.</p> : null}
-
-          <section className={styles.registryCard} aria-label="Facility profile configuration table">
-            <div className={styles.tableScroller}>
-              <table className={[styles.registryTable, styles.profileTable].join(' ')}>
-                <thead>
-                  <tr>
-                    <th>Health Center</th>
-                    <th>Lead Time</th>
-                    <th>Accessibility</th>
-                    <th>Cold Chain</th>
-                    <th>Distance to IFK</th>
-                    <th>MMR Area</th>
-                    <th>Capacity</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr className={row.highlighted ? styles.highlightedProfileRow : undefined} key={row.name}>
-                      <td>
-                        <span className={styles.facilityNameCell}>
-                          <span className={styles.statusDot} data-tone={row.statusTone} />
-                          <strong>{row.name}</strong>
-                        </span>
-                      </td>
-                      <td>{row.leadTime}</td>
-                      <td>
-                        <span className={styles.accessibilityCell}>
-                          <span className={styles.accessibilityBadge} data-tone={row.accessTone}>{row.access}</span>
-                          {row.score ? <small>({row.score})</small> : null}
-                        </span>
-                      </td>
-                      <td>{row.coldChain ? <span className={styles.coldChainIcon}><AppIcon name="checkCircle" width={18} height={18} /></span> : '-'}</td>
-                      <td>{row.distance}</td>
-                      <td>{row.mmr}</td>
-                      <td>{row.capacity}</td>
-                      <td>
-                        {row.action === 'Complete now' ? (
-                          <button type="button" className={styles.completeButton} onClick={() => explainUnavailable(`Complete ${row.name}`)}>Complete now</button>
-                        ) : (
-                          <button type="button" className={styles.linkButton} onClick={() => explainUnavailable(`Edit ${row.name}`)}>Edit</button>
-                        )}
-                      </td>
+        <section className={styles.registryCard} aria-label="Facility profile configuration table">
+          <div className={styles.tableScroller}>
+            <table className={[styles.registryTable, styles.profileTable].join(' ')}>
+              <thead><tr><th>Health Center</th><th>Lead Time</th><th>Accessibility</th><th>Cold Chain</th><th>Distance to IFK</th><th>MMR Area</th><th>Capacity</th><th>Actions</th></tr></thead>
+              <tbody>
+                {rows.map((row) => {
+                  const incomplete = isIncomplete(row);
+                  const access = mapAccess(row.skorAksesibilitas);
+                  return (
+                    <tr className={incomplete ? styles.highlightedProfileRow : undefined} key={row.id}>
+                      <td><span className={styles.facilityNameCell}><span className={styles.statusDot} data-tone={incomplete ? 'neutral' : 'green'} /><strong>{row.nama}</strong></span></td>
+                      <td>{row.leadTimeHari == null ? '-' : `${row.leadTimeHari} days`}</td>
+                      <td><span className={styles.accessibilityCell}><span className={styles.accessibilityBadge} data-tone={incomplete ? 'missing' : access.accessTone}>{incomplete ? 'Not filled' : access.access}</span>{!incomplete ? <small>({access.score})</small> : null}</span></td>
+                      <td>{row.coldChainReady ? <span className={styles.coldChainIcon}><AppIcon name="checkCircle" width={18} height={18} /></span> : '-'}</td>
+                      <td>{row.jarakKeIfkKm == null ? '-' : `${row.jarakKeIfkKm} km`}</td>
+                      <td>{row.statusEndemisMalaria ? 'Endemic area' : 'Non-endemic'}</td>
+                      <td>{row.kapasitasSimpanObat == null ? '-' : `${row.kapasitasSimpanObat} units`}</td>
+                      <td>{incomplete ? <button type="button" className={styles.completeButton} onClick={() => setForm(toForm(row))}>Complete now</button> : <button type="button" className={styles.linkButton} onClick={() => setForm(toForm(row))}>Edit</button>}</td>
                     </tr>
-                  ))}
-                  {rows.length === 0 ? <tr><td colSpan={8}>Belum ada profil fasilitas dari database.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+                {rows.length === 0 ? <tr><td colSpan={8}>Belum ada profil fasilitas dari database.</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
+          <footer className={styles.registryPagination}><p>Showing {rows.length} health centers</p></footer>
+        </section>
+      </div>
 
-            <footer className={styles.registryPagination}>
-              <p>Showing {rows.length} health centers</p>
-              <div className={styles.pages}>
-                <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
-                <button type="button" className={styles.currentPage}>1</button>
-                <button type="button" aria-label="Next page" disabled><AppIcon name="chevronRight" width={14} height={14} /></button>
-              </div>
-            </footer>
-          </section>
+      {form ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setForm(null)}>
+          <form className={styles.modalCard} onSubmit={(event) => void submitForm(event)} onMouseDown={(event) => event.stopPropagation()}>
+            <header className={styles.drawerHeader}><h2>{form.nama}</h2><button type="button" onClick={() => setForm(null)}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+            <label>Lead time<input type="number" min="0" value={form.leadTimeHari} onChange={(event) => setForm({ ...form, leadTimeHari: Number(event.target.value) })} /></label>
+            <label>Distance IFK<input type="number" min="0" step="0.1" value={form.jarakKeIfkKm} onChange={(event) => setForm({ ...form, jarakKeIfkKm: Number(event.target.value) })} /></label>
+            <label>Capacity<input type="number" min="0" value={form.kapasitasSimpanObat} onChange={(event) => setForm({ ...form, kapasitasSimpanObat: Number(event.target.value) })} /></label>
+            <label>Accessibility score<input type="number" min="1" max="3" value={form.skorAksesibilitas} onChange={(event) => setForm({ ...form, skorAksesibilitas: Number(event.target.value) })} /></label>
+            <label>Rain access<select value={form.rainyAccess} onChange={(event) => setForm({ ...form, rainyAccess: event.target.value as ProfileForm['rainyAccess'] })}><option value="AMAN">Aman</option><option value="TERBATAS">Terbatas</option><option value="TERGANGGU">Terganggu</option></select></label>
+            <label className={styles.checkboxRow}><input type="checkbox" checked={form.coldChainReady} onChange={(event) => setForm({ ...form, coldChainReady: event.target.checked })} /> Cold chain ready</label>
+            <label className={styles.checkboxRow}><input type="checkbox" checked={form.ketersediaanLab} onChange={(event) => setForm({ ...form, ketersediaanLab: event.target.checked })} /> Lab available</label>
+            <label className={styles.checkboxRow}><input type="checkbox" checked={form.statusEndemisMalaria} onChange={(event) => setForm({ ...form, statusEndemisMalaria: event.target.checked })} /> Malaria endemic</label>
+            <div className={styles.modalActions}><button type="button" onClick={() => setForm(null)}>Cancel</button><button className={styles.primaryButton} type="submit">Save</button></div>
+          </form>
         </div>
-      </section>
-    </main>
+      ) : null}
+    </AdminShell>
   );
 }

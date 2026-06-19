@@ -1,221 +1,139 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { NotificationCenter } from '@/components/layout/notification-center';
-import { RoleLogoutButton } from '@/components/layout/role-logout-button';
-import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import { getCurrentUser, getUsers, type AdminUserRecord, type CurrentUser } from '@/lib/api';
-import { routes } from '@/lib/routes';
+import { AppIcon } from '@/components/ui/app-icon';
+import { createUser, deleteUser, getCurrentUser, getPuskesmas, getUsers, updateUser, type AdminUserRecord, type CurrentUser, type PuskesmasRecord, type UserRole } from '@/lib/api';
+import { AdminShell } from './admin-shell';
 import styles from './super-admin-dashboard.module.css';
 
 type UserRoleFilter = 'All' | 'Super Admin' | 'Midwife' | 'IFK Officer';
-
-type AccountRow = {
-  initials: string;
-  name: string;
-  role: Exclude<UserRoleFilter, 'All'>;
-  facility: string;
-  email: string;
-  active: boolean;
-  tone: 'blue' | 'indigo' | 'green';
-};
-
-type NavItem = {
-  label: string;
-  icon: AppIconName;
-  href: string;
-  active?: boolean;
-};
-
-const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'grid', href: routes.admin },
-  { label: 'Health Centers', icon: 'briefcase', href: routes.adminHealthCenters },
-  { label: 'User Accounts', icon: 'users', href: routes.adminUsers, active: true },
-  { label: 'Medicine List', icon: 'clipboard', href: routes.adminMedicines },
-  { label: 'Facility Profiles', icon: 'archive', href: routes.adminFacilityProfiles },
-];
+type UserForm = { id?: string; username: string; displayName: string; role: UserRole; puskesmasId: string; password: string; active: boolean };
 
 const roleFilters: UserRoleFilter[] = ['All', 'Super Admin', 'Midwife', 'IFK Officer'];
+const emptyForm: UserForm = { username: '', displayName: '', role: 'BIDAN_PUSKESMAS', puskesmasId: '', password: '', active: true };
 
-function mapRole(role: AdminUserRecord['role']): AccountRow['role'] {
+function roleLabel(role: UserRole): Exclude<UserRoleFilter, 'All'> {
   if (role === 'SUPER_ADMIN') return 'Super Admin';
   if (role === 'IFK_ADMIN') return 'IFK Officer';
   return 'Midwife';
-}
-
-function userTone(role: AccountRow['role']): AccountRow['tone'] {
-  if (role === 'Super Admin') return 'blue';
-  if (role === 'IFK Officer') return 'green';
-  return 'indigo';
 }
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U';
 }
 
-function mapAccountRows(rows: AdminUserRecord[]): AccountRow[] {
-  return rows.map((row) => {
-    const role = mapRole(row.role);
-    const name = row.displayName || row.username;
-    return {
-      initials: initials(name),
-      name,
-      role,
-      facility: row.puskesmas?.nama ?? (row.role === 'IFK_ADMIN' ? 'IFK' : 'System'),
-      email: row.username,
-      active: row.active,
-      tone: userTone(role),
-    };
-  });
+function userTone(role: UserRole) {
+  if (role === 'SUPER_ADMIN') return 'blue';
+  if (role === 'IFK_ADMIN') return 'green';
+  return 'indigo';
 }
 
 export function SuperAdminUsersContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
-  const [rows, setRows] = useState<AccountRow[]>([]);
+  const [rows, setRows] = useState<AdminUserRecord[]>([]);
+  const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
   const [activeFilter, setActiveFilter] = useState<UserRoleFilter>('All');
-  const [notice, setNotice] = useState<string | null>(null);
+  const [form, setForm] = useState<UserForm | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    Promise.all([getCurrentUser(), getUsers()]).then(([nextUser, userRows]) => {
-      if (!mounted) return;
-      setUser(nextUser);
-      setRows(mapAccountRows(userRows));
-    }).catch((loadError) => {
-      if (!mounted) return;
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load users');
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  async function reload() {
+    const [nextUser, userRows, puskesmasRows] = await Promise.all([getCurrentUser(), getUsers(), getPuskesmas()]);
+    setUser(nextUser);
+    setRows(userRows);
+    setPuskesmas(puskesmasRows);
+  }
+
+  useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load users')); }, []);
 
   const filteredRows = useMemo(() => {
     if (activeFilter === 'All') return rows;
-    return rows.filter((row) => row.role === activeFilter);
+    return rows.filter((row) => roleLabel(row.role) === activeFilter);
   }, [activeFilter, rows]);
 
-  const displayName = user?.displayName ?? user?.username ?? 'Siti Aminah';
+  function editRow(row: AdminUserRecord) {
+    setForm({ id: row.id, username: row.username, displayName: row.displayName ?? row.username, role: row.role, puskesmasId: row.puskesmasId ?? '', password: '', active: row.active });
+  }
 
-  function explainUnavailable(feature: string) {
-    setNotice(`${feature} akan diaktifkan pada batch integrasi data berikutnya.`);
+  async function submitForm(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = { username: form.username, displayName: form.displayName, role: form.role, puskesmasId: form.role === 'BIDAN_PUSKESMAS' ? form.puskesmasId : null, active: form.active, ...(form.password ? { password: form.password } : {}) };
+      if (form.id) await updateUser(form.id, payload);
+      else await createUser({ ...payload, password: form.password || 'maternalink123' });
+      setForm(null);
+      await reload();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan user');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeRow(row: AdminUserRecord) {
+    if (!window.confirm(`Hapus/nonaktifkan user ${row.displayName || row.username}?`)) return;
+    await deleteUser(row.id);
+    await reload();
   }
 
   return (
-    <main className={styles.shell}>
-      <aside className={styles.sidebar} aria-label="Super admin navigation">
-        <Link href={routes.admin} className={styles.brand} aria-label="MaternaLink super admin dashboard">
-          <span className={styles.brandIcon}><AppIcon name="grid" width={20} height={20} /></span>
-          <span className={styles.brandText}>
-            <strong>MaternaLink</strong>
-            <small>SUPER ADMIN</small>
-          </span>
-        </Link>
+    <AdminShell active="users" breadcrumb="User Accounts" user={user}>
+      <div className={[styles.content, styles.usersContent].join(' ')}>
+        <section className={[styles.pageHeader, styles.registryHeader].join(' ')}>
+          <div><h1>User Accounts</h1><p>Manage healthcare personnel and IFK officer accounts</p></div>
+          <button type="button" className={styles.primaryButton} onClick={() => setForm({ ...emptyForm, puskesmasId: puskesmas[0]?.id ?? '' })}><AppIcon name="plus" width={16} height={16} /> Add User</button>
+        </section>
 
-        <nav className={styles.nav}>
-          {navItems.map((item) => (
-            <Link href={item.href} className={[styles.navItem, item.active ? styles.activeNav : ''].filter(Boolean).join(' ')} key={item.label}>
-              <AppIcon name={item.icon} width={20} height={20} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+        {error ? <p className={styles.error}>{error}</p> : null}
 
-        <div className={styles.sidebarFooter}>
-          <button type="button" className={styles.navItem} onClick={() => explainUnavailable('Help')}><AppIcon name="info" width={20} height={20} /><span>Help</span></button>
-          <RoleLogoutButton className={styles.navItem} />
-        </div>
-      </aside>
-
-      <section className={styles.mainArea}>
-        <header className={styles.topbar}>
-          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href={routes.admin}>Home</Link>
-            <AppIcon name="chevronRight" width={14} height={14} />
-            <strong>User Accounts</strong>
-          </nav>
-          <div className={styles.topbarActions}>
-            {user ? <NotificationCenter user={user} /> : null}
-            <button className={styles.iconButton} type="button" aria-label="Settings" onClick={() => explainUnavailable('Settings')}><AppIcon name="settings" width={20} height={20} /></button>
-            <div className={styles.profile}>
-              <span><strong>{displayName}</strong><small>Superadmin</small></span>
-              <span className={styles.avatar} aria-hidden="true">SA</span>
-            </div>
+        <section className={styles.userCard} aria-label="User account table">
+          <div className={styles.roleTabs} role="tablist" aria-label="User role filters">
+            {roleFilters.map((filter) => <button type="button" role="tab" aria-selected={activeFilter === filter} className={activeFilter === filter ? styles.activeTab : undefined} onClick={() => setActiveFilter(filter)} key={filter}>{filter}</button>)}
           </div>
-        </header>
 
-        <div className={[styles.content, styles.usersContent].join(' ')}>
-          <section className={[styles.pageHeader, styles.registryHeader].join(' ')}>
-            <div>
-              <h1>User Accounts</h1>
-              <p>Manage healthcare personnel and IFK officer accounts</p>
-            </div>
-            <button type="button" className={styles.primaryButton} onClick={() => explainUnavailable('Add user')}><AppIcon name="plus" width={16} height={16} /> Add User</button>
-          </section>
-
-          {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
-          {error ? <p className={styles.error}>{error}. User list unavailable.</p> : null}
-
-          <section className={styles.userCard} aria-label="User account table">
-            <div className={styles.roleTabs} role="tablist" aria-label="User role filters">
-              {roleFilters.map((filter) => (
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeFilter === filter}
-                  className={activeFilter === filter ? styles.activeTab : undefined}
-                  onClick={() => setActiveFilter(filter)}
-                  key={filter}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
-
-            <div className={styles.tableScroller}>
-              <table className={[styles.registryTable, styles.userTable].join(' ')}>
-                <thead>
-                  <tr><th>Name</th><th>Role</th><th>Facility</th><th>Email</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                  {filteredRows.map((row) => (
-                    <tr key={row.email}>
-                      <td>
-                        <span className={styles.userNameCell}>
-                          <span className={styles.userInitials} data-tone={row.tone}>{row.initials}</span>
-                          <strong>{row.name}</strong>
-                        </span>
-                      </td>
-                      <td>{row.role}</td>
-                      <td>{row.facility}</td>
-                      <td><em>{row.email}</em></td>
-                      <td><span className={row.active ? styles.activeBadge : styles.inactiveBadge}>{row.active ? 'Active' : 'Inactive'}</span></td>
-                      <td>
-                        <div className={styles.iconActions}>
-                          <button type="button" aria-label={`Edit ${row.name}`} onClick={() => explainUnavailable(`Edit ${row.name}`)}><AppIcon name="edit" width={16} height={16} /></button>
-                          <button type="button" aria-label={`Delete ${row.name}`} onClick={() => explainUnavailable(`Delete ${row.name}`)}><AppIcon name="trash" width={16} height={16} /></button>
-                        </div>
-                      </td>
+          <div className={styles.tableScroller}>
+            <table className={[styles.registryTable, styles.userTable].join(' ')}>
+              <thead><tr><th>Name</th><th>Role</th><th>Facility</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {filteredRows.map((row) => {
+                  const name = row.displayName || row.username;
+                  return (
+                    <tr key={row.id}>
+                      <td><span className={styles.userNameCell}><span className={styles.userInitials} data-tone={userTone(row.role)}>{initials(name)}</span><strong>{name}</strong></span></td>
+                      <td>{roleLabel(row.role)}</td>
+                      <td>{row.puskesmas?.nama ?? (row.role === 'IFK_ADMIN' ? 'IFK' : 'System')}</td>
+                      <td><em>{row.username}</em></td>
+                      <td><button type="button" className={row.active ? styles.activeBadge : styles.inactiveBadge} onClick={() => void updateUser(row.id, { active: !row.active }).then(reload)}>{row.active ? 'Active' : 'Inactive'}</button></td>
+                      <td><div className={styles.iconActions}><button type="button" aria-label={`Edit ${name}`} onClick={() => editRow(row)}><AppIcon name="edit" width={16} height={16} /></button><button type="button" aria-label={`Delete ${name}`} onClick={() => void removeRow(row)}><AppIcon name="trash" width={16} height={16} /></button></div></td>
                     </tr>
-                  ))}
-                  {filteredRows.length === 0 ? <tr><td colSpan={6}>Belum ada user dari database untuk filter ini.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+                {filteredRows.length === 0 ? <tr><td colSpan={6}>Belum ada user dari database untuk filter ini.</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
 
-            <footer className={styles.registryPagination}>
-              <p>Showing {filteredRows.length} of {rows.length} users</p>
-              <div className={styles.pages}>
-                <button type="button" aria-label="Previous page" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
-                <button type="button" className={styles.currentPage}>1</button>
-                <button type="button" aria-label="Next page" disabled><AppIcon name="chevronRight" width={14} height={14} /></button>
-              </div>
-            </footer>
-          </section>
+          <footer className={styles.registryPagination}><p>Showing {filteredRows.length} of {rows.length} users</p></footer>
+        </section>
+      </div>
+
+      {form ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setForm(null)}>
+          <form className={styles.modalCard} onSubmit={(event) => void submitForm(event)} onMouseDown={(event) => event.stopPropagation()}>
+            <header className={styles.drawerHeader}><h2>{form.id ? 'Edit User' : 'Add User'}</h2><button type="button" onClick={() => setForm(null)}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+            <label>Display name<input required value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} /></label>
+            <label>Username<input required value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label>
+            <label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as UserRole })}><option value="BIDAN_PUSKESMAS">Midwife</option><option value="IFK_ADMIN">IFK Officer</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
+            {form.role === 'BIDAN_PUSKESMAS' ? <label>Puskesmas<select required value={form.puskesmasId} onChange={(event) => setForm({ ...form, puskesmasId: event.target.value })}>{puskesmas.map((item) => <option value={item.id} key={item.id}>{item.nama}</option>)}</select></label> : null}
+            <label>Password<input type="password" minLength={6} required={!form.id} placeholder={form.id ? 'Kosongkan jika tidak diganti' : 'Minimal 6 karakter'} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
+            <label className={styles.checkboxRow}><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> Active</label>
+            <div className={styles.modalActions}><button type="button" onClick={() => setForm(null)}>Cancel</button><button className={styles.primaryButton} disabled={saving} type="submit">{saving ? 'Saving' : 'Save'}</button></div>
+          </form>
         </div>
-      </section>
-    </main>
+      ) : null}
+    </AdminShell>
   );
 }

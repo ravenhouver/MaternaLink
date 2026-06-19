@@ -14,16 +14,34 @@ export class DashboardService {
   }
 
   private async getSuperAdminSummary() {
-    const [healthCenters, users, medicines, inactiveAccounts] = await Promise.all([
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const [healthCenters, users, medicines, inactiveAccounts, newHealthCenters, newUsers, newMedicines, recentActivity] = await Promise.all([
       this.prisma.puskesmas.count(),
       this.prisma.user.count(),
       this.prisma.obat.count(),
       this.prisma.user.count({ where: { active: false } }),
+      this.prisma.puskesmas.count({ where: { createdAt: { gte: since } } }),
+      this.prisma.user.count({ where: { createdAt: { gte: since } } }),
+      this.prisma.obat.count({ where: { createdAt: { gte: since } } }),
+      this.prisma.auditLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 25,
+        include: { user: { select: { username: true, displayName: true } } },
+      }),
     ]);
 
     return {
       role: UserRole.SUPER_ADMIN,
-      masterData: { healthCenters, users, medicines, inactiveAccounts },
+      masterData: { healthCenters, users, medicines, inactiveAccounts, newHealthCenters, newUsers, newMedicines },
+      recentActivity: recentActivity.map((item) => ({
+        id: item.id,
+        action: item.action,
+        entityType: item.entityType,
+        entityId: item.entityId,
+        metadata: item.metadata,
+        createdAt: item.createdAt,
+        actor: item.user?.displayName ?? item.user?.username ?? 'System',
+      })),
     };
   }
 

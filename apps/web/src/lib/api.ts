@@ -94,7 +94,8 @@ export type DashboardSummary = {
   medicine?: { criticalCount: number };
   recommendations?: { pending: number; approved: number; rejected: number; critical: number };
   deliveries?: { active: number };
-  masterData?: { healthCenters: number; users: number; medicines: number; inactiveAccounts: number };
+  masterData?: { healthCenters: number; users: number; medicines: number; inactiveAccounts: number; newHealthCenters?: number; newUsers?: number; newMedicines?: number };
+  recentActivity?: Array<{ id: number; action: string; entityType: string; entityId?: string | null; metadata?: unknown; createdAt: string; actor: string }>;
 };
 
 export type QueueRecord = {
@@ -222,6 +223,47 @@ export type ObatRecord = {
   kategori: string;
   tipe: string;
   perluColdChain: boolean;
+  satuan: string;
+  dosisStandarHarian?: number | null;
+  durasiPengobatanHari?: number | null;
+};
+
+export type CreateAdminUserPayload = {
+  username: string;
+  displayName: string;
+  role: UserRole;
+  puskesmasId?: string | null;
+  password: string;
+  active?: boolean;
+};
+
+export type UpdateAdminUserPayload = Partial<CreateAdminUserPayload>;
+
+export type UpsertPuskesmasPayload = {
+  id: string;
+  nama: string;
+  kecamatan: string;
+  kabupatenKota?: string | null;
+  provinsi?: string | null;
+  tipe: 'RAWAT_INAP' | 'NON_RAWAT_INAP';
+  rainyAccess?: 'AMAN' | 'TERBATAS' | 'TERGANGGU';
+  coldChainReady?: boolean;
+  statusEndemisMalaria?: boolean;
+  ketersediaanLab?: boolean;
+  kapasitasSimpanObat?: number | null;
+  jarakKeIfkKm?: number | null;
+  leadTimeHari?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  skorAksesibilitas?: number;
+};
+
+export type UpsertObatPayload = {
+  id: string;
+  nama: string;
+  kategori: 'OBAT' | 'VAKSIN' | 'ALAT_KESEHATAN';
+  tipe: 'TABLET' | 'SIRUP' | 'INJEKSI' | 'KAPSUL' | 'CAIRAN' | 'LAINNYA';
+  perluColdChain?: boolean;
   satuan: string;
   dosisStandarHarian?: number | null;
   durasiPengobatanHari?: number | null;
@@ -524,6 +566,18 @@ export async function getUsers(): Promise<AdminUserRecord[]> {
   return apiFetch('/auth/users');
 }
 
+export async function createUser(payload: CreateAdminUserPayload): Promise<AdminUserRecord> {
+  return apiFetch('/auth/users', { method: 'POST', body: JSON.stringify(payload), successMessage: 'User berhasil dibuat', errorMessage: 'Gagal membuat user' });
+}
+
+export async function updateUser(id: string, payload: UpdateAdminUserPayload): Promise<AdminUserRecord> {
+  return apiFetch(`/auth/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'User berhasil diperbarui', errorMessage: 'Gagal memperbarui user' });
+}
+
+export async function deleteUser(id: string): Promise<{ id: string; deleted: boolean } | AdminUserRecord> {
+  return apiFetch(`/auth/users/${encodeURIComponent(id)}`, { method: 'DELETE', successMessage: 'User berhasil dihapus/nonaktif', errorMessage: 'Gagal menghapus user' });
+}
+
 export async function createPatient(payload: CreatePatientPayload): Promise<{ patient: PatientRecord; pregnancy: PregnancyRecord }> {
   return apiFetch('/patients', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Pasien berhasil dibuat', errorMessage: 'Gagal membuat pasien' });
 }
@@ -558,8 +612,28 @@ export async function getPuskesmas(): Promise<PuskesmasRecord[]> {
   return apiFetch('/master/puskesmas');
 }
 
+export async function createPuskesmas(payload: UpsertPuskesmasPayload): Promise<PuskesmasRecord> {
+  return apiFetch('/master/puskesmas', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Puskesmas berhasil dibuat', errorMessage: 'Gagal membuat puskesmas' });
+}
+
+export async function updatePuskesmas(id: string, payload: Partial<UpsertPuskesmasPayload>): Promise<PuskesmasRecord> {
+  return apiFetch(`/master/puskesmas/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'Puskesmas berhasil diperbarui', errorMessage: 'Gagal memperbarui puskesmas' });
+}
+
+export async function deletePuskesmas(id: string): Promise<{ id: string; deleted: boolean }> {
+  return apiFetch(`/master/puskesmas/${encodeURIComponent(id)}`, { method: 'DELETE', successMessage: 'Puskesmas berhasil dihapus', errorMessage: 'Gagal menghapus puskesmas' });
+}
+
 export async function getObat(): Promise<ObatRecord[]> {
   return apiFetch('/master/obat');
+}
+
+export async function createObat(payload: UpsertObatPayload): Promise<ObatRecord> {
+  return apiFetch('/master/obat', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Obat berhasil dibuat', errorMessage: 'Gagal membuat obat' });
+}
+
+export async function updateObat(id: string, payload: Partial<UpsertObatPayload>): Promise<ObatRecord> {
+  return apiFetch(`/master/obat/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'Obat berhasil diperbarui', errorMessage: 'Gagal memperbarui obat' });
 }
 
 export async function getKondisi(): Promise<KondisiRecord[]> {

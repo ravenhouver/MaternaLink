@@ -631,6 +631,196 @@
   box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
 }
 
+.primaryButton:disabled,
+.panelFooter button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 0.42);
+}
+
+.sideDrawer,
+.modalCard {
+  width: min(100%, 520px);
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  border: 1px solid #c1c6d6;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgb(15 23 42 / 0.28);
+}
+
+.sideDrawer {
+  margin-left: auto;
+  align-self: stretch;
+  max-height: none;
+  border-radius: 12px 0 0 12px;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #c1c6d6;
+}
+
+.drawerHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 28px;
+}
+
+.drawerHeader button,
+.modalActions button,
+.activeBadge,
+.inactiveBadge {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+}
+
+.drawerBody p,
+.helpList,
+.settingsList {
+  margin: 0;
+  color: #414754;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.helpList {
+  padding-left: 18px;
+}
+
+.settingsList {
+  display: grid;
+  gap: 12px;
+}
+
+.settingsList div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e6e8ed;
+}
+
+.settingsList dt,
+.settingsList dd {
+  margin: 0;
+}
+
+.settingsList dt {
+  color: #727785;
+  font-weight: 700;
+}
+
+.settingsList dd {
+  color: #191c20;
+  font-weight: 800;
+  text-align: right;
+}
+
+.modalCard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 20px 20px;
+}
+
+.modalCard .drawerHeader,
+.modalActions,
+.checkboxRow {
+  grid-column: 1 / -1;
+}
+
+.modalCard .drawerHeader {
+  margin: 0 -20px;
+}
+
+.modalCard label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: #414754;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 16px;
+}
+
+.modalCard input,
+.modalCard select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #c1c6d6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #191c20;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.checkboxRow {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+  min-height: 32px;
+}
+
+.checkboxRow input {
+  width: 16px;
+  min-height: 16px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.modalActions > button:first-child {
+  min-height: 40px;
+  padding: 10px 18px;
+  border: 1px solid #c1c6d6;
+  border-radius: 8px;
+  color: #414754;
+}
+
+.emptyState {
+  margin: 0;
+  padding: 18px 24px;
+  color: #727785;
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .registryCard {
   overflow: hidden;
   border: 1px solid #c1c6d6;
