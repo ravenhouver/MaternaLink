@@ -17,9 +17,9 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_TAG: ${{ github.sha }}
-  API_IMAGE_REPO: ghcr.io/ravenhouver/furap-jogja-api
-  WEB_IMAGE_REPO: ghcr.io/ravenhouver/furap-jogja-web
-  SPEECH_STT_IMAGE_REPO: ghcr.io/ravenhouver/furap-jogja-speech-stt
+  API_IMAGE_REPO: ghcr.io/ravenhouver/maternalink-api
+  WEB_IMAGE_REPO: ghcr.io/ravenhouver/maternalink-web
+  SPEECH_STT_IMAGE_REPO: ghcr.io/ravenhouver/maternalink-speech-stt
 
 jobs:
   deploy:
@@ -185,6 +185,14 @@ jobs:
           podman pull "${API_IMAGE}"
           podman pull "${WEB_IMAGE}"
           podman pull "${SPEECH_STT_IMAGE}"
+
+          ${COMPOSE} -f podman-compose.prod.yml down --remove-orphans || true
+          for port in 41873 41874 41875; do
+            CONTAINERS="$(podman ps -a --format '{{.ID}} {{.Ports}}' | awk -v pattern=":${port}->" '$0 ~ pattern { print $1 }')"
+            if [ -n "${CONTAINERS}" ]; then
+              podman rm -f ${CONTAINERS}
+            fi
+          done
 
           ${COMPOSE} -f podman-compose.prod.yml up -d
           ${COMPOSE} -f podman-compose.prod.yml ps

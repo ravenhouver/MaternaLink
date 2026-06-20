@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ${API_IMAGE:-ghcr.io/ravenhouver/furap-jogja-api:latest}
+    image: ${API_IMAGE:-ghcr.io/ravenhouver/maternalink-api:latest}
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   speech-stt:
-    image: ${SPEECH_STT_IMAGE:-ghcr.io/ravenhouver/furap-jogja-speech-stt:latest}
+    image: ${SPEECH_STT_IMAGE:-ghcr.io/ravenhouver/maternalink-speech-stt:latest}
     environment:
       STT_MODEL_SIZE: ${STT_MODEL_SIZE:-small}
       STT_DEVICE: ${STT_DEVICE:-cpu}
@@ -52,7 +52,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: ${WEB_IMAGE:-ghcr.io/ravenhouver/furap-jogja-web:latest}
+    image: ${WEB_IMAGE:-ghcr.io/ravenhouver/maternalink-web:latest}
     environment:
       NODE_ENV: production
       PORT: 3000
