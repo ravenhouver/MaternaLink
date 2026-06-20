@@ -144,12 +144,12 @@ jobs:
 
           if [ ! -d "${DEPLOY_PATH}/.git" ]; then
             rm -rf "${DEPLOY_PATH}"
-            git clone --branch "${BRANCH}" "${REPO_URL}" "${DEPLOY_PATH}"
+            git -c http.extraheader="AUTHORIZATION: bearer ${GHCR_TOKEN}" clone --branch "${BRANCH}" "${REPO_URL}" "${DEPLOY_PATH}"
           fi
 
           cd "${DEPLOY_PATH}"
           git checkout "${BRANCH}"
-          git pull --ff-only origin "${BRANCH}"
+          git -c http.extraheader="AUTHORIZATION: bearer ${GHCR_TOKEN}" pull --ff-only origin "${BRANCH}"
 
           if [ ! -f .env.production ]; then
             POSTGRES_PASSWORD="$(openssl rand -hex 24)"
