@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ${API_IMAGE:-ghcr.io/0xsyam/maternalink-api:latest}
+    image: ${API_IMAGE:-ghcr.io/ravenhouver/furap-jogja-api:latest}
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -28,6 +28,8 @@ services:
       AI_MODE: ${AI_MODE:-remote}
       AI_SERVICE_TIMEOUT_MS: ${AI_SERVICE_TIMEOUT_MS:-30000}
       AI_LAYER2_TIMEOUT_MS: ${AI_LAYER2_TIMEOUT_MS:-600000}
+      SPEECH_STT_SERVICE_URL: ${SPEECH_STT_SERVICE_URL:-http://speech-stt:8002}
+      SPEECH_STT_TIMEOUT_MS: ${SPEECH_STT_TIMEOUT_MS:-120000}
       RUN_SEED: ${RUN_SEED:-true}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     ports:
@@ -35,10 +37,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      speech-stt:
+        condition: service_started
+    restart: unless-stopped
+
+  speech-stt:
+    image: ${SPEECH_STT_IMAGE:-ghcr.io/ravenhouver/furap-jogja-speech-stt:latest}
+    environment:
+      STT_MODEL_SIZE: ${STT_MODEL_SIZE:-small}
+      STT_DEVICE: ${STT_DEVICE:-cpu}
+      STT_COMPUTE_TYPE: ${STT_COMPUTE_TYPE:-int8}
+    ports:
+      - "41875:8002"
     restart: unless-stopped
 
   web:
-    image: ${WEB_IMAGE:-ghcr.io/0xsyam/maternalink-web:latest}
+    image: ${WEB_IMAGE:-ghcr.io/ravenhouver/furap-jogja-web:latest}
     environment:
       NODE_ENV: production
       PORT: 3000

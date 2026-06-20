@@ -17,9 +17,9 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_TAG: ${{ github.sha }}
-  API_IMAGE_REPO: ghcr.io/0xsyam/maternalink-api
-  WEB_IMAGE_REPO: ghcr.io/0xsyam/maternalink-web
-  AI_SERVICE_IMAGE_REPO: ghcr.io/0xsyam/maternalink-ai-service
+  API_IMAGE_REPO: ghcr.io/ravenhouver/furap-jogja-api
+  WEB_IMAGE_REPO: ghcr.io/ravenhouver/furap-jogja-web
+  SPEECH_STT_IMAGE_REPO: ghcr.io/ravenhouver/furap-jogja-speech-stt
 
 jobs:
   deploy:
@@ -63,15 +63,15 @@ jobs:
             ${{ env.WEB_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
             ${{ env.WEB_IMAGE_REPO }}:latest
 
-      - name: Build and push AI service image
+      - name: Build and push speech STT image
         uses: docker/build-push-action@v6
         with:
-          context: apps/ai-service
-          file: apps/ai-service/Dockerfile
+          context: .
+          file: services/speech-stt/Dockerfile
           push: true
           tags: |
-            ${{ env.AI_SERVICE_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
-            ${{ env.AI_SERVICE_IMAGE_REPO }}:latest
+            ${{ env.SPEECH_STT_IMAGE_REPO }}:${{ env.IMAGE_TAG }}
+            ${{ env.SPEECH_STT_IMAGE_REPO }}:latest
 
       - name: Deploy over SSH
         env:
@@ -85,7 +85,8 @@ jobs:
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
           API_IMAGE_REPO: ${{ env.API_IMAGE_REPO }}
           WEB_IMAGE_REPO: ${{ env.WEB_IMAGE_REPO }}
-          AI_SERVICE_IMAGE_REPO: ${{ env.AI_SERVICE_IMAGE_REPO }}
+          SPEECH_STT_IMAGE_REPO: ${{ env.SPEECH_STT_IMAGE_REPO }}
+          REPO_URL: https://github.com/${{ github.repository }}.git
         run: |
           set -euo pipefail
 
@@ -114,10 +115,9 @@ jobs:
           fi
 
           "${SSH_COMMAND[@]}" "${VPS_USER}@${VPS_HOST}" \
-            "VPS_DEPLOY_PATH='${VPS_DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' API_IMAGE_REPO='${API_IMAGE_REPO}' WEB_IMAGE_REPO='${WEB_IMAGE_REPO}' AI_SERVICE_IMAGE_REPO='${AI_SERVICE_IMAGE_REPO}' GHCR_USERNAME='${GHCR_USERNAME}' GHCR_TOKEN='${GHCR_TOKEN}' bash -s" <<'REMOTE'
+            "VPS_DEPLOY_PATH='${VPS_DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' API_IMAGE_REPO='${API_IMAGE_REPO}' WEB_IMAGE_REPO='${WEB_IMAGE_REPO}' SPEECH_STT_IMAGE_REPO='${SPEECH_STT_IMAGE_REPO}' REPO_URL='${REPO_URL}' GHCR_USERNAME='${GHCR_USERNAME}' GHCR_TOKEN='${GHCR_TOKEN}' bash -s" <<'REMOTE'
           set -euo pipefail
 
-          REPO_URL="https://github.com/0xSyam/MaternaLink.git"
           BRANCH="main"
           DEPLOY_PATH="${VPS_DEPLOY_PATH}"
 
@@ -176,12 +176,12 @@ jobs:
 
           export API_IMAGE="${API_IMAGE_REPO}:${IMAGE_TAG}"
           export WEB_IMAGE="${WEB_IMAGE_REPO}:${IMAGE_TAG}"
-          export AI_SERVICE_IMAGE="${AI_SERVICE_IMAGE_REPO}:${IMAGE_TAG}"
+          export SPEECH_STT_IMAGE="${SPEECH_STT_IMAGE_REPO}:${IMAGE_TAG}"
 
           printf '%s' "${GHCR_TOKEN}" | podman login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
           podman pull "${API_IMAGE}"
           podman pull "${WEB_IMAGE}"
-          podman pull "${AI_SERVICE_IMAGE}"
+          podman pull "${SPEECH_STT_IMAGE}"
 
           ${COMPOSE} -f podman-compose.prod.yml up -d
           ${COMPOSE} -f podman-compose.prod.yml ps
