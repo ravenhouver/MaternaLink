@@ -938,12 +938,13 @@
 .dhChart i,
 .dhChart b { display: inline-block; width: 12px; height: 12px; border-radius: 999px; background: #34a853; }
 .dhChart b { background: #d93025; }
-.dhBars { display: flex; align-items: flex-end; gap: 22px; height: 210px; padding: 34px 16px 0; }
-.dhBars div { display: flex; align-items: center; flex-direction: column; justify-content: flex-end; gap: 8px; }
+.dhBars { display: flex; align-items: flex-end; gap: 22px; height: 230px; padding: 34px 16px 0; }
+.dhBars div { display: flex; min-width: 60px; align-items: center; flex-direction: column; justify-content: flex-end; gap: 0; }
 .dhBars span,
 .dhBars b { display: block; width: 60px; border-radius: 6px 6px 0 0; background: #34a853; }
 .dhBars b { border-radius: 0; background: #d93025; }
-.dhBars small { color: #5f6368; font-size: 10px; }
+.dhBars small { margin-top: 8px; color: #5f6368; font-size: 10px; }
+.dhChartEmpty { width: 100%; align-self: center; margin: 0; color: #64748b; font-size: 13px; font-weight: 700; text-align: center; }
 .dhCompliance { min-height: 360px; background: #1a73e8; color: #fff; padding: 32px; }
 .dhCompliance > span { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 12px; background: rgb(255 255 255 / 0.16); }
 .dhCompliance h2 { margin: 32px 0 16px; color: #fff; font-size: 24px; }
@@ -999,6 +1000,7 @@
   .dhTable td > span { grid-column: 2; }
   .dhChart > div:first-child { flex-direction: column; }
   .dhBars { gap: 10px; overflow-x: auto; }
+  .dhBars div { min-width: 42px; }
   .dhBars span,
   .dhBars b { width: 42px; }
 }

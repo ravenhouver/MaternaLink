@@ -10,6 +10,9 @@ import styles from './decision-history.module.css';
 type Metric = { label: string; value: string; note: string; icon: AppIconName; tone: 'green' | 'blue' };
 type Row = IfkDecisionHistoryResponse['rows'][number];
 
+const CHART_MAX_HEIGHT = 176;
+const CHART_MIN_SEGMENT_HEIGHT = 8;
+
 function downloadCsv(rows: Row[]) {
   const header = ['Tanggal', 'Petugas', 'Klinik', 'Tindakan', 'AI Prediction Stocks', 'Actual Decision'];
   const body = rows.map((row) => [row.date, row.officer, row.clinic, row.action, row.prediction, row.decision].map((value) => `"${value.replaceAll('"', '""')}"`).join(','));
@@ -80,6 +83,24 @@ export function DecisionHistoryContent() {
     return ledgerRows.filter((row) => [row.officer, row.clinic, row.action, row.decision].some((value) => value.toLowerCase().includes(normalized)));
   }, [ledgerRows, query]);
 
+  const chartBars = useMemo(() => {
+    const maxTotal = Math.max(1, ...bars.map((bar) => bar.green + bar.red));
+    return bars.map((bar) => {
+      const total = bar.green + bar.red;
+      const scaledTotal = total === 0 ? 0 : Math.max(CHART_MIN_SEGMENT_HEIGHT, Math.round((total / maxTotal) * CHART_MAX_HEIGHT));
+      const greenHeight = total === 0 ? 0 : Math.round((bar.green / total) * scaledTotal);
+      const redHeight = total === 0 ? 0 : scaledTotal - greenHeight;
+      return {
+        ...bar,
+        greenHeight: bar.green > 0 ? Math.max(CHART_MIN_SEGMENT_HEIGHT, greenHeight) : 0,
+        redHeight: bar.red > 0 ? Math.max(CHART_MIN_SEGMENT_HEIGHT, redHeight) : 0,
+        total,
+      };
+    });
+  }, [bars]);
+
+  const hasChartData = chartBars.some((bar) => bar.total > 0);
+
   return (
     <div className={styles.dhShell}>
       <Sidebar />
@@ -94,7 +115,7 @@ export function DecisionHistoryContent() {
             <div className={styles.dhPagination}><span>Showing entries {filteredRows.length}</span><div><button type="button" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button><button type="button" className={styles.current}>1</button><button type="button" disabled><AppIcon name="chevronRight" width={14} height={14} /></button></div></div>
           </section>
           <section className={styles.dhBottomGrid}>
-            <article className={styles.dhChart}><div><h2>Audit Trail Analysis</h2><p>Deviation distribution from stored IFK decisions</p><span><i />Matched <b />Deviated</span></div><div className={styles.dhBars}>{bars.map((bar) => <div key={bar.day}><span style={{ height: `${bar.green}px` }} /><b style={{ height: `${bar.red}px` }} /><small>{bar.day}</small></div>)}</div></article>
+            <article className={styles.dhChart}><div><h2>Audit Trail Analysis</h2><p>Deviation distribution from stored IFK decisions</p><span><i />Matched <b />Deviated</span></div><div className={styles.dhBars} aria-label="Audit trail analysis chart">{hasChartData ? chartBars.map((bar) => <div key={bar.day} title={`${bar.day}: ${bar.green} matched, ${bar.red} deviated`}><span style={{ height: `${bar.greenHeight}px` }} /><b style={{ height: `${bar.redHeight}px` }} /><small>{bar.day}</small></div>) : <p className={styles.dhChartEmpty}>Belum ada keputusan final untuk dianalisis.</p>}</div></article>
             <aside className={styles.dhCompliance}><span><AppIcon name="shield" width={24} height={24} /></span><h2>Compliance Rating {compliance ? `${compliance.rating}%` : ''}</h2><p>{compliance?.summary ?? 'Belum ada data keputusan final.'}</p><div><small>Primary Deviation Factor</small><strong>{compliance?.primaryDeviationFactor ?? 'Belum tersedia'}</strong></div></aside>
           </section>
         </main>
