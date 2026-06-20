@@ -182,6 +182,11 @@ jobs:
           export SPEECH_STT_IMAGE="${SPEECH_STT_IMAGE_REPO}:${IMAGE_TAG}"
 
           printf '%s' "${GHCR_TOKEN}" | podman login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
+
+          podman container prune -f || true
+          podman image prune -af || true
+          podman system prune -af || true
+
           podman pull "${API_IMAGE}"
           podman pull "${WEB_IMAGE}"
           podman pull "${SPEECH_STT_IMAGE}"
