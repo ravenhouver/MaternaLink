@@ -21,6 +21,7 @@ describe('MaternaLink API', () => {
   }
 
   beforeAll(async () => {
+    process.env.AI_MASTER_AUTO_SYNC = 'false';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
@@ -132,6 +133,135 @@ describe('MaternaLink API', () => {
 
     const response = await request(app.getHttpServer()).get('/api/ai/health').expect(200);
     expect(response.body).toEqual(expect.objectContaining({ mode: 'remote', remote: true, status: 'ok', service: 'MaternaLink AI' }));
+  });
+
+  it('creates Layer 0 AI examination draft from manual complaint text', async () => {
+    process.env.AI_MODE = 'remote';
+    mockFetch(async (url, init) => {
+      expect(url).toBe('https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer0/extract');
+      const body = JSON.parse(String(init?.body));
+      expect(body).toEqual({
+        period: '2026-06-01',
+        records: [expect.objectContaining({ facility_id: 'PKM-001', transcript: 'Ibu hamil pusing, kaki bengkak, dan tekanan darah tinggi.' })],
+      });
+      return jsonResponse({
+        extraction_results: [{
+          record_id: body.records[0].record_id,
+          facility_id: 'PKM-001',
+          period: '2026-06-01',
+          extracted_symptoms: JSON.stringify([{ symptom_id: 'G05', confidence: 0.91 }, { symptom_id: 'G08', confidence: 0.84 }]),
+          min_confidence: 0.84,
+          hitl_flag: false,
+          validated_symptoms: JSON.stringify(['G05', 'G08']),
+          extraction_model: 'qwen3-32b-test',
+        }],
+        condition_estimates: [
+          { facility_id: 'PKM-001', period: '2026-06-01', condition_id: 'K03', manual_cases: 0, anamnesis_indicated_cases: 1, estimated_total_cases: 1, confidence_level: 'high' },
+          { facility_id: 'PKM-001', period: '2026-06-01', condition_id: 'K01', manual_cases: 0, anamnesis_indicated_cases: 0, estimated_total_cases: 0, confidence_level: 'low' },
+        ],
+      });
+    });
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const response = await request(app.getHttpServer())
+      .post('/api/examinations/ai/draft')
+      .set('Cookie', login.headers['set-cookie'])
+      .send({ complaint: 'Ibu hamil pusing, kaki bengkak, dan tekanan darah tinggi.', period: '2026-06-01' })
+      .expect(201);
+
+    expect(response.body).toEqual({
+      symptomIds: ['G05', 'G08'],
+      diagnosisIds: ['K03'],
+      needsReview: false,
+      minConfidence: 0.84,
+      model: 'qwen3-32b-test',
+    });
+  });
+
+  it('marks Layer 0 AI examination draft as needs-review for low confidence', async () => {
+    process.env.AI_MODE = 'remote';
+    mockFetch(async () => jsonResponse({
+      extraction_results: [{
+        record_id: 'DRAFT-LOW',
+        facility_id: 'PKM-001',
+        period: '2026-06-01',
+        extracted_symptoms: JSON.stringify([{ symptom_id: 'G02', confidence: 0.52 }]),
+        min_confidence: 0.52,
+        hitl_flag: true,
+        validated_symptoms: JSON.stringify(['G02']),
+        extraction_model: 'qwen3-32b-test',
+      }],
+      condition_estimates: [
+        { facility_id: 'PKM-001', period: '2026-06-01', condition_id: 'K02', manual_cases: 0, anamnesis_indicated_cases: 1, estimated_total_cases: 1, confidence_level: 'low' },
+      ],
+    }));
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const response = await request(app.getHttpServer())
+      .post('/api/examinations/ai/draft')
+      .set('Cookie', login.headers['set-cookie'])
+      .send({ complaint: 'Keluhan tidak spesifik dan perlu pemeriksaan lanjutan.', period: '2026-06-01' })
+      .expect(201);
+
+    expect(response.body).toEqual(expect.objectContaining({ symptomIds: ['G02'], diagnosisIds: ['K02'], needsReview: true, minConfidence: 0.52 }));
+  });
+
+  it('protects Layer 0 AI examination draft endpoint from unauthenticated and non-bidan users', async () => {
+    await request(app.getHttpServer())
+      .post('/api/examinations/ai/draft')
+      .send({ complaint: 'Ibu hamil pusing.', period: '2026-06-01' })
+      .expect(401);
+
+    const ifkLogin = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'ifk', password: 'password123' }).expect(201);
+    await request(app.getHttpServer())
+      .post('/api/examinations/ai/draft')
+      .set('Cookie', ifkLogin.headers['set-cookie'])
+      .send({ complaint: 'Ibu hamil pusing.', period: '2026-06-01' })
+      .expect(403);
+  });
+
+  it('runs Layer 1 hosted AI forecast with stock, diagnosis, and facility context payload', async () => {
+    process.env.AI_MODE = 'remote';
+    mockFetch(async (url, init) => {
+      expect(url).toBe('https://azrilfahmiardi-maternalink-ai.hf.space/api/v1/layer1/forecast');
+      const body = JSON.parse(String(init?.body));
+      expect(body).toEqual(expect.objectContaining({
+        facility_id: 'PKM-001',
+        drug_id: expect.any(String),
+        period: '2025-03-01',
+        closing_stock: expect.any(Number),
+        estimated_total_cases: expect.any(Number),
+        lead_time_days: expect.any(Number),
+        rainy_season_access: expect.stringMatching(/normal|limited|cut_off/),
+        accessibility_score: expect.any(Number),
+        standard_daily_dose: expect.any(Number),
+        treatment_duration_days: expect.any(Number),
+      }));
+      return jsonResponse({
+        facility_id: body.facility_id,
+        drug_id: body.drug_id,
+        period: body.period,
+        forecast_demand: 33,
+        buffer_pct: 0.25,
+        buffer_units: 9,
+        total_requirement: 42,
+        current_stock: body.closing_stock,
+      });
+    });
+
+    const login = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const response = await request(app.getHttpServer())
+      .post('/api/forecast/ai/run')
+      .set('Cookie', login.headers['set-cookie'])
+      .send({ puskesmasId: 'PKM-001', periode: '2025-03-01' })
+      .expect(201);
+
+    expect(response.body).toEqual(expect.objectContaining({
+      puskesmasId: 'PKM-001',
+      status: 'COMPLETED',
+      confidence: 'HIGH',
+      prediksi: expect.arrayContaining([expect.objectContaining({ kebutuhanObat: 33, bufferPersen: 0.25, totalRekomendasi: 42, confidence: 'HIGH' })]),
+    }));
   });
 
   it('lets bidan create patient, queue patient, call patient, and save examination', async () => {

@@ -577,6 +577,14 @@
   color: #7e5260;
 }
 
+.aiTag {
+  color: #005bbf;
+}
+
+.reviewTag {
+  color: #a33d23;
+}
+
 .inputShell {
   display: flex;
   min-height: 46px;
@@ -675,6 +683,16 @@
 .manualField .inputShell {
   border-color: #7e5260;
   background: #fff5f7;
+}
+
+.aiField .inputShell {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.reviewField .inputShell {
+  border-color: #f59e0b;
+  background: #fffbeb;
 }
 
 .medicationPanel {

@@ -88,75 +88,126 @@ async function main() {
   }
 
   const conditions = [
-    ['K01', 'Malaria'],
-    ['K02', 'Anemia Kehamilan'],
-    ['K03', 'Hipertensi / Preeklampsia'],
-    ['K04', 'Diabetes Gestasional'],
-    ['K05', 'Infeksi Saluran Kemih'],
-    ['K06', 'Infeksi Vagina'],
-    ['K11', 'ISPA / Pneumonia'],
-    ['K12', 'Depresi / Kecemasan Antenatal'],
-    ['K13', 'Heartburn / GERD'],
-    ['K14', 'Konstipasi / Wasir'],
+    ['K01', 'Malaria', 'Infeksi parasit; diagnosis RDT / hasil lab'],
+    ['K02', 'Anemia', 'Hematologi; diagnosis hasil lab HB'],
+    ['K03', 'Hipertensi / Preeklampsia', 'Kardiovaskular; pemeriksaan fisik ANC'],
+    ['K04', 'Diabetes Gestasional', 'Metabolik; tes gula darah'],
+    ['K05', 'ISK (Infeksi Saluran Kemih)', 'Infeksi bakteri; diagnosis bidan/dokter'],
+    ['K06', 'Infeksi Vagina (Vaginosis/Kandidiasis)', 'Infeksi; diagnosis bidan/dokter'],
+    ['K07', 'Hipotiroid', 'Endokrin; diagnosis dokter'],
+    ['K08', 'HIV', 'Infeksi virus; RDT HIV / VCT'],
+    ['K09', 'Hepatitis B', 'Infeksi virus; RDT HBsAg'],
+    ['K10', 'Toksoplasmosis', 'Infeksi parasit; serologi'],
+    ['K11', 'ISPA / Pneumonia', 'Respirasi; diagnosis bidan/dokter'],
+    ['K12', 'Depresi / Kecemasan Antenatal', 'Mental health; skrining EPDS'],
+    ['K13', 'Heartburn / GERD', 'Gastrointestinal; anamnesis'],
+    ['K14', 'Konstipasi / Wasir', 'Gastrointestinal; anamnesis'],
   ] as const;
 
-  for (const [id, nama] of conditions) {
+  for (const [id, nama, deskripsi] of conditions) {
     await prisma.kondisi.upsert({
       where: { id },
-      update: { nama },
-      create: { id, nama },
+      update: { nama, deskripsi },
+      create: { id, nama, deskripsi },
     });
   }
 
   const symptoms = [
-    ['G01', 'Demam tinggi'],
-    ['G02', 'Menggigil'],
-    ['G03', 'Mual / muntah berlebihan'],
-    ['G04', 'Lemas / mudah lelah ekstrem'],
-    ['G05', 'Pusing / sakit kepala berat'],
-    ['G06', 'Bengkak wajah / kaki'],
-    ['G07', 'Nyeri / panas saat kencing'],
-    ['G09', 'Penglihatan kabur'],
-    ['G11', 'Sesak napas'],
-    ['G15', 'Susah BAB / perut kembung'],
+    ['G01', 'Demam tinggi', 'Kemungkinan: K01 Malaria, K11 ISPA, K05 ISK'],
+    ['G02', 'Menggigil', 'Kemungkinan: K01 Malaria'],
+    ['G03', 'Mual / muntah berlebihan', 'Kemungkinan: Hiperemesis, K01 Malaria, K09 Hepatitis B'],
+    ['G04', 'Lemas / mudah lelah ekstrem', 'Kemungkinan: K02 Anemia, K07 Hipotiroid, K01 Malaria'],
+    ['G05', 'Pusing / sakit kepala berat', 'Kemungkinan: K02 Anemia, K03 Preeklampsia/Hipertensi'],
+    ['G06', 'Bengkak wajah / kaki', 'Kemungkinan: K03 Preeklampsia, gagal ginjal'],
+    ['G07', 'Nyeri / panas saat kencing', 'Kemungkinan: K05 ISK'],
+    ['G08', 'Keputihan abnormal', 'Kemungkinan: K06 Vaginosis/Kandidiasis'],
+    ['G09', 'Penglihatan kabur', 'Kemungkinan: K03 Preeklampsia (tanda bahaya)'],
+    ['G10', 'Nyeri ulu hati', 'Kemungkinan: K13 GERD, K03 Preeklampsia berat'],
+    ['G11', 'Sesak napas', 'Kemungkinan: K02 Anemia berat, K11 Pneumonia'],
+    ['G12', 'Kulit / mata kuning', 'Kemungkinan: K09 Hepatitis B'],
+    ['G13', 'Kram kaki / nyeri tulang', 'Kemungkinan: kekurangan kalsium'],
+    ['G14', 'Sedih berkepanjangan / cemas', 'Kemungkinan: K12 Depresi antenatal'],
+    ['G15', 'Susah BAB / perut kembung', 'Kemungkinan: K14 Konstipasi, K07 Hipotiroid'],
   ] as const;
 
-  for (const [id, nama] of symptoms) {
+  for (const [id, nama, deskripsi] of symptoms) {
     await prisma.gejala.upsert({
       where: { id },
-      update: { nama },
-      create: { id, nama },
+      update: { nama, deskripsi },
+      create: { id, nama, deskripsi },
     });
   }
 
   const medicines = [
-    ['OBT-001', 'Kina', 'OBAT', 'TABLET', false, 3, 7],
-    ['OBT-002', 'Klindamisin', 'OBAT', 'KAPSUL', false, 3, 7],
-    ['OBT-003', 'ACT (Artemisinin Combination Therapy)', 'OBAT', 'TABLET', false, 4, 3],
-    ['OBT-004', 'Fe dosis tinggi', 'OBAT', 'TABLET', false, 1, 30],
-    ['OBT-008', 'Nifedipin', 'OBAT', 'TABLET', false, 2, 30],
-    ['OBT-009', 'Metildopa', 'OBAT', 'TABLET', false, 2, 30],
-    ['OBT-010', 'MgSO4 (Magnesium Sulfat)', 'OBAT', 'INJEKSI', true, 1, 1],
-    ['OBT-013', 'Amoksisilin', 'OBAT', 'KAPSUL', false, 3, 7],
-    ['OBT-024', 'Parasetamol', 'OBAT', 'TABLET', false, 3, 5],
-    ['OBT-028', 'Laktulosa', 'OBAT', 'CAIRAN', false, 1, 7],
+    ['OBT-001', 'Kina', 'OBAT', 'TABLET', 'tablet', false, 3, 7],
+    ['OBT-002', 'Klindamisin', 'OBAT', 'KAPSUL', 'kapsul', false, 3, 7],
+    ['OBT-003', 'ACT (Artemisinin Combination Therapy)', 'OBAT', 'TABLET', 'tablet', false, 4, 3],
+    ['OBT-004', 'Fe dosis tinggi', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-005', 'Vitamin B12', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-006', 'Folat tambahan', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-007', 'Glukosa oral / IV', 'OBAT', 'INJEKSI', 'vial', false, 1, 1],
+    ['OBT-008', 'Nifedipin', 'OBAT', 'TABLET', 'tablet', false, 2, 30],
+    ['OBT-009', 'Metildopa', 'OBAT', 'TABLET', 'tablet', false, 2, 30],
+    ['OBT-010', 'MgSO4 (Magnesium Sulfat)', 'OBAT', 'INJEKSI', 'vial', true, 1, 1],
+    ['OBT-011', 'Insulin', 'OBAT', 'INJEKSI', 'vial', true, 1, 30],
+    ['OBT-012', 'Metformin', 'OBAT', 'TABLET', 'tablet', false, 2, 30],
+    ['OBT-013', 'Amoksisilin', 'OBAT', 'KAPSUL', 'kapsul', false, 3, 7],
+    ['OBT-014', 'Sefaleksin', 'OBAT', 'KAPSUL', 'kapsul', false, 4, 7],
+    ['OBT-015', 'Ondansetron', 'OBAT', 'TABLET', 'tablet', false, 2, 3],
+    ['OBT-016', 'Vitamin B6 (Piridoksin)', 'OBAT', 'TABLET', 'tablet', false, 3, 7],
+    ['OBT-017', 'Antasida', 'OBAT', 'TABLET', 'tablet', false, 3, 7],
+    ['OBT-018', 'Levotiroksin', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-019', 'ARV (Antiretroviral)', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-020', 'Kotrimoksazol', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-021', 'Tenofovir', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-022', 'Metronidazol', 'OBAT', 'TABLET', 'tablet', false, 3, 7],
+    ['OBT-023', 'Klotrimazol topikal', 'OBAT', 'CAIRAN', 'tube', false, 1, 7],
+    ['OBT-024', 'Parasetamol', 'OBAT', 'TABLET', 'tablet', false, 3, 5],
+    ['OBT-025', 'Sertralin', 'OBAT', 'TABLET', 'tablet', false, 1, 30],
+    ['OBT-026', 'Ranitidin', 'OBAT', 'TABLET', 'tablet', false, 2, 7],
+    ['OBT-027', 'Omeprazol', 'OBAT', 'KAPSUL', 'kapsul', false, 1, 14],
+    ['OBT-028', 'Laktulosa', 'OBAT', 'CAIRAN', 'botol', false, 1, 7],
+    ['OBT-029', 'Spiramisin', 'OBAT', 'TABLET', 'tablet', false, 3, 21],
+    ['OBT-030', 'Pirimetamin', 'OBAT', 'TABLET', 'tablet', false, 1, 21],
   ] as const;
 
-  for (const [id, nama, kategori, tipe, perluColdChain, dosisStandarHarian, durasiPengobatanHari] of medicines) {
+  for (const [id, nama, kategori, tipe, satuan, perluColdChain, dosisStandarHarian, durasiPengobatanHari] of medicines) {
     await prisma.obat.upsert({
       where: { id },
-      update: { nama, kategori, tipe, perluColdChain, dosisStandarHarian, durasiPengobatanHari },
-      create: { id, nama, kategori, tipe, perluColdChain, satuan: 'unit', dosisStandarHarian, durasiPengobatanHari },
+      update: { nama, kategori, tipe, satuan, perluColdChain, dosisStandarHarian, durasiPengobatanHari },
+      create: { id, nama, kategori, tipe, satuan, perluColdChain, dosisStandarHarian, durasiPengobatanHari },
     });
   }
 
   const conditionMedicineRows = [
     ['K01', 'OBT-001', '3 tablet per hari', 'T1', 1, 'Malaria trimester awal'],
+    ['K01', 'OBT-002', '3 kapsul per hari', 'T1', 2, 'Alternatif malaria trimester awal'],
     ['K01', 'OBT-003', '4 tablet per hari', 'T2,T3', 1, 'Malaria trimester lanjut'],
     ['K02', 'OBT-004', '1 tablet per hari', 'T1,T2,T3', 1, 'Anemia berat'],
+    ['K02', 'OBT-005', '1 tablet per hari', 'T1,T2,T3', 2, 'Anemia berat'],
+    ['K02', 'OBT-006', '1 tablet per hari', 'T1,T2,T3', 2, 'Anemia berat'],
     ['K03', 'OBT-008', '2 tablet per hari', 'T2,T3', 1, 'Hipertensi kehamilan'],
+    ['K03', 'OBT-009', '2 tablet per hari', 'T1,T2,T3', 2, 'Alternatif hipertensi kehamilan'],
     ['K03', 'OBT-010', 'sesuai protokol kegawatdaruratan', 'T2,T3', 1, 'Preeklampsia berat atau kejang'],
+    ['K04', 'OBT-011', 'sesuai protokol insulin', 'T1,T2,T3', 1, 'Diabetes gestasional'],
+    ['K04', 'OBT-012', '2 tablet per hari', 'T1,T2,T3', 2, 'Diabetes gestasional'],
     ['K05', 'OBT-013', '3 kapsul per hari', 'T1,T2,T3', 1, 'ISK maternal'],
+    ['K05', 'OBT-014', '4 kapsul per hari', 'T1,T2,T3', 2, 'Alternatif ISK maternal'],
+    ['K06', 'OBT-022', '3 tablet per hari', 'T1,T2,T3', 1, 'Vaginosis'],
+    ['K06', 'OBT-023', '1 aplikasi per hari', 'T1,T2,T3', 2, 'Kandidiasis'],
+    ['K07', 'OBT-018', '1 tablet per hari', 'T1,T2,T3', 1, 'Hipotiroid'],
+    ['K08', 'OBT-019', 'sesuai protokol ARV', 'T1,T2,T3', 1, 'HIV maternal'],
+    ['K08', 'OBT-020', '1 tablet per hari', 'T1,T2,T3', 2, 'Profilaksis HIV'],
+    ['K09', 'OBT-021', '1 tablet per hari', 'T1,T2,T3', 1, 'Hepatitis B'],
+    ['K10', 'OBT-029', '3 tablet per hari', 'T1', 1, 'Toksoplasmosis trimester awal'],
+    ['K10', 'OBT-030', '1 tablet per hari', 'T2,T3', 1, 'Toksoplasmosis trimester lanjut'],
+    ['K11', 'OBT-013', '3 kapsul per hari', 'T1,T2,T3', 1, 'ISPA / pneumonia maternal'],
+    ['K11', 'OBT-024', '3 tablet per hari', 'T1,T2,T3', 2, 'Demam atau nyeri pada ISPA'],
+    ['K12', 'OBT-025', '1 tablet per hari', 'T1,T2,T3', 1, 'Depresi antenatal'],
+    ['K13', 'OBT-017', '3 tablet per hari', 'T1,T2,T3', 1, 'Heartburn / GERD'],
+    ['K13', 'OBT-026', '2 tablet per hari', 'T1,T2,T3', 2, 'Alternatif GERD'],
+    ['K13', 'OBT-027', '1 kapsul per hari', 'T1,T2,T3', 2, 'Alternatif GERD'],
+    ['K14', 'OBT-028', '1 botol per hari sesuai kebutuhan', 'T1,T2,T3', 1, 'Konstipasi'],
   ] as const;
 
   for (const [kondisiId, obatId, dosis, trimesterApplicable, prioritas, catatan] of conditionMedicineRows) {
@@ -169,11 +220,28 @@ async function main() {
 
   const symptomConditionRows = [
     ['G01', 'K01', 3, 0.6, 0.8],
+    ['G01', 'K11', 2, 0.3, 0.5],
+    ['G01', 'K05', 2, 0.2, 0.5],
     ['G02', 'K01', 3, 0.5, 0.7],
+    ['G03', 'K01', 2, 0.2, 0.4],
+    ['G03', 'K09', 2, 0.2, 0.5],
     ['G04', 'K02', 2, 0.4, 0.6],
+    ['G04', 'K07', 2, 0.2, 0.5],
+    ['G04', 'K01', 2, 0.3, 0.5],
+    ['G05', 'K02', 2, 0.3, 0.5],
     ['G05', 'K03', 2, 0.4, 0.6],
     ['G06', 'K03', 3, 0.6, 0.8],
     ['G07', 'K05', 3, 0.7, 0.7],
+    ['G08', 'K06', 3, 0.6, 0.7],
+    ['G09', 'K03', 3, 0.6, 0.8],
+    ['G10', 'K13', 2, 0.4, 0.5],
+    ['G10', 'K03', 3, 0.5, 0.8],
+    ['G11', 'K02', 2, 0.3, 0.6],
+    ['G11', 'K11', 3, 0.5, 0.7],
+    ['G12', 'K09', 3, 0.6, 0.8],
+    ['G14', 'K12', 3, 0.6, 0.7],
+    ['G15', 'K14', 3, 0.6, 0.7],
+    ['G15', 'K07', 2, 0.2, 0.5],
   ] as const;
 
   for (const [gejalaId, kondisiId, bobot, priorProbability, bobotTanpaLab] of symptomConditionRows) {

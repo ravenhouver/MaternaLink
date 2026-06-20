@@ -12,7 +12,7 @@ import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
 
 type FlowMode = 'method' | 'recording' | 'transcript' | 'manual';
-type FieldStatus = 'verified' | 'manual' | 'empty';
+type FieldStatus = 'verified' | 'manual' | 'empty' | 'ai' | 'review';
 
 type ExaminationField = {
   id: string;
@@ -39,6 +39,8 @@ type ExaminationFormState = {
   medications: MedicationFormRow[];
   notes: string;
 };
+
+type AiDraftMeta = Pick<AiExaminationDraft, 'symptomIds' | 'diagnosisIds' | 'needsReview' | 'minConfidence' | 'model'>;
 
 type MedicationFormRow = {
   id: string;
@@ -106,6 +108,7 @@ export function PatientExaminationContent() {
   const [conditions, setConditions] = useState<KondisiRecord[]>([]);
   const [symptomOptions, setSymptomOptions] = useState<GejalaRecord[]>([]);
   const [medicines, setMedicines] = useState<ObatRecord[]>([]);
+  const [aiDraft, setAiDraft] = useState<AiDraftMeta | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isFormMode = mode === 'transcript' || mode === 'manual';
@@ -184,6 +187,7 @@ export function PatientExaminationContent() {
       const speechDraft = applySpeechDraft(form, result);
       const aiDraft = speechDraft.complaint.trim() ? await createAiExaminationDraft({ complaint: speechDraft.complaint, period: currentPeriod() }) : null;
       setForm(aiDraft ? applyAiDraft(speechDraft, aiDraft) : speechDraft);
+      setAiDraft(aiDraft);
       setSource('VOICE_TRANSCRIPT_AI');
       setMode('transcript');
     } catch (transcribeError) {
@@ -199,7 +203,8 @@ export function PatientExaminationContent() {
     setError(null);
     setIsSaving(true);
     try {
-      const finalForm = await completeAiDraft(form);
+      const { form: finalForm, draft } = await completeAiDraft(form);
+      if (draft) setAiDraft(draft);
       if (finalForm !== form) setForm(finalForm);
       await createExamination({
         queueId: queue.id,
@@ -258,8 +263,8 @@ export function PatientExaminationContent() {
 
       {mode === 'method' ? <MethodSelector onManual={() => { setSource('MANUAL'); setMode('manual'); }} onRecord={() => setMode('recording')} /> : null}
       {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={(audio) => void finishRecording(audio)} /> : null}
-      {mode === 'transcript' ? <ExaminationForm conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} medicines={medicines} mode="transcript" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
-      {mode === 'manual' ? <ExaminationForm conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} medicines={medicines} mode="manual" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
+      {mode === 'transcript' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} medicines={medicines} mode="transcript" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
+      {mode === 'manual' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} medicines={medicines} mode="manual" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
     </PageContainer>
   );
 }
@@ -286,11 +291,11 @@ function applySpeechDraft(current: ExaminationFormState, result: SpeechTranscrip
   };
 }
 
-async function completeAiDraft(current: ExaminationFormState) {
-  if (!current.complaint.trim()) return current;
-  if (current.symptomIds.length > 0 && current.diagnosisIds.length > 0) return current;
+async function completeAiDraft(current: ExaminationFormState): Promise<{ form: ExaminationFormState; draft: AiDraftMeta | null }> {
+  if (!current.complaint.trim()) return { form: current, draft: null };
+  if (current.symptomIds.length > 0 && current.diagnosisIds.length > 0) return { form: current, draft: null };
   const draft = await createAiExaminationDraft({ complaint: current.complaint, period: currentPeriod() });
-  return applyAiDraft(current, draft);
+  return { form: applyAiDraft(current, draft), draft };
 }
 
 function applyAiDraft(current: ExaminationFormState, draft: AiExaminationDraft): ExaminationFormState {
@@ -495,7 +500,7 @@ function preferredMimeType() {
   return 'audio/webm';
 }
 
-function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, symptoms, onAddMedication, onChange, onListChange, onMedicationChange, onRecordAgain, onRemoveMedication, onSave }: { conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onAddMedication: () => void; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void; onMedicationChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRecordAgain: () => void; onRemoveMedication: (id: string) => void; onSave: () => void }) {
+function ExaminationForm({ aiDraft, conditions, fields, form, isSaving, medicines, mode, symptoms, onAddMedication, onChange, onListChange, onMedicationChange, onRecordAgain, onRemoveMedication, onSave }: { aiDraft: AiDraftMeta | null; conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onAddMedication: () => void; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void; onMedicationChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRecordAgain: () => void; onRemoveMedication: (id: string) => void; onSave: () => void }) {
   const t = useTranslations('examination');
   const manualCount = fields.filter((field) => field.status === 'manual').length;
   const mainFields = fields.filter((field) => field.id !== 'notes');
@@ -509,9 +514,9 @@ function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, 
       </div>
 
       <div className={styles.formGrid}>
-        {mainFields.map((field) => <FormField conditions={conditions} key={field.id} field={field} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} />)}
+        {mainFields.map((field) => <FormField aiDraft={aiDraft} conditions={conditions} key={field.id} field={field} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} />)}
         <MedicationPanel form={form} medicines={medicines} onAdd={onAddMedication} onChange={onMedicationChange} onRemove={onRemoveMedication} />
-        {notesField ? <FormField conditions={conditions} field={notesField} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} /> : null}
+        {notesField ? <FormField aiDraft={aiDraft} conditions={conditions} field={notesField} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} /> : null}
       </div>
 
       <footer className={styles.formFooter}>
@@ -539,9 +544,10 @@ function ExaminationForm({ conditions, fields, form, isSaving, medicines, mode, 
   );
 }
 
-function FormField({ conditions, field, form, medicines, symptoms, onChange, onListChange }: { conditions: KondisiRecord[]; field: ExaminationField; form: ExaminationFormState; medicines: ObatRecord[]; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void }) {
+function FormField({ aiDraft, conditions, field, form, medicines, symptoms, onChange, onListChange }: { aiDraft: AiDraftMeta | null; conditions: KondisiRecord[]; field: ExaminationField; form: ExaminationFormState; medicines: ObatRecord[]; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void }) {
   const t = useTranslations('examination');
-  const className = [styles.formField, field.wide ? styles.wideField : '', field.status === 'manual' ? styles.manualField : '', field.status === 'verified' ? styles.verifiedField : ''].filter(Boolean).join(' ');
+  const status = fieldStatus(field, form, aiDraft);
+  const className = [styles.formField, field.wide ? styles.wideField : '', status === 'manual' ? styles.manualField : '', status === 'verified' ? styles.verifiedField : '', status === 'ai' ? styles.aiField : '', status === 'review' ? styles.reviewField : ''].filter(Boolean).join(' ');
   const key = field.id as keyof ExaminationFormState;
   const value = form[key] ?? '';
   const multiKey: 'symptomIds' | 'diagnosisIds' | null = field.id === 'symptomIds' ? 'symptomIds' : field.id === 'diagnosisIds' ? 'diagnosisIds' : null;
@@ -563,8 +569,7 @@ function FormField({ conditions, field, form, medicines, symptoms, onChange, onL
       <div className={className}>
         <span className={styles.fieldLabelRow}>
           <span>{t(field.label)}</span>
-          {field.status === 'verified' ? <em className={styles.verifiedTag}>{t('verified')}</em> : null}
-          {field.status === 'manual' ? <em className={styles.manualTag}>{t('fillManual')}</em> : null}
+          <FieldStatusTag status={status} />
         </span>
         <span className={styles.inputShell}>
           {field.icon ? <AppIcon name="search" width={16} height={16} /> : null}
@@ -592,8 +597,7 @@ function FormField({ conditions, field, form, medicines, symptoms, onChange, onL
     <label className={className}>
       <span className={styles.fieldLabelRow}>
         <span>{t(field.label)}</span>
-        {field.status === 'verified' ? <em className={styles.verifiedTag}>{t('verified')}</em> : null}
-        {field.status === 'manual' ? <em className={styles.manualTag}>{t('fillManual')}</em> : null}
+        <FieldStatusTag status={status} />
       </span>
       <span className={[styles.inputShell, field.type === 'textarea' ? styles.textareaShell : ''].join(' ')}>
         {field.icon ? <AppIcon name="search" width={16} height={16} /> : null}
@@ -611,6 +615,23 @@ function FormField({ conditions, field, form, medicines, symptoms, onChange, onL
       </span>
     </label>
   );
+}
+
+function FieldStatusTag({ status }: { status?: FieldStatus }) {
+  const t = useTranslations('examination');
+  if (status === 'verified') return <em className={styles.verifiedTag}>{t('verified')}</em>;
+  if (status === 'manual') return <em className={styles.manualTag}>{t('fillManual')}</em>;
+  if (status === 'ai') return <em className={styles.aiTag}>{t('aiDraft')}</em>;
+  if (status === 'review') return <em className={styles.reviewTag}>{t('needsReview')}</em>;
+  return null;
+}
+
+function fieldStatus(field: ExaminationField, form: ExaminationFormState, draft: AiDraftMeta | null): FieldStatus | undefined {
+  if (!draft) return field.status;
+  if (field.id === 'symptomIds' && form.symptomIds.length > 0 && draft.symptomIds.length > 0) return draft.needsReview ? 'review' : 'ai';
+  if (field.id === 'diagnosisIds' && form.diagnosisIds.length > 0 && draft.diagnosisIds.length > 0) return draft.needsReview ? 'review' : 'ai';
+  if (field.id === 'notes' && draft.needsReview) return 'review';
+  return field.status;
 }
 
 function MedicationPanel({ form, medicines, onAdd, onChange, onRemove }: { form: ExaminationFormState; medicines: ObatRecord[]; onAdd: () => void; onChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRemove: (id: string) => void }) {
