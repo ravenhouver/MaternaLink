@@ -142,14 +142,17 @@ jobs:
 
           mkdir -p "$(dirname "${DEPLOY_PATH}")"
 
+          AUTH_REPO_URL="https://x-access-token:${GHCR_TOKEN}@${REPO_URL#https://}"
+
           if [ ! -d "${DEPLOY_PATH}/.git" ]; then
             rm -rf "${DEPLOY_PATH}"
-            git -c http.extraheader="AUTHORIZATION: bearer ${GHCR_TOKEN}" clone --branch "${BRANCH}" "${REPO_URL}" "${DEPLOY_PATH}"
+            git clone --branch "${BRANCH}" "${AUTH_REPO_URL}" "${DEPLOY_PATH}"
+            git -C "${DEPLOY_PATH}" remote set-url origin "${REPO_URL}"
           fi
 
           cd "${DEPLOY_PATH}"
           git checkout "${BRANCH}"
-          git -c http.extraheader="AUTHORIZATION: bearer ${GHCR_TOKEN}" pull --ff-only origin "${BRANCH}"
+          git pull --ff-only "${AUTH_REPO_URL}" "${BRANCH}"
 
           if [ ! -f .env.production ]; then
             POSTGRES_PASSWORD="$(openssl rand -hex 24)"
