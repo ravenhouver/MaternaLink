@@ -59,7 +59,7 @@ services:
       - /app/node_modules
       - /app/apps/web/node_modules
     working_dir: /app/apps/web
-    command: pnpm run dev
+    command: sh -lc "CI=true pnpm install --frozen-lockfile --filter @maternalink/web... && pnpm run dev"
     depends_on:
       - api
     restart: unless-stopped
