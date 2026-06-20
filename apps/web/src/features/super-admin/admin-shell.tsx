@@ -31,8 +31,8 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
 
   return (
     <main className={styles.shell}>
-      <aside className={styles.sidebar} aria-label="Super admin navigation">
-        <Link href={routes.admin} className={styles.brand} aria-label="MaternaLink super admin dashboard">
+      <aside className={styles.sidebar} aria-label={tCommon('mainNavigation')}>
+        <Link href={routes.admin} className={styles.brand} aria-label={tCommon('brandHome')}>
           <span className={styles.brandIcon}><AppIcon name="briefcase" width={20} height={20} /></span>
           <span className={styles.brandText}><strong>MaternaLink</strong><small>{t('superAdmin')}</small></span>
         </Link>
@@ -54,8 +54,8 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
 
       <section className={styles.mainArea}>
         <header className={styles.topbar}>
-          <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-            <Link href={routes.admin}>Home</Link>
+          <nav className={styles.breadcrumbs} aria-label={tCommon('breadcrumb')}>
+            <Link href={routes.admin}>{tCommon('home')}</Link>
             <AppIcon name="chevronRight" width={14} height={14} />
             <strong>{breadcrumb}</strong>
           </nav>
@@ -64,7 +64,7 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
             <LanguageSwitcher className={styles.adminLanguageSwitcher} />
             <button className={styles.iconButton} type="button" aria-label={tCommon('settings')} onClick={() => setPanel('settings')}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
-              <span><strong>{displayName}</strong><small>Superadmin</small></span>
+              <span><strong>{displayName}</strong><small>{t('superAdmin')}</small></span>
               <span className={styles.avatar} aria-hidden="true">{initials}</span>
             </div>
           </div>
@@ -75,10 +75,10 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
 
       {panel ? (
         <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setPanel(null)}>
-          <section className={styles.sideDrawer} role="dialog" aria-modal="true" aria-label={panel === 'settings' ? 'Admin settings' : 'Admin help'} onMouseDown={(event) => event.stopPropagation()}>
+          <section className={styles.sideDrawer} role="dialog" aria-modal="true" aria-label={panel === 'settings' ? t('settingsTitle') : t('helpTitle')} onMouseDown={(event) => event.stopPropagation()}>
             <header className={styles.drawerHeader}>
               <h2>{panel === 'settings' ? t('settingsTitle') : t('helpTitle')}</h2>
-              <button type="button" aria-label="Close" onClick={() => setPanel(null)}><AppIcon name="circleStop" width={18} height={18} /></button>
+              <button type="button" aria-label={tCommon('closeMenu')} onClick={() => setPanel(null)}><AppIcon name="circleStop" width={18} height={18} /></button>
             </header>
             {panel === 'settings' ? <AdminSettings user={user} /> : <AdminHelp />}
           </section>
@@ -96,7 +96,7 @@ function AdminSettings({ user }: { user: CurrentUser | null }) {
       <dl className={styles.settingsList}>
         <div><dt>{tCommon('username')}</dt><dd>{user?.username ?? '-'}</dd></div>
         <div><dt>{tCommon('role')}</dt><dd>{user?.role ?? '-'}</dd></div>
-        <div><dt>Session</dt><dd>{t('settingsSession')}</dd></div>
+        <div><dt>{t('session')}</dt><dd>{t('settingsSession')}</dd></div>
       </dl>
       <RoleLogoutButton className={styles.primaryButton} />
     </div>
@@ -109,9 +109,9 @@ function AdminHelp() {
     <div className={styles.drawerBody}>
       <p>{t('helpBody')}</p>
       <ul className={styles.helpList}>
-        <li>User terhubung ke akun login dan role.</li>
-        <li>Health center dan facility profile memakai tabel puskesmas yang sama.</li>
-        <li>Medicine list memakai master obat dan bisa diekspor CSV.</li>
+        <li>{t('helpUserAccounts')}</li>
+        <li>{t('helpHealthCenters')}</li>
+        <li>{t('helpMedicines')}</li>
       </ul>
     </div>
   );

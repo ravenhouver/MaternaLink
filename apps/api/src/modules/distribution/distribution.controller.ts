@@ -7,9 +7,11 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { RolesGuard } from '../../common/auth/roles.guard';
 import {
   CreateAllocationPlanDto,
+  CreateShipmentRequestDto,
   ListRecommendationsQueryDto,
   RejectRecommendationDto,
   ReorderRecommendationsDto,
+  RunAiAllocationDto,
   TrackingEventDto,
   UpdateAllocationPlanDto,
   UpdateRecommendationItemDto,
@@ -60,6 +62,18 @@ export class DistributionController {
   @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN)
   @Get('recommendations/:id')
   getRecommendation(@Param('id') id: string) { return this.service.getRecommendation(id); }
+
+  @ApiOperation({ summary: 'Create shipment request from puskesmas forecast' })
+  @ApiResponse({ status: 201, description: 'Shipment request created' })
+  @Roles(UserRole.BIDAN_PUSKESMAS)
+  @Post('requests')
+  createShipmentRequest(@Body() body: CreateShipmentRequestDto, @Req() request: { user: CurrentUser }) { return this.service.createShipmentRequest(body, request.user.id); }
+
+  @ApiOperation({ summary: 'Run hosted AI allocation for IFK recommendations' })
+  @ApiResponse({ status: 201, description: 'Hosted AI allocation recommendations generated' })
+  @Roles(UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
+  @Post('ifk/ai-allocation')
+  runAiAllocation(@Body() body: RunAiAllocationDto) { return this.service.runAiAllocation(body); }
 
   @ApiOperation({ summary: 'Reorder recommendation priority' })
   @ApiResponse({ status: 200, description: 'Recommendations reordered' })

@@ -40,3 +40,14 @@ export class ListRecommendationsQueryDto {
   @ApiProperty({ enum: RecommendationStatus, required: false }) @IsOptional() @IsEnum(RecommendationStatus) status?: RecommendationStatus;
   @ApiProperty({ example: 'PKM-001', required: false }) @IsOptional() @IsString() puskesmasId?: string;
 }
+
+export class CreateShipmentRequestDto {
+  @ApiProperty({ example: 'PKM-001' }) @IsString() puskesmasId!: string;
+  @ApiProperty({ example: '2025-03-01' }) @IsDateString() periode!: string;
+  @ApiProperty({ type: [AllocationPlanItemDto] }) @IsArray() @ValidateNested({ each: true }) @Type(() => AllocationPlanItemDto) items!: AllocationPlanItemDto[];
+  @ApiProperty({ example: 'Forecast stockout risk', required: false }) @IsOptional() @IsString() justification?: string;
+}
+
+export class RunAiAllocationDto {
+  @ApiProperty({ example: '2025-03-01' }) @IsDateString() periode!: string;
+}

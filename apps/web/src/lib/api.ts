@@ -351,6 +351,18 @@ export type AiMasterSyncResult = {
   kondisi: number;
 };
 
+export type AiMasterSyncStatus = {
+  status: 'never' | 'running' | 'success' | 'failed';
+  mode?: 'auto' | 'manual';
+  startedAt?: string;
+  finishedAt?: string;
+  puskesmas?: number;
+  obat?: number;
+  kondisi?: number;
+  message?: string;
+  latestAudit?: { action: string; metadata?: unknown; createdAt: string } | null;
+};
+
 export type StokRow = {
   id: number;
   puskesmasId: string;
@@ -422,6 +434,15 @@ export type CreateExaminationPayload = {
   medication?: Array<{ obatId: string; quantity: number; unit?: string | null; duration?: number | null; durationUnit?: string | null; frequency?: number | null; frequencyUnit?: string | null }>;
   notes?: string;
   riskSummary?: Record<string, unknown>;
+};
+
+export type AiExaminationDraft = {
+  symptomIds: string[];
+  diagnosisIds: string[];
+  needsReview: boolean;
+  minConfidence?: number | null;
+  model?: string;
+  message?: string;
 };
 
 export type ForecastCalendarEventType = 'anc' | 'delivery' | 'risk';
@@ -648,6 +669,10 @@ export async function syncAiMasterData(): Promise<AiMasterSyncResult> {
   return apiFetch('/master/ai/sync', { method: 'POST', successMessage: 'Sinkronisasi master data berhasil', errorMessage: 'Gagal sinkronisasi master data' });
 }
 
+export async function getAiMasterSyncStatus(): Promise<AiMasterSyncStatus> {
+  return apiFetch('/master/ai/sync/status');
+}
+
 export async function deleteObat(id: string): Promise<{ id: string; deleted: boolean }> {
   return apiFetch(`/master/obat/${encodeURIComponent(id)}`, { method: 'DELETE', successMessage: 'Obat berhasil dihapus', errorMessage: 'Gagal menghapus obat' });
 }
@@ -729,6 +754,10 @@ export async function createExamination(payload: CreateExaminationPayload) {
   return apiFetch('/examinations', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Pemeriksaan berhasil disimpan', errorMessage: 'Gagal menyimpan pemeriksaan' });
 }
 
+export async function createAiExaminationDraft(payload: { complaint: string; period?: string }): Promise<AiExaminationDraft> {
+  return apiFetch('/examinations/ai/draft', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Draft AI pemeriksaan berhasil dibuat', errorMessage: 'Gagal membuat draft AI pemeriksaan' });
+}
+
 export async function runDemoWorkflow(): Promise<DemoWorkflowRunResponse> {
   return apiFetch('/workflow/demo/run', { method: 'POST', successMessage: 'Demo workflow berhasil dimulai', errorMessage: 'Gagal memulai demo workflow' });
 }
@@ -749,6 +778,10 @@ export async function getAiWorkflowState(payload: AiWorkflowRunPayload): Promise
 
 export async function getForecastRuns(): Promise<ForecastRun[]> {
   return apiFetch('/forecast/runs');
+}
+
+export async function runAiForecast(payload: { puskesmasId: string; periode: string }): Promise<ForecastRun> {
+  return apiFetch('/forecast/ai/run', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Forecast AI berhasil dibuat', errorMessage: 'Gagal menjalankan forecast AI' });
 }
 
 export async function getForecastCalendar(params: { month: string; selectedDate?: string }): Promise<ForecastCalendarResponse> {
@@ -775,6 +808,18 @@ export async function getRecommendations(filters?: { status?: RecommendationStat
 
 export async function updateRecommendationItem(recommendationId: string, itemId: string, payload: { overrideQuantity?: number; overrideReason?: string }) {
   return apiFetch(`/distribution/recommendations/${recommendationId}/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'Item rekomendasi berhasil diperbarui', errorMessage: 'Gagal memperbarui item rekomendasi' });
+}
+
+export async function generateLplpo(payload: { puskesmasId: string; periode: string }): Promise<LplpoRow[]> {
+  return apiFetch('/lplpo/generate', { method: 'POST', body: JSON.stringify(payload), successMessage: 'LPLPO prediktif berhasil dibuat', errorMessage: 'Gagal membuat LPLPO prediktif' });
+}
+
+export async function createShipmentRequest(payload: { puskesmasId: string; periode: string; items: Array<{ obatId: string; jumlah: number; note?: string }>; justification?: string }): Promise<DistributionRecommendation> {
+  return apiFetch('/distribution/requests', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Request pengiriman berhasil dikirim', errorMessage: 'Gagal mengirim request pengiriman' });
+}
+
+export async function runIfkAiAllocation(payload: { periode: string }): Promise<DistributionRecommendation[]> {
+  return apiFetch('/distribution/ifk/ai-allocation', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Alokasi AI berhasil dibuat', errorMessage: 'Gagal menjalankan alokasi AI' });
 }
 
 export async function reorderRecommendations(orderedIds: string[]): Promise<DistributionRecommendation[]> {

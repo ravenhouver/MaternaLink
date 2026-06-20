@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
 import { createUser, deleteUser, getCurrentUser, getPuskesmas, getUsers, updateUser, type AdminUserRecord, type CurrentUser, type PuskesmasRecord, type UserRole } from '@/lib/api';
 import { AdminShell } from './admin-shell';
@@ -28,7 +29,16 @@ function userTone(role: UserRole) {
   return 'indigo';
 }
 
+function roleFilterLabel(filter: UserRoleFilter, t: (key: string) => string) {
+  if (filter === 'All') return t('all');
+  if (filter === 'Super Admin') return t('superAdmin');
+  if (filter === 'IFK Officer') return t('ifkOfficer');
+  return t('midwife');
+}
+
 export function SuperAdminUsersContent() {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [rows, setRows] = useState<AdminUserRecord[]>([]);
   const [puskesmas, setPuskesmas] = useState<PuskesmasRecord[]>([]);
@@ -44,7 +54,7 @@ export function SuperAdminUsersContent() {
     setPuskesmas(puskesmasRows);
   }
 
-  useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load users')); }, []);
+  useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : t('unableLoadUsers'))); }, [t]);
 
   const filteredRows = useMemo(() => {
     if (activeFilter === 'All') return rows;
@@ -67,36 +77,36 @@ export function SuperAdminUsersContent() {
       setForm(null);
       await reload();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan user');
+      setError(saveError instanceof Error ? saveError.message : t('saveUserFailed'));
     } finally {
       setSaving(false);
     }
   }
 
   async function removeRow(row: AdminUserRecord) {
-    if (!window.confirm(`Hapus/nonaktifkan user ${row.displayName || row.username}?`)) return;
+    if (!window.confirm(t('confirmDeleteUser', { name: row.displayName || row.username }))) return;
     await deleteUser(row.id);
     await reload();
   }
 
   return (
-    <AdminShell active="users" breadcrumb="User Accounts" user={user}>
+    <AdminShell active="users" breadcrumb={t('usersTitle')} user={user}>
       <div className={[styles.content, styles.usersContent].join(' ')}>
         <section className={[styles.pageHeader, styles.registryHeader].join(' ')}>
-          <div><h1>User Accounts</h1><p>Manage healthcare personnel and IFK officer accounts</p></div>
-          <button type="button" className={styles.primaryButton} onClick={() => setForm({ ...emptyForm, puskesmasId: puskesmas[0]?.id ?? '' })}><AppIcon name="plus" width={16} height={16} /> Add User</button>
+          <div><h1>{t('usersTitle')}</h1><p>{t('usersSubtitle')}</p></div>
+          <button type="button" className={styles.primaryButton} onClick={() => setForm({ ...emptyForm, puskesmasId: puskesmas[0]?.id ?? '' })}><AppIcon name="plus" width={16} height={16} /> {t('addUser')}</button>
         </section>
 
         {error ? <p className={styles.error}>{error}</p> : null}
 
-        <section className={styles.userCard} aria-label="User account table">
-          <div className={styles.roleTabs} role="tablist" aria-label="User role filters">
-            {roleFilters.map((filter) => <button type="button" role="tab" aria-selected={activeFilter === filter} className={activeFilter === filter ? styles.activeTab : undefined} onClick={() => setActiveFilter(filter)} key={filter}>{filter}</button>)}
+        <section className={styles.userCard} aria-label={t('userAccountTable')}>
+          <div className={styles.roleTabs} role="tablist" aria-label={t('userRoleFilters')}>
+            {roleFilters.map((filter) => <button type="button" role="tab" aria-selected={activeFilter === filter} className={activeFilter === filter ? styles.activeTab : undefined} onClick={() => setActiveFilter(filter)} key={filter}>{roleFilterLabel(filter, t)}</button>)}
           </div>
 
           <div className={styles.tableScroller}>
             <table className={[styles.registryTable, styles.userTable].join(' ')}>
-              <thead><tr><th>Name</th><th>Role</th><th>Facility</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>{tCommon('name')}</th><th>{tCommon('role')}</th><th>{tCommon('facility')}</th><th>{tCommon('email')}</th><th>{tCommon('status')}</th><th>{tCommon('actions')}</th></tr></thead>
               <tbody>
                 {filteredRows.map((row) => {
                   const name = row.displayName || row.username;
@@ -104,33 +114,33 @@ export function SuperAdminUsersContent() {
                     <tr key={row.id}>
                       <td><span className={styles.userNameCell}><span className={styles.userInitials} data-tone={userTone(row.role)}>{initials(name)}</span><strong>{name}</strong></span></td>
                       <td>{roleLabel(row.role)}</td>
-                      <td>{row.puskesmas?.nama ?? (row.role === 'IFK_ADMIN' ? 'IFK' : 'System')}</td>
+                      <td>{row.puskesmas?.nama ?? (row.role === 'IFK_ADMIN' ? 'IFK' : t('system'))}</td>
                       <td><em>{row.username}</em></td>
-                      <td><button type="button" className={row.active ? styles.activeBadge : styles.inactiveBadge} onClick={() => void updateUser(row.id, { active: !row.active }).then(reload)}>{row.active ? 'Active' : 'Inactive'}</button></td>
-                      <td><div className={styles.iconActions}><button type="button" aria-label={`Edit ${name}`} onClick={() => editRow(row)}><AppIcon name="edit" width={16} height={16} /></button><button type="button" aria-label={`Delete ${name}`} onClick={() => void removeRow(row)}><AppIcon name="trash" width={16} height={16} /></button></div></td>
+                      <td><button type="button" className={row.active ? styles.activeBadge : styles.inactiveBadge} onClick={() => void updateUser(row.id, { active: !row.active }).then(reload)}>{row.active ? tCommon('active') : tCommon('inactive')}</button></td>
+                      <td><div className={styles.iconActions}><button type="button" aria-label={t('editNamed', { name })} onClick={() => editRow(row)}><AppIcon name="edit" width={16} height={16} /></button><button type="button" aria-label={t('deleteNamed', { name })} onClick={() => void removeRow(row)}><AppIcon name="trash" width={16} height={16} /></button></div></td>
                     </tr>
                   );
                 })}
-                {filteredRows.length === 0 ? <tr><td colSpan={6}>Belum ada user dari database untuk filter ini.</td></tr> : null}
+                {filteredRows.length === 0 ? <tr><td colSpan={6}>{t('noUsersForFilter')}</td></tr> : null}
               </tbody>
             </table>
           </div>
 
-          <footer className={styles.registryPagination}><p>Showing {filteredRows.length} of {rows.length} users</p></footer>
+          <footer className={styles.registryPagination}><p>{t('showingUsers', { shown: filteredRows.length, total: rows.length })}</p></footer>
         </section>
       </div>
 
       {form ? (
         <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setForm(null)}>
           <form className={styles.modalCard} onSubmit={(event) => void submitForm(event)} onMouseDown={(event) => event.stopPropagation()}>
-            <header className={styles.drawerHeader}><h2>{form.id ? 'Edit User' : 'Add User'}</h2><button type="button" onClick={() => setForm(null)}><AppIcon name="circleStop" width={18} height={18} /></button></header>
-            <label>Display name<input required value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} /></label>
-            <label>Username<input required value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label>
-            <label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as UserRole })}><option value="BIDAN_PUSKESMAS">Midwife</option><option value="IFK_ADMIN">IFK Officer</option><option value="SUPER_ADMIN">Super Admin</option></select></label>
-            {form.role === 'BIDAN_PUSKESMAS' ? <label>Puskesmas<select required value={form.puskesmasId} onChange={(event) => setForm({ ...form, puskesmasId: event.target.value })}>{puskesmas.map((item) => <option value={item.id} key={item.id}>{item.nama}</option>)}</select></label> : null}
-            <label>Password<input type="password" minLength={6} required={!form.id} placeholder={form.id ? 'Kosongkan jika tidak diganti' : 'Minimal 6 karakter'} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
-            <label className={styles.checkboxRow}><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> Active</label>
-            <div className={styles.modalActions}><button type="button" onClick={() => setForm(null)}>Cancel</button><button className={styles.primaryButton} disabled={saving} type="submit">{saving ? 'Saving' : 'Save'}</button></div>
+            <header className={styles.drawerHeader}><h2>{form.id ? t('editUser') : t('addUser')}</h2><button type="button" onClick={() => setForm(null)}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+            <label>{t('displayName')}<input required value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} /></label>
+            <label>{tCommon('username')}<input required value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} /></label>
+            <label>{tCommon('role')}<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as UserRole })}><option value="BIDAN_PUSKESMAS">{t('midwife')}</option><option value="IFK_ADMIN">{t('ifkOfficer')}</option><option value="SUPER_ADMIN">{t('superAdmin')}</option></select></label>
+            {form.role === 'BIDAN_PUSKESMAS' ? <label>{t('healthCenter')}<select required value={form.puskesmasId} onChange={(event) => setForm({ ...form, puskesmasId: event.target.value })}>{puskesmas.map((item) => <option value={item.id} key={item.id}>{item.nama}</option>)}</select></label> : null}
+            <label>{tCommon('password')}<input type="password" minLength={6} required={!form.id} placeholder={form.id ? t('blankPasswordPlaceholder') : t('minimumPasswordPlaceholder')} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
+            <label className={styles.checkboxRow}><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> {tCommon('active')}</label>
+            <div className={styles.modalActions}><button type="button" onClick={() => setForm(null)}>{tCommon('cancel')}</button><button className={styles.primaryButton} disabled={saving} type="submit">{saving ? t('saving') : tCommon('save')}</button></div>
           </form>
         </div>
       ) : null}

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AiService, type AiForecastResponse } from '../ai/ai.service';
 import { ForecastCalendarQueryDto, RunForecastDto } from './forecast.dto';
 
 const toDate = (value: string) => new Date(value);
@@ -31,7 +32,7 @@ type CalendarEvent = {
 
 @Injectable()
 export class ForecastService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly ai: AiService) {}
 
   async run(data: RunForecastDto) {
     const periode = toDate(data.periode);
@@ -73,6 +74,61 @@ export class ForecastService {
     });
 
     return run;
+  }
+
+  async runAiForCurrentUser(data: RunForecastDto, user: CurrentUser) {
+    const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId : data.puskesmasId;
+    if (!puskesmasId) throw new NotFoundException('Puskesmas is required for AI forecast');
+    const periode = toDate(data.periode);
+    const [puskesmas, stocks, context, diagnoses] = await Promise.all([
+      this.prisma.puskesmas.findUniqueOrThrow({ where: { id: puskesmasId } }),
+      this.prisma.stokPuskesmas.findMany({ where: { puskesmasId, periode }, include: { obat: { include: { kondisiObat: true } } }, orderBy: { obatId: 'asc' } }),
+      this.prisma.konteksPeriode.findUnique({ where: { puskesmasId_periode: { puskesmasId, periode } } }),
+      this.prisma.diagnosisPeriode.findMany({ where: { puskesmasId, periode } }),
+    ]);
+    if (!stocks.length) throw new NotFoundException('No stock input found for puskesmas and periode');
+
+    const successful: Array<{ stock: (typeof stocks)[number]; forecast: AiForecastResponse }> = [];
+    for (const stock of stocks) {
+      const conditionId = stock.obat.kondisiObat[0]?.kondisiId;
+      const diagnosis = diagnoses.find((item) => item.kondisiId === conditionId);
+      const estimatedCases = Math.max(1, diagnosis?.jumlahKasus ?? Math.ceil(stock.konsumsiPeriode / 10));
+      const forecast = await this.ai.forecastDemand({
+        facility_id: stock.puskesmasId,
+        drug_id: stock.obatId,
+        period: data.periode.slice(0, 10),
+        closing_stock: stock.stokSaatIni,
+        estimated_total_cases: estimatedCases,
+        lead_time_days: puskesmas.leadTimeHari ?? 3,
+        rainy_season_access: this.rainyAccessForAi(context?.rainyAccess ?? puskesmas.rainyAccess),
+        accessibility_score: Math.max(0, Math.min(1, (context?.accessScore ?? puskesmas.skorAksesibilitas ?? 2) / 3)),
+        standard_daily_dose: stock.obat.dosisStandarHarian ?? 1,
+        treatment_duration_days: stock.obat.durasiPengobatanHari ?? 1,
+      });
+      successful.push({ stock, forecast });
+    }
+
+    return this.prisma.forecastRun.create({
+      data: {
+        puskesmasId,
+        periode,
+        status: 'COMPLETED',
+        confidence: 'HIGH',
+        prediksi: {
+          create: successful.map(({ stock, forecast }) => ({
+            obatId: stock.obatId,
+            kondisiId: stock.obat.kondisiObat[0]?.kondisiId,
+            kebutuhanObat: Math.max(0, Math.round(forecast.forecast_demand)),
+            bufferPersen: forecast.buffer_pct,
+            totalRekomendasi: Math.max(0, Math.round(forecast.total_requirement)),
+            stokSaatIni: Math.max(0, Math.round(forecast.current_stock)),
+            konsumsiPeriode: stock.konsumsiPeriode,
+            confidence: 'HIGH',
+          })),
+        },
+      },
+      include: { prediksi: { orderBy: { obatId: 'asc' } } },
+    });
   }
 
   async getCalendar(query: ForecastCalendarQueryDto, user: CurrentUser) {
@@ -181,5 +237,11 @@ export class ForecastService {
 
   getResults(id: number) {
     return this.prisma.forecastRun.findUniqueOrThrow({ where: { id }, include: { prediksi: { orderBy: { obatId: 'asc' } } } });
+  }
+
+  private rainyAccessForAi(value?: string | null) {
+    if (value === 'TERGANGGU') return 'cut_off';
+    if (value === 'TERBATAS') return 'limited';
+    return 'normal';
   }
 }

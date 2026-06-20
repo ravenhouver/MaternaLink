@@ -1,7 +1,6 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
 import { localeCookieName, localeLabels, locales, type AppLocale } from '@/i18n/config';
 
 type LanguageSwitcherProps = {
@@ -10,12 +9,12 @@ type LanguageSwitcherProps = {
 
 export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const locale = useLocale() as AppLocale;
-  const router = useRouter();
   const t = useTranslations('common');
 
   function setLocale(nextLocale: AppLocale) {
-    document.cookie = `${localeCookieName}=${nextLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-    router.refresh();
+    if (nextLocale === locale) return;
+    document.cookie = `${localeCookieName}=${nextLocale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+    window.location.reload();
   }
 
   return (

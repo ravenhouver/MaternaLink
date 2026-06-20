@@ -7,6 +7,7 @@ import { cookies, headers } from 'next/headers';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app-shell';
+import { DomLocalizer } from '@/components/dom-localizer';
 import { defaultLocale, isAppLocale, localeCookieName, type AppLocale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
 
@@ -34,6 +35,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang={locale}>
       <body>
         <NextIntlClientProvider locale={locale} messages={getMessages(locale)}>
+          <DomLocalizer />
           <AppShell>{children}</AppShell>
         </NextIntlClientProvider>
       </body>

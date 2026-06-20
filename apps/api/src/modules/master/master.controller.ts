@@ -29,6 +29,14 @@ export class MasterController {
     return this.service.syncAiMasterData();
   }
 
+  @ApiOperation({ summary: 'Get hosted AI master data sync status' })
+  @ApiResponse({ status: 200, description: 'Hosted AI master data sync status returned' })
+  @Roles(UserRole.SUPER_ADMIN)
+  @Get('ai/sync/status')
+  getAiMasterSyncStatus() {
+    return this.service.getAiMasterSyncStatus();
+  }
+
   @ApiOperation({ summary: 'Create puskesmas master data' })
   @ApiResponse({ status: 201, description: 'Puskesmas created' })
   @Roles(UserRole.SUPER_ADMIN)

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { logout } from '@/lib/api';
@@ -15,6 +16,7 @@ type RoleLogoutButtonProps = {
 
 export function RoleLogoutButton({ className, iconSize = 20, label = 'Logout' }: RoleLogoutButtonProps) {
   const router = useRouter();
+  const tCommon = useTranslations('common');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   async function handleLogout() {
@@ -29,7 +31,7 @@ export function RoleLogoutButton({ className, iconSize = 20, label = 'Logout' }:
   return (
     <button type="button" className={className} onClick={handleLogout} disabled={isLoggingOut}>
       <AppIcon name="logOut" width={iconSize} height={iconSize} />
-      <span>{isLoggingOut ? 'Keluar...' : label}</span>
+      <span>{isLoggingOut ? tCommon('loggingOut') : label === 'Logout' ? tCommon('logout') : label}</span>
     </button>
   );
 }

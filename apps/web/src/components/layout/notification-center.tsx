@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
 import { getAlerts, getDashboardSummary, getRecommendations, type AlertRecord, type CurrentUser, type DashboardSummary, type DistributionRecommendation } from '@/lib/api';
 import styles from './notification-center.module.css';
@@ -51,58 +52,60 @@ function isItemRead(item: NotificationItem, readIds: string[]) {
   return [item.id, ...(item.legacyIds ?? [])].some((id) => readIds.includes(id));
 }
 
-function formatTime(value?: string) {
-  if (!value) return 'Baru saja';
-  return new Date(value).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+function formatTime(value?: string, locale = 'id-ID', fallback = 'Baru saja') {
+  if (!value) return fallback;
+  return new Date(value).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-function buildSummaryItems(summary: DashboardSummary): NotificationItem[] {
+function buildSummaryItems(summary: DashboardSummary, t: (key: string, values?: Record<string, number | string>) => string): NotificationItem[] {
   const items: NotificationItem[] = [];
 
   if (summary.queue?.waiting) {
-    items.push({ id: 'queue-waiting', legacyIds: [`queue-waiting-${summary.queue.waiting}`], title: 'Antrean pasien menunggu', body: `${summary.queue.waiting} pasien perlu dipanggil atau diproses.`, tone: 'info', time: 'Hari ini' });
+    items.push({ id: 'queue-waiting', legacyIds: [`queue-waiting-${summary.queue.waiting}`], title: t('queueWaitingTitle'), body: t('queueWaitingBody', { count: summary.queue.waiting }), tone: 'info', time: t('today') });
   }
 
   if (summary.medicine?.criticalCount) {
-    items.push({ id: 'medicine-critical', legacyIds: [`medicine-critical-${summary.medicine.criticalCount}`], title: 'Stok obat kritis', body: `${summary.medicine.criticalCount} item obat butuh perhatian.`, tone: 'critical', time: 'Hari ini' });
+    items.push({ id: 'medicine-critical', legacyIds: [`medicine-critical-${summary.medicine.criticalCount}`], title: t('medicineCriticalTitle'), body: t('medicineCriticalBody', { count: summary.medicine.criticalCount }), tone: 'critical', time: t('today') });
   }
 
   if (summary.recommendations?.pending) {
-    items.push({ id: 'recommendation-pending', legacyIds: [`recommendation-pending-${summary.recommendations.pending}`], title: 'Rekomendasi menunggu review', body: `${summary.recommendations.pending} rekomendasi distribusi belum diputuskan.`, tone: 'warning', time: 'Hari ini' });
+    items.push({ id: 'recommendation-pending', legacyIds: [`recommendation-pending-${summary.recommendations.pending}`], title: t('recommendationPendingTitle'), body: t('recommendationPendingBody', { count: summary.recommendations.pending }), tone: 'warning', time: t('today') });
   }
 
   if (summary.deliveries?.active) {
-    items.push({ id: 'delivery-active', legacyIds: [`delivery-active-${summary.deliveries.active}`], title: 'Pengiriman aktif', body: `${summary.deliveries.active} pengiriman sedang berjalan.`, tone: 'success', time: 'Hari ini' });
+    items.push({ id: 'delivery-active', legacyIds: [`delivery-active-${summary.deliveries.active}`], title: t('deliveryActiveTitle'), body: t('deliveryActiveBody', { count: summary.deliveries.active }), tone: 'success', time: t('today') });
   }
 
   if (summary.masterData?.inactiveAccounts) {
-    items.push({ id: 'inactive-accounts', legacyIds: [`inactive-accounts-${summary.masterData.inactiveAccounts}`], title: 'Akun tidak aktif', body: `${summary.masterData.inactiveAccounts} akun perlu ditinjau super admin.`, tone: 'warning', time: 'Hari ini' });
+    items.push({ id: 'inactive-accounts', legacyIds: [`inactive-accounts-${summary.masterData.inactiveAccounts}`], title: t('inactiveAccountsTitle'), body: t('inactiveAccountsBody', { count: summary.masterData.inactiveAccounts }), tone: 'warning', time: t('today') });
   }
 
   return items;
 }
 
-function buildAlertItems(alerts: AlertRecord[]): NotificationItem[] {
+function buildAlertItems(alerts: AlertRecord[], locale: string, fallbackTime: string): NotificationItem[] {
   return alerts.filter((alert) => !alert.resolved).slice(0, 4).map((alert) => ({
     id: `alert-${alert.id}-${alert.resolved ? 'closed' : 'open'}`,
     title: alert.type.replaceAll('_', ' '),
     body: alert.message,
     tone: alert.severity === 'CRITICAL' || alert.severity === 'HIGH' ? 'critical' : 'warning',
-    time: formatTime(alert.createdAt),
+    time: formatTime(alert.createdAt, locale, fallbackTime),
   }));
 }
 
-function buildRecommendationItems(recommendations: DistributionRecommendation[]): NotificationItem[] {
+function buildRecommendationItems(recommendations: DistributionRecommendation[], t: (key: string, values?: Record<string, number | string>) => string): NotificationItem[] {
   return recommendations.slice(0, 3).map((item) => ({
     id: `recommendation-${item.id}-${item.status}`,
-    title: item.urgency === 'CRITICAL' ? 'Distribusi prioritas kritis' : 'Distribusi menunggu keputusan',
-    body: `${item.puskesmas?.nama ?? item.puskesmasId} - ${item.items.length} item obat.`,
+    title: item.urgency === 'CRITICAL' ? t('criticalDistributionTitle') : t('pendingDistributionTitle'),
+    body: t('distributionBody', { facility: item.puskesmas?.nama ?? item.puskesmasId, count: item.items.length }),
     tone: item.urgency === 'CRITICAL' ? 'critical' : 'warning',
     time: item.periode,
   }));
 }
 
 export function NotificationCenter({ user, buttonClassName }: NotificationCenterProps) {
+  const t = useTranslations('notifications');
+  const tCommon = useTranslations('common');
   const rootRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -131,7 +134,7 @@ export function NotificationCenter({ user, buttonClassName }: NotificationCenter
       })
       .catch((loadError) => {
         if (cancelled) return;
-        setError(loadError instanceof Error ? loadError.message : 'Gagal memuat notifikasi');
+        setError(loadError instanceof Error ? loadError.message : t('loadError'));
       });
 
     return () => {
@@ -150,9 +153,9 @@ export function NotificationCenter({ user, buttonClassName }: NotificationCenter
   }, [isOpen]);
 
   const items = useMemo(() => {
-    const summaryItems = summary ? buildSummaryItems(summary) : [];
-    return [...buildAlertItems(alerts), ...buildRecommendationItems(recommendations), ...summaryItems].slice(0, 8);
-  }, [alerts, recommendations, summary]);
+    const summaryItems = summary ? buildSummaryItems(summary, t) : [];
+    return [...buildAlertItems(alerts, t('locale'), t('justNow')), ...buildRecommendationItems(recommendations, t), ...summaryItems].slice(0, 8);
+  }, [alerts, recommendations, summary, t]);
 
   const unreadCount = items.filter((item) => !isItemRead(item, readIds)).length;
 
@@ -164,19 +167,19 @@ export function NotificationCenter({ user, buttonClassName }: NotificationCenter
 
   return (
     <div className={styles.root} ref={rootRef}>
-      <button type="button" className={buttonClassName ?? styles.trigger} aria-label={`Notifikasi, ${unreadCount} belum dibaca`} aria-expanded={isOpen} onClick={() => setIsOpen((current) => !current)}>
+      <button type="button" className={buttonClassName ?? styles.trigger} aria-label={t('buttonLabel', { count: unreadCount })} aria-expanded={isOpen} onClick={() => setIsOpen((current) => !current)}>
         <AppIcon name="bell" width={20} height={20} />
         {unreadCount ? <span className={styles.badge}>{unreadCount > 9 ? '9+' : unreadCount}</span> : null}
       </button>
 
       {isOpen ? (
-        <section className={styles.panel} aria-label="Pusat notifikasi">
+        <section className={styles.panel} aria-label={t('panelLabel')}>
           <div className={styles.panelHeader}>
             <div>
-              <strong>Notifikasi</strong>
-              <span>{unreadCount ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'}</span>
+              <strong>{t('title')}</strong>
+              <span>{unreadCount ? t('unread', { count: unreadCount }) : t('allRead')}</span>
             </div>
-            {items.length ? <button type="button" className={styles.markRead} onClick={markAllRead}>Tandai dibaca</button> : null}
+            {items.length ? <button type="button" className={styles.markRead} onClick={markAllRead}>{t('markRead')}</button> : null}
           </div>
 
           {items.length ? (
@@ -197,8 +200,8 @@ export function NotificationCenter({ user, buttonClassName }: NotificationCenter
             </div>
           ) : (
             <div className={styles.empty}>
-              <strong>Tidak ada notifikasi</strong>
-              <p>Aktivitas penting akan muncul di sini.</p>
+              <strong>{t('emptyTitle')}</strong>
+              <p>{t('emptyBody')}</p>
             </div>
           )}
 

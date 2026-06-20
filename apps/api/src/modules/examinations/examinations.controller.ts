@@ -4,7 +4,7 @@ import { AuthGuard } from '../../common/auth/auth.guard';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RolesGuard } from '../../common/auth/roles.guard';
-import { CreateExaminationDto, UpdateExaminationDto } from './examinations.dto';
+import { AiExaminationDraftDto, CreateExaminationDto, UpdateExaminationDto } from './examinations.dto';
 import { ExaminationsService } from './examinations.service';
 
 @UseGuards(AuthGuard, RolesGuard)
@@ -16,6 +16,11 @@ export class ExaminationsController {
   @Post()
   create(@Body() body: CreateExaminationDto, @Req() request: { user: CurrentUser }) {
     return this.service.create(body, request.user);
+  }
+
+  @Post('ai/draft')
+  createAiDraft(@Body() body: AiExaminationDraftDto, @Req() request: { user: CurrentUser }) {
+    return this.service.createAiDraft(body, request.user);
   }
 
   @Get()

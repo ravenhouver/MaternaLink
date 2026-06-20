@@ -419,16 +419,66 @@
 
 .waveform {
   display: flex;
+  width: min(100%, 360px);
   height: 74px;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: default;
 }
 
 .waveform span {
   display: block;
   width: 6px;
+  height: var(--bar-height);
   border-radius: 9999px;
   background: #1a73e8;
+  opacity: 0.45;
+  transform: scaleY(0.55);
+  transform-origin: center;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.waveform:disabled {
+  color: inherit;
+}
+
+.waveformActive {
+  cursor: pointer;
+}
+
+.waveformActive span,
+.waveformProcessing span {
+  opacity: 1;
+  animation: waveformBounce 0.78s ease-in-out infinite;
+  animation-delay: var(--bar-delay);
+}
+
+.waveformProcessing span {
+  background: #34a853;
+  animation-duration: 0.58s;
+}
+
+.waveformActive:hover span {
+  background: #005bbf;
+}
+
+.waveformActive:focus-visible {
+  outline: 3px solid rgb(26 115 232 / 0.2);
+  outline-offset: 6px;
+}
+
+@keyframes waveformBounce {
+  0%, 100% {
+    transform: scaleY(0.48);
+  }
+
+  45% {
+    transform: scaleY(1);
+  }
 }
 
 .recordingActions,

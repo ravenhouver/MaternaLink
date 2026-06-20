@@ -11,6 +11,7 @@ import {
   getRecommendations,
   rejectRecommendation,
   reorderRecommendations,
+  runIfkAiAllocation,
   updateRecommendationItem,
   type CurrentUser,
   type DistributionRecommendation,
@@ -81,6 +82,7 @@ export function MedicineSenderRecommendationsContent() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'ALL'>('ALL');
   const [isLoading, setIsLoading] = useState(true);
+  const [isAllocating, setIsAllocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
 
@@ -162,6 +164,19 @@ export function MedicineSenderRecommendationsContent() {
     }
   }
 
+  async function runAllocation() {
+    setIsAllocating(true);
+    setError(null);
+    try {
+      await runIfkAiAllocation({ periode: currentPeriod() });
+      await refreshRows();
+    } catch (allocationError) {
+      setError(allocationError instanceof Error ? allocationError.message : 'Gagal menjalankan alokasi AI');
+    } finally {
+      setIsAllocating(false);
+    }
+  }
+
   return (
     <div className={styles.recoShell}>
       <RecommendationsSidebar />
@@ -175,6 +190,7 @@ export function MedicineSenderRecommendationsContent() {
           <section className={styles.recoStats}>{stats.map((stat) => <article className={styles[stat.tone]} key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></article>)}</section>
           <section className={styles.recoToolbar}>
             <button type="button" onClick={() => setModal('filter')}><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
+            <button type="button" disabled={isAllocating} onClick={() => void runAllocation()}><AppIcon name="zap" width={18} height={18} />{isAllocating ? 'Running AI...' : 'Run AI Allocation'}</button>
             <button type="button" onClick={() => void refreshRows()}><AppIcon name="rotateCcw" width={18} height={18} />Refresh</button>
           </section>
           {error ? <p className={styles.recoError}>{error}</p> : null}
@@ -195,6 +211,11 @@ export function MedicineSenderRecommendationsContent() {
       </div>
     </div>
   );
+}
+
+function currentPeriod() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
 function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, rows }: { isLoading: boolean; onDragStart: (id: string) => void; onDrop: (id: string) => void; onMove: (id: string, direction: -1 | 1) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; rows: DistributionRecommendation[] }) {

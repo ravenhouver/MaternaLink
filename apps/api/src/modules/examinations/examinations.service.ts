@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateExaminationDto, UpdateExaminationDto } from './examinations.dto';
+import { AiService } from '../ai/ai.service';
+import { AiExaminationDraftDto, CreateExaminationDto, UpdateExaminationDto } from './examinations.dto';
 
 function currentPeriod() {
   const now = new Date();
@@ -25,7 +26,30 @@ function normalizeMedication(data: CreateExaminationDto['medication']) {
 
 @Injectable()
 export class ExaminationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly ai: AiService) {}
+
+  async createAiDraft(data: AiExaminationDraftDto, user: CurrentUser) {
+    if (!user.puskesmasId) return { symptomIds: [], diagnosisIds: [], needsReview: true, model: 'unavailable', message: 'Current user is not assigned to a puskesmas' };
+    const period = data.period?.slice(0, 10) ?? currentPeriod().toISOString().slice(0, 10);
+    const extraction = await this.ai.extractSymptoms({
+      period,
+      records: [{ record_id: `DRAFT-${Date.now()}`, facility_id: user.puskesmasId, transcript: data.complaint }],
+    });
+    const result = extraction.extraction_results[0];
+    const symptomIds = this.parseSymptomIds(result?.validated_symptoms || result?.extracted_symptoms);
+    const diagnosisIds = extraction.condition_estimates
+      .filter((item) => item.estimated_total_cases > 0)
+      .sort((a, b) => b.estimated_total_cases - a.estimated_total_cases)
+      .map((item) => item.condition_id)
+      .slice(0, 3);
+    return {
+      symptomIds,
+      diagnosisIds,
+      needsReview: Boolean(result?.hitl_flag || (result?.min_confidence ?? 1) < 0.7),
+      minConfidence: result?.min_confidence ?? null,
+      model: result?.extraction_model ?? 'hosted-ai-layer0',
+    };
+  }
 
   create(data: CreateExaminationDto, user: CurrentUser) {
     return this.prisma.$transaction(async (tx) => {
@@ -149,5 +173,22 @@ export class ExaminationsService {
     await this.prisma.examination.delete({ where: { id: existing.id } });
     await this.prisma.auditLog.create({ data: { userId: user.id, action: 'examination.delete', entityType: 'Examination', entityId: existing.id } });
     return { id: existing.id, deleted: true };
+  }
+
+  private parseSymptomIds(value?: string | null) {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((item) => {
+          if (typeof item === 'string') return [item];
+          if (item && typeof item === 'object' && 'symptom_id' in item) return [String((item as { symptom_id: unknown }).symptom_id)];
+          return [];
+        });
+      }
+    } catch {
+      return [];
+    }
+    return [];
   }
 }

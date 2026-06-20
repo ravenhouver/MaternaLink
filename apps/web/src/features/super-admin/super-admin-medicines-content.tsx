@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
-import { createObat, deleteObat, getCurrentUser, getObat, syncAiMasterData, updateObat, type CurrentUser, type ObatRecord, type UpsertObatPayload } from '@/lib/api';
+import { createObat, deleteObat, getAiMasterSyncStatus, getCurrentUser, getObat, updateObat, type AiMasterSyncStatus, type CurrentUser, type ObatRecord, type UpsertObatPayload } from '@/lib/api';
 import { AdminShell } from './admin-shell';
 import styles from './super-admin-dashboard.module.css';
 
@@ -15,6 +16,13 @@ function formatDailyDosage(row: ObatRecord) { return row.dosisStandarHarian ? `$
 function mapMedicineRows(rows: ObatRecord[]): MedicineRow[] { return rows.map((row) => ({ id: row.id, name: row.nama, unit: row.satuan, category: row.kategori, dailyDosage: formatDailyDosage(row), coldChain: row.perluColdChain })); }
 function toForm(row: ObatRecord): FormState { return { id: row.id, nama: row.nama, kategori: row.kategori as FormState['kategori'], tipe: row.tipe as FormState['tipe'], perluColdChain: row.perluColdChain, satuan: row.satuan, dosisStandarHarian: row.dosisStandarHarian ?? 0, durasiPengobatanHari: row.durasiPengobatanHari ?? 0 }; }
 function categoryTone(category: string) { return category === 'VAKSIN' ? 'essential' : category === 'ALAT_KESEHATAN' ? 'routine' : 'emergency'; }
+function syncLabel(status: AiMasterSyncStatus | null) {
+  if (!status || status.status === 'never') return 'Auto-sync: pending';
+  if (status.status === 'running') return 'Auto-sync: running';
+  if (status.status === 'failed') return 'Auto-sync: cached data';
+  const value = status.finishedAt ?? status.latestAudit?.createdAt;
+  return value ? `Auto-synced ${new Date(value).toLocaleDateString('id-ID')}` : 'Auto-sync active';
+}
 
 function downloadCsv(filename: string, rows: MedicineRow[]) {
   const header = ['id', 'name', 'category', 'unit', 'dailyDosage', 'coldChain'].join(',');
@@ -29,6 +37,8 @@ function downloadCsv(filename: string, rows: MedicineRow[]) {
 }
 
 export function SuperAdminMedicinesContent() {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
   const [rawRows, setRawRows] = useState<ObatRecord[]>([]);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
@@ -37,16 +47,16 @@ export function SuperAdminMedicinesContent() {
   const [page, setPage] = useState(1);
   const [form, setForm] = useState<FormState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<AiMasterSyncStatus | null>(null);
 
   async function reload() {
-    const [medicineRows, nextUser] = await Promise.all([getObat(), getCurrentUser()]);
+    const [medicineRows, nextUser, nextSyncStatus] = await Promise.all([getObat(), getCurrentUser(), getAiMasterSyncStatus().catch(() => null)]);
     setRawRows(medicineRows);
     setUser(nextUser);
+    setSyncStatus(nextSyncStatus);
   }
 
-  useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load medicine data')); }, []);
+  useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : t('unableLoadMedicineData'))); }, [t]);
 
   const rows = useMemo(() => mapMedicineRows(rawRows), [rawRows]);
   const categories = useMemo(() => ['All', ...Array.from(new Set(rows.map((row) => row.category)))], [rows]);
@@ -56,13 +66,6 @@ export function SuperAdminMedicinesContent() {
   }, [category, coldOnly, query, rows]);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / 8));
   const visibleRows = filteredRows.slice((page - 1) * 8, page * 8);
-
-  async function syncMasterData() {
-    setIsSyncing(true); setError(null); setNotice('Sinkronisasi master data AI sedang berjalan.');
-    try { const result = await syncAiMasterData(); await reload(); setNotice(`Master data AI tersinkron: ${result.puskesmas} puskesmas, ${result.obat} obat, ${result.kondisi} kondisi.`); }
-    catch (syncError) { setError(syncError instanceof Error ? syncError.message : 'Gagal sinkronisasi master data AI'); }
-    finally { setIsSyncing(false); }
-  }
 
   async function submitForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,42 +77,41 @@ export function SuperAdminMedicinesContent() {
   }
 
   async function removeRow(row: MedicineRow) {
-    if (!window.confirm(`Hapus obat ${row.name}?`)) return;
+    if (!window.confirm(t('confirmDeleteMedicine', { name: row.name }))) return;
     await deleteObat(row.id); await reload();
   }
 
   return (
-    <AdminShell active="medicines" breadcrumb="Medicine List" user={user}>
+    <AdminShell active="medicines" breadcrumb={t('medicinesTitle')} user={user}>
       <div className={[styles.content, styles.registryContent, styles.medicineContent].join(' ')}>
         <section className={[styles.pageHeader, styles.registryHeader].join(' ')}>
-          <div><h1>Maternal Medicine Registry</h1><p>Catalog of {rows.length} maternal medicines used in the system</p></div>
-          <div className={styles.registryActions}><button type="button" className={styles.primaryButton} disabled={isSyncing} onClick={() => void syncMasterData()}><AppIcon name="download" width={16} height={16} /> {isSyncing ? 'Syncing AI Data' : 'Sync AI Master'}</button><button type="button" className={styles.primaryButton} onClick={() => setForm({ ...emptyForm })}><AppIcon name="plus" width={16} height={16} /> Add Medicine</button></div>
+          <div><h1>{t('medicinesTitle')}</h1><p>{t('medicinesSubtitle', { count: rows.length })}</p></div>
+          <div className={styles.registryActions}><span className={styles.syncStatus} data-state={syncStatus?.status ?? 'never'}>{syncLabel(syncStatus)}</span><button type="button" className={styles.primaryButton} onClick={() => setForm({ ...emptyForm })}><AppIcon name="plus" width={16} height={16} /> {t('addMedicine')}</button></div>
         </section>
-        {notice ? <p role="status" className={styles.noticeText}>{notice}</p> : null}
         {error ? <p className={styles.error}>{error}</p> : null}
 
-        <section className={styles.medicineToolbar} aria-label="Medicine filters">
+        <section className={styles.medicineToolbar} aria-label={t('medicineFilters')}>
           <div className={styles.medicineFilterGroup}>
-            <label className={styles.searchBox}><AppIcon name="search" width={18} height={18} /><input aria-label="Search medicine name" placeholder="Search medicine name..." value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} /></label>
-            <label className={styles.categoryFilter}><span>Filter Category:</span><select aria-label="Filter medicine category" value={category} onChange={(event) => { setPage(1); setCategory(event.target.value); }}>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select><AppIcon name="chevronDown" width={18} height={18} /></label>
-            <label className={styles.checkboxRow}><input type="checkbox" checked={coldOnly} onChange={(event) => { setPage(1); setColdOnly(event.target.checked); }} /> Cold chain only</label>
+            <label className={styles.searchBox}><AppIcon name="search" width={18} height={18} /><input aria-label={t('searchMedicineName')} placeholder={t('searchMedicineName')} value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} /></label>
+            <label className={styles.categoryFilter}><span>{t('filterCategory')}</span><select aria-label={t('filterMedicineCategory')} value={category} onChange={(event) => { setPage(1); setCategory(event.target.value); }}>{categories.map((item) => <option key={item} value={item}>{item === 'All' ? t('all') : item}</option>)}</select><AppIcon name="chevronDown" width={18} height={18} /></label>
+            <label className={styles.checkboxRow}><input type="checkbox" checked={coldOnly} onChange={(event) => { setPage(1); setColdOnly(event.target.checked); }} /> {t('coldChainOnly')}</label>
           </div>
-          <div className={styles.toolbarIconActions}><button type="button" aria-label="Download medicine list" onClick={() => downloadCsv('maternalink-medicines.csv', filteredRows)}><AppIcon name="download" width={18} height={18} /></button></div>
+          <div className={styles.toolbarIconActions}><button type="button" aria-label={t('downloadMedicineList')} onClick={() => downloadCsv('maternalink-medicines.csv', filteredRows)}><AppIcon name="download" width={18} height={18} /></button></div>
         </section>
 
-        <section className={[styles.registryCard, styles.medicineCard].join(' ')} aria-label="Medicine registry table">
+        <section className={[styles.registryCard, styles.medicineCard].join(' ')} aria-label={t('medicineRegistryTable')}>
           <div className={styles.tableScroller}>
             <table className={[styles.registryTable, styles.medicineTable].join(' ')}>
-              <thead><tr><th>ID</th><th>Name</th><th>Unit</th><th>Category</th><th>Daily Dosage</th><th>Cold Chain</th><th>Actions</th></tr></thead>
+              <thead><tr><th>ID</th><th>{tCommon('name')}</th><th>{t('unit')}</th><th>{t('category')}</th><th>{t('dailyDosage')}</th><th>{t('coldChain')}</th><th>{tCommon('actions')}</th></tr></thead>
               <tbody>
                 {visibleRows.map((row) => (
-                  <tr key={row.id}><td>{row.id}</td><td><strong>{row.name}</strong></td><td>{row.unit}</td><td><span className={styles.categoryBadge} data-tone={categoryTone(row.category)}>{row.category}</span></td><td>{row.dailyDosage}</td><td><span className={styles.coldChainStatus} data-active={row.coldChain}><AppIcon name={row.coldChain ? 'checkCircle' : 'circleStop'} width={15} height={15} />{row.coldChain ? 'Yes' : 'No'}</span></td><td><div className={styles.textActions}><button type="button" onClick={() => setForm(toForm(rawRows.find((item) => item.id === row.id)!))}>Edit</button><button type="button" onClick={() => void removeRow(row)}>Delete</button></div></td></tr>
+                  <tr key={row.id}><td>{row.id}</td><td><strong>{row.name}</strong></td><td>{row.unit}</td><td><span className={styles.categoryBadge} data-tone={categoryTone(row.category)}>{row.category}</span></td><td>{row.dailyDosage}</td><td><span className={styles.coldChainStatus} data-active={row.coldChain}><AppIcon name={row.coldChain ? 'checkCircle' : 'circleStop'} width={15} height={15} />{row.coldChain ? t('yes') : t('no')}</span></td><td><div className={styles.textActions}><button type="button" onClick={() => setForm(toForm(rawRows.find((item) => item.id === row.id)!))}>{tCommon('edit')}</button><button type="button" onClick={() => void removeRow(row)}>{tCommon('delete')}</button></div></td></tr>
                 ))}
-                {filteredRows.length === 0 ? <tr><td colSpan={7}>Belum ada obat dari database untuk filter ini.</td></tr> : null}
+                {filteredRows.length === 0 ? <tr><td colSpan={7}>{t('noMedicineForFilter')}</td></tr> : null}
               </tbody>
             </table>
           </div>
-          <footer className={[styles.registryPagination, styles.compactPagination].join(' ')}><p>{filteredRows.length} of {rows.length} registered medicines</p><div className={styles.pages}><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} aria-label="Previous page"><AppIcon name="chevronLeft" width={14} height={14} /></button><span>Page {page} of {totalPages}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)} aria-label="Next page"><AppIcon name="chevronRight" width={14} height={14} /></button></div></footer>
+          <footer className={[styles.registryPagination, styles.compactPagination].join(' ')}><p>{t('registeredMedicinesCount', { shown: filteredRows.length, total: rows.length })}</p><div className={styles.pages}><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} aria-label={t('previousPage')}><AppIcon name="chevronLeft" width={14} height={14} /></button><span>{t('pageOf', { page, total: totalPages })}</span><button type="button" disabled={page >= totalPages} onClick={() => setPage((value) => value + 1)} aria-label={t('nextPage')}><AppIcon name="chevronRight" width={14} height={14} /></button></div></footer>
         </section>
       </div>
       {form ? <MedicineModal form={form} setForm={setForm} submitForm={submitForm} close={() => setForm(null)} /> : null}
@@ -118,19 +120,21 @@ export function SuperAdminMedicinesContent() {
 }
 
 function MedicineModal({ form, setForm, submitForm, close }: { form: FormState; setForm: (form: FormState) => void; submitForm: (event: FormEvent<HTMLFormElement>) => void; close: () => void }) {
+  const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
   return (
     <div className={styles.modalBackdrop} role="presentation" onMouseDown={close}>
       <form className={styles.modalCard} onSubmit={submitForm} onMouseDown={(event) => event.stopPropagation()}>
-        <header className={styles.drawerHeader}><h2>{form.id ? 'Medicine' : 'Add Medicine'}</h2><button type="button" onClick={close}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+        <header className={styles.drawerHeader}><h2>{form.id ? t('medicine') : t('addMedicine')}</h2><button type="button" onClick={close}><AppIcon name="circleStop" width={18} height={18} /></button></header>
         <label>ID<input required value={form.id} onChange={(event) => setForm({ ...form, id: event.target.value })} /></label>
-        <label>Name<input required value={form.nama} onChange={(event) => setForm({ ...form, nama: event.target.value })} /></label>
-        <label>Category<select value={form.kategori} onChange={(event) => setForm({ ...form, kategori: event.target.value as FormState['kategori'] })}><option value="OBAT">Obat</option><option value="VAKSIN">Vaksin</option><option value="ALAT_KESEHATAN">Alat Kesehatan</option></select></label>
-        <label>Type<select value={form.tipe} onChange={(event) => setForm({ ...form, tipe: event.target.value as FormState['tipe'] })}><option value="TABLET">Tablet</option><option value="SIRUP">Sirup</option><option value="INJEKSI">Injeksi</option><option value="KAPSUL">Kapsul</option><option value="CAIRAN">Cairan</option><option value="LAINNYA">Lainnya</option></select></label>
-        <label>Unit<input required value={form.satuan} onChange={(event) => setForm({ ...form, satuan: event.target.value })} /></label>
-        <label>Daily dose<input type="number" min="0" step="0.1" value={form.dosisStandarHarian ?? 0} onChange={(event) => setForm({ ...form, dosisStandarHarian: Number(event.target.value) })} /></label>
-        <label>Treatment duration<input type="number" min="0" value={form.durasiPengobatanHari ?? 0} onChange={(event) => setForm({ ...form, durasiPengobatanHari: Number(event.target.value) })} /></label>
-        <label className={styles.checkboxRow}><input type="checkbox" checked={form.perluColdChain} onChange={(event) => setForm({ ...form, perluColdChain: event.target.checked })} /> Cold chain</label>
-        <div className={styles.modalActions}><button type="button" onClick={close}>Cancel</button><button className={styles.primaryButton} type="submit">Save</button></div>
+        <label>{tCommon('name')}<input required value={form.nama} onChange={(event) => setForm({ ...form, nama: event.target.value })} /></label>
+        <label>{t('category')}<select value={form.kategori} onChange={(event) => setForm({ ...form, kategori: event.target.value as FormState['kategori'] })}><option value="OBAT">{t('medicineCategoryMedicine')}</option><option value="VAKSIN">{t('medicineCategoryVaccine')}</option><option value="ALAT_KESEHATAN">{t('medicineCategoryDevice')}</option></select></label>
+        <label>{t('type')}<select value={form.tipe} onChange={(event) => setForm({ ...form, tipe: event.target.value as FormState['tipe'] })}><option value="TABLET">Tablet</option><option value="SIRUP">{t('syrup')}</option><option value="INJEKSI">{t('injection')}</option><option value="KAPSUL">{t('capsule')}</option><option value="CAIRAN">{t('liquid')}</option><option value="LAINNYA">{t('other')}</option></select></label>
+        <label>{t('unit')}<input required value={form.satuan} onChange={(event) => setForm({ ...form, satuan: event.target.value })} /></label>
+        <label>{t('dailyDose')}<input type="number" min="0" step="0.1" value={form.dosisStandarHarian ?? 0} onChange={(event) => setForm({ ...form, dosisStandarHarian: Number(event.target.value) })} /></label>
+        <label>{t('treatmentDuration')}<input type="number" min="0" value={form.durasiPengobatanHari ?? 0} onChange={(event) => setForm({ ...form, durasiPengobatanHari: Number(event.target.value) })} /></label>
+        <label className={styles.checkboxRow}><input type="checkbox" checked={form.perluColdChain} onChange={(event) => setForm({ ...form, perluColdChain: event.target.checked })} /> {t('coldChain')}</label>
+        <div className={styles.modalActions}><button type="button" onClick={close}>{tCommon('cancel')}</button><button className={styles.primaryButton} type="submit">{tCommon('save')}</button></div>
       </form>
     </div>
   );

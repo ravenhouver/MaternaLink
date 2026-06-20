@@ -99,3 +99,12 @@ export class CreateExaminationDto {
 }
 
 export class UpdateExaminationDto extends PartialType(CreateExaminationDto) {}
+
+export class AiExaminationDraftDto {
+  @IsString()
+  complaint!: string;
+
+  @IsOptional()
+  @IsString()
+  period?: string;
+}

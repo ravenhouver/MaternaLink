@@ -3,6 +3,7 @@
 import Layout from 'antd/es/layout';
 import Typography from 'antd/es/typography';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
@@ -23,10 +24,12 @@ type SidebarProps = {
 export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
   const pathname = usePathname() ?? '';
   const router = useRouter();
+  const tCommon = useTranslations('common');
+  const tNav = useTranslations('nav');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const hasTopbar = pathname !== routes.dashboard;
   const selectedKey = resolveSelectedKey(pathname);
-  const visibleItems = getVisibleNavItems(user.role) as Array<{ key: string; href: string; icon: AppIconName; label: string; roles: UserRole[] }>;
+  const visibleItems = getVisibleNavItems(user.role) as Array<{ key: string; href: string; icon: AppIconName; labelKey: string; roles: UserRole[] }>;
   const profile = getProfile(user);
   const brandHref = getBrandHref(user.role);
 
@@ -56,14 +59,14 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
       <div className={styles.main}>
         <div className={styles.header}>
           {collapsed ? (
-            <button type="button" className={[styles.brandBlock, styles.brandButton].join(' ')} aria-label="Buka sidebar" aria-expanded={false} onClick={onToggle}>
+            <button type="button" className={[styles.brandBlock, styles.brandButton].join(' ')} aria-label={tCommon('openSidebar')} aria-expanded={false} onClick={onToggle}>
               <span className={styles.brandIcon}>
                 <AppIcon name="shield" width={20} height={20} />
               </span>
             </button>
           ) : (
             <>
-              <Link href={brandHref} className={styles.brandBlock} aria-label="MaternaLink beranda">
+              <Link href={brandHref} className={styles.brandBlock} aria-label={tCommon('brandHome')}>
                 <span className={styles.brandIcon}>
                   <AppIcon name="shield" width={20} height={20} />
                 </span>
@@ -72,21 +75,21 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
                   <Typography.Text className={styles.brandSubtitle}>Digital Sanctuary</Typography.Text>
                 </span>
               </Link>
-              <button type="button" className={styles.toggle} aria-label="Tutup sidebar" aria-expanded onClick={onToggle}>
+              <button type="button" className={styles.toggle} aria-label={tCommon('closeSidebar')} aria-expanded onClick={onToggle}>
                 <AppIcon name="chevronLeft" width={18} height={18} />
               </button>
             </>
           )}
         </div>
 
-        <nav className={styles.nav} aria-label="Navigasi utama">
+        <nav className={styles.nav} aria-label={tCommon('mainNavigation')}>
           {visibleItems.map((item) => {
             const isActive = item.key === selectedKey;
 
             return (
               <Link key={item.key} href={item.href} className={[styles.navItem, isActive ? styles.active : ''].filter(Boolean).join(' ')}>
                 <AppIcon name={item.icon} className={styles.navIcon} width={20} height={20} />
-                <span>{item.label}</span>
+                <span>{tNav(item.labelKey)}</span>
               </Link>
             );
           })}
@@ -96,7 +99,7 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
       <div className={styles.profileArea}>
         <button type="button" className={[styles.navItem, styles.navButton].join(' ')} onClick={handleLogout} disabled={isLoggingOut}>
           <AppIcon name="logOut" className={styles.navIcon} width={22} height={22} />
-          <span>{isLoggingOut ? 'Keluar...' : 'Logout'}</span>
+          <span>{isLoggingOut ? tCommon('loggingOut') : tCommon('logout')}</span>
         </button>
         {hasTopbar && !collapsed ? (
           <div className={styles.profileCard}>

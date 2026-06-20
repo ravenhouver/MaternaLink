@@ -1,20 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useState, type FormEvent } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { login } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './login-page.module.css';
 
-const stats = [
-  { value: '10K+', label: 'Puskesmas' },
-  { value: '514', label: 'IFK' },
-  { value: '30', label: 'Jenis Obat' },
-];
-
 export function LoginPageContent() {
   const router = useRouter();
+  const t = useTranslations('login');
+  const tCommon = useTranslations('common');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,7 +27,7 @@ export function LoginPageContent() {
       const user = await login(username.trim(), password);
       router.replace(user.role === 'SUPER_ADMIN' ? routes.admin : user.role === 'IFK_ADMIN' ? routes.ifk : routes.dashboard);
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Login gagal');
+      setError(loginError instanceof Error ? loginError.message : t('loginFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -38,7 +35,7 @@ export function LoginPageContent() {
 
   return (
     <main className={styles.page}>
-      <section className={styles.brandPanel} aria-label="MaternaLink identity">
+      <section className={styles.brandPanel} aria-label={t('identityLabel')}>
         <div className={styles.brandHeader}>
           <span className={styles.logoMark}>
             <AppIcon name="shield" width={20} height={20} />
@@ -60,30 +57,30 @@ export function LoginPageContent() {
         <div className={styles.brandFooter}>
           <blockquote className={styles.testimonial}>
             <span className={styles.quoteMark} aria-hidden="true">&quot;</span>
-            <p>Membantu 10.000+ puskesmas mengelola stok obat maternal secara akurat dan efisien.</p>
+            <p>{t('testimonial')}</p>
           </blockquote>
 
           <dl className={styles.statsRow}>
-            {stats.map((stat) => (
-              <div className={styles.statItem} key={stat.label}>
-                <dt>{stat.label}</dt>
-                <dd>{stat.value}</dd>
+            {['puskesmas', 'ifk', 'medicineTypes'].map((key) => (
+              <div className={styles.statItem} key={key}>
+                <dt>{t(`stats.${key}.label`)}</dt>
+                <dd>{t(`stats.${key}.value`)}</dd>
               </div>
             ))}
           </dl>
         </div>
       </section>
 
-      <section className={styles.formPanel} aria-label="Login form">
+      <section className={styles.formPanel} aria-label={t('formLabel')}>
         <div className={styles.formWrap}>
           <div className={styles.greeting}>
-            <h1>Welcome</h1>
-            <p>Login to your account</p>
+            <h1>{t('welcome')}</h1>
+            <p>{t('subtitle')}</p>
           </div>
 
           <form className={styles.card} onSubmit={handleSubmit}>
             <label className={styles.field}>
-              <span>Username</span>
+              <span>{tCommon('username')}</span>
               <span className={styles.inputWrap}>
                 <AppIcon name="user" width={17} height={17} />
                 <input type="text" name="username" placeholder="bidan" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required />
@@ -91,14 +88,14 @@ export function LoginPageContent() {
             </label>
 
             <label className={styles.field}>
-              <span>Password</span>
+              <span>{tCommon('password')}</span>
               <span className={styles.inputWrap}>
                 <AppIcon name="lock" width={16} height={16} />
-                <input type={showPassword ? 'text' : 'password'} name="password" placeholder="Masukkan password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+                <input type={showPassword ? 'text' : 'password'} name="password" placeholder={t('passwordPlaceholder')} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
                 <button
                   type="button"
                   className={styles.visibilityButton}
-                  aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword((current) => !current)}
                 >
@@ -110,19 +107,19 @@ export function LoginPageContent() {
             <div className={styles.optionsRow}>
               <label className={styles.rememberLabel}>
                 <input type="checkbox" name="remember" />
-                <span>Remember me</span>
+                <span>{t('rememberMe')}</span>
               </label>
-              <a href="#forgot-password">Forgot Password</a>
+              <a href="#forgot-password">{t('forgotPassword')}</a>
             </div>
 
             {error ? <p className={styles.errorMessage}>{error}</p> : null}
 
-            <button type="submit" className={styles.submitButton} disabled={isSubmitting}>{isSubmitting ? 'Memproses...' : 'Log In'}</button>
+            <button type="submit" className={styles.submitButton} disabled={isSubmitting}>{isSubmitting ? t('processing') : t('submit')}</button>
           </form>
 
           <footer className={styles.secondaryFooter}>
-            <span className={styles.onlineStatus}><i />Online</span>
-            <p><span>&copy; 2024 MaternaLink</span><span aria-hidden="true">.</span><span>Health Inventory System</span></p>
+            <span className={styles.onlineStatus}><i />{t('online')}</span>
+            <p><span>&copy; 2024 MaternaLink</span><span aria-hidden="true">.</span><span>{t('systemName')}</span></p>
           </footer>
         </div>
       </section>

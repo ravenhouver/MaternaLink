@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { createQueue, getPatients, updatePatient, type PatientRecord, type PregnancyRiskLevel } from '@/lib/api';
@@ -62,15 +63,15 @@ function formatDueDate(value?: string | null) {
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 }
 
-function dueHint(value?: string | null) {
+function dueHint(value: string | null | undefined, t: ReturnType<typeof useTranslations>) {
   if (!value) return '';
   const today = new Date();
   const due = new Date(value);
   if (Number.isNaN(due.getTime())) return '';
   const days = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
-  if (days === 1) return 'Tomorrow!';
-  if (days < 0) return `${Math.abs(days)} days overdue`;
-  return `${days} days left`;
+  if (days === 1) return t('tomorrow');
+  if (days < 0) return t('overdue', { count: Math.abs(days) });
+  return t('daysLeft', { count: days });
 }
 
 function ancCount(value?: string | null) {
@@ -124,21 +125,22 @@ function toQueueDraft(patient: PatientRecord): QueueDraft {
   };
 }
 
-function inferPriority(patient: PatientRecord | null, draft: QueueDraft | null) {
-  if (!patient || !draft) return { level: 'LOW', minutes: 30, message: 'Complete screening to calculate queue placement.' };
+function inferPriority(patient: PatientRecord | null, draft: QueueDraft | null, t: ReturnType<typeof useTranslations>) {
+  if (!patient || !draft) return { level: 'LOW', minutes: 30, message: t('completeScreening') };
   const pregnancy = activePregnancy(patient);
   const highRisk = pregnancy?.riskLevel === 'HIGH' || draft.reason === 'Emergency' || draft.riskFactors.some((risk) => /preeclampsia|hypertension|diabetes/i.test(risk));
   const mediumRisk = pregnancy?.riskLevel === 'MEDIUM' || draft.riskFactors.length > 0;
   if (highRisk) {
-    return { level: 'HIGH', minutes: 12, message: 'Patient identified as High Risk based on current screening. Recommended for Priority Queue.' };
+    return { level: 'HIGH', minutes: 12, message: t('priorityHigh') };
   }
   if (mediumRisk) {
-    return { level: 'MEDIUM', minutes: 18, message: 'Patient has moderate risk indicators. Recommended for monitored queue placement.' };
+    return { level: 'MEDIUM', minutes: 18, message: t('priorityMedium') };
   }
-  return { level: 'LOW', minutes: 30, message: 'Patient screening is stable. Recommended for regular queue placement.' };
+  return { level: 'LOW', minutes: 30, message: t('priorityLow') };
 }
 
 export function PatientsPageContent() {
+  const t = useTranslations('patients');
   const [rows, setRows] = useState<PatientRecord[]>([]);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -155,7 +157,7 @@ export function PatientsPageContent() {
     try {
       setRows(await getPatients());
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Gagal memuat pasien');
+      setError(loadError instanceof Error ? loadError.message : t('loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +188,7 @@ export function PatientsPageContent() {
   function openQueue(patient: PatientRecord) {
     const pregnancy = activePregnancy(patient);
     if (!pregnancy) {
-      setError('Pasien belum punya data kehamilan aktif.');
+      setError(t('noActivePregnancy'));
       return;
     }
     setQueueing(patient);
@@ -197,7 +199,7 @@ export function PatientsPageContent() {
     if (!queueing || !queueDraft) return;
     const pregnancy = activePregnancy(queueing);
     if (!pregnancy) return;
-    const priority = inferPriority(queueing, queueDraft);
+    const priority = inferPriority(queueing, queueDraft, t);
     setError(null);
     try {
       await createQueue({
@@ -230,7 +232,7 @@ export function PatientsPageContent() {
       setQueueDraft(null);
       await refreshRows();
     } catch (queueError) {
-      setError(queueError instanceof Error ? queueError.message : 'Gagal memasukkan pasien ke antrean');
+      setError(queueError instanceof Error ? queueError.message : t('queueError'));
     }
   }
 
@@ -256,7 +258,7 @@ export function PatientsPageContent() {
       setDraft(null);
       await refreshRows();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan pasien');
+      setError(saveError instanceof Error ? saveError.message : t('saveError'));
     }
   }
 
@@ -265,61 +267,61 @@ export function PatientsPageContent() {
       <section className={styles.headerCard}>
         <div>
           <div className={styles.titleRow}>
-            <h1>Patient List</h1>
-            <span>{rows.length} registered patients</span>
+            <h1>{t('title')}</h1>
+            <span>{t('registered', { count: rows.length })}</span>
           </div>
-          <p>Manage maternal data, monitor risk status, and pregnancy schedules in a unified view.</p>
+          <p>{t('subtitle')}</p>
         </div>
         <div className={styles.headerActions}>
-          <button type="button" aria-label="Refresh patient list" onClick={() => void refreshRows()}><AppIcon name="clock" width={20} height={20} /></button>
-          <Link href={routes.newPatient} aria-label="Add new patient"><AppIcon name="plus" width={20} height={20} /></Link>
+          <button type="button" aria-label={t('refreshList')} onClick={() => void refreshRows()}><AppIcon name="clock" width={20} height={20} /></button>
+          <Link href={routes.newPatient} aria-label={t('addNew')}><AppIcon name="plus" width={20} height={20} /></Link>
         </div>
       </section>
 
-      <section className={styles.toolbar} aria-label="Search and filter patients">
+      <section className={styles.toolbar} aria-label={t('searchFilter')}>
         <label className={styles.searchBox}>
           <AppIcon name="search" width={18} height={18} />
-          <input type="search" placeholder="Search patient..." value={search} onChange={(event) => setSearch(event.target.value)} />
+          <input type="search" placeholder={t('searchPlaceholder')} value={search} onChange={(event) => setSearch(event.target.value)} />
         </label>
         <button type="button" className={styles.filterButton} onClick={() => void refreshRows()}>
           <AppIcon name="filter" width={16} height={16} />
-          Filter
+          {t('filter')}
           <AppIcon name="chevronDown" width={14} height={14} />
         </button>
       </section>
 
       {error ? <p className={styles.formError}>{error}</p> : null}
 
-      <section className={styles.tableCard} aria-label="Patient list table">
+      <section className={styles.tableCard} aria-label={t('tableLabel')}>
         <div className={styles.tableScroll}>
           <table className={styles.patientTable}>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Gestational Age</th>
-                <th>Due Date</th>
-                <th>ANC Visit</th>
-                <th>Action</th>
+                <th>{t('name')}</th>
+                <th>{t('gestationalAge')}</th>
+                <th>{t('dueDate')}</th>
+                <th>{t('ancVisit')}</th>
+                <th>{t('action')}</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading ? <tr><td colSpan={5}>Loading patients...</td></tr> : null}
-              {!isLoading && filteredRows.length === 0 ? <tr><td colSpan={5}>Belum ada data pasien.</td></tr> : null}
+              {isLoading ? <tr><td colSpan={5}>{t('loading')}</td></tr> : null}
+              {!isLoading && filteredRows.length === 0 ? <tr><td colSpan={5}>{t('empty')}</td></tr> : null}
               {visibleRows.map((patient, index) => {
                 const pregnancy = activePregnancy(patient);
-                const due = dueHint(pregnancy?.edd);
+                const due = dueHint(pregnancy?.edd, t);
                 const ancDone = ancCount(pregnancy?.ancVisit);
-                const isUrgent = pregnancy?.riskLevel === 'HIGH' || due === 'Tomorrow!' || due.includes('overdue') || due.startsWith('0 ');
+                const isUrgent = pregnancy?.riskLevel === 'HIGH' || due === t('tomorrow') || due.includes('overdue') || due.includes('terlambat') || due.startsWith('0 ');
                 return (
                   <tr key={patient.id}>
-                    <td data-label="Name"><strong className={styles.patientName}>{patient.fullName}</strong><span className={styles.patientId}>ID: {formatPatientId(patient, pageStart + index)}</span></td>
-                    <td data-label="Gestational Age">{pregnancy?.gestationalAge ? `${pregnancy.gestationalAge} weeks` : '-'}</td>
-                    <td data-label="Due Date"><strong className={isUrgent ? styles.urgentDate : undefined}>{due === 'Tomorrow!' ? due : formatDueDate(pregnancy?.edd)}</strong>{due && due !== 'Tomorrow!' ? <span className={isUrgent ? styles.urgentHint : styles.dueHint}>({due})</span> : null}{due === 'Tomorrow!' ? <span className={styles.dueHint}>{formatDueDate(pregnancy?.edd)}</span> : null}</td>
-                    <td data-label="ANC Visit"><span className={styles.ancDots} aria-label={`${ancDone} of 4 ANC visits`}>{[0, 1, 2, 3].map((dot) => <i key={dot} className={dot < ancDone ? styles.ancDone : styles.ancPending} />)}</span></td>
-                    <td data-label="Action">
+                    <td data-label={t('name')}><strong className={styles.patientName}>{patient.fullName}</strong><span className={styles.patientId}>ID: {formatPatientId(patient, pageStart + index)}</span></td>
+                    <td data-label={t('gestationalAge')}>{pregnancy?.gestationalAge ? t('weeks', { count: pregnancy.gestationalAge }) : '-'}</td>
+                    <td data-label={t('dueDate')}><strong className={isUrgent ? styles.urgentDate : undefined}>{due === t('tomorrow') ? due : formatDueDate(pregnancy?.edd)}</strong>{due && due !== t('tomorrow') ? <span className={isUrgent ? styles.urgentHint : styles.dueHint}>({due})</span> : null}{due === t('tomorrow') ? <span className={styles.dueHint}>{formatDueDate(pregnancy?.edd)}</span> : null}</td>
+                    <td data-label={t('ancVisit')}><span className={styles.ancDots} aria-label={t('ancVisits', { count: ancDone })}>{[0, 1, 2, 3].map((dot) => <i key={dot} className={dot < ancDone ? styles.ancDone : styles.ancPending} />)}</span></td>
+                    <td data-label={t('action')}>
                       <div className={styles.actionGroup}>
-                        <Link className={styles.detailButton} href={routes.patientDetail(patient.id)}>View Details</Link>
-                        <button type="button" className={styles.queueButton} onClick={() => openQueue(patient)}><AppIcon name="plus" width={18} height={18} />Queue</button>
+                        <Link className={styles.detailButton} href={routes.patientDetail(patient.id)}>{t('viewDetails')}</Link>
+                        <button type="button" className={styles.queueButton} onClick={() => openQueue(patient)}><AppIcon name="plus" width={18} height={18} />{t('queue')}</button>
                       </div>
                     </td>
                   </tr>
@@ -329,13 +331,13 @@ export function PatientsPageContent() {
           </table>
         </div>
         <footer className={styles.pagination}>
-          <p>Showing {visibleRows.length ? pageStart + 1 : 0}-{pageStart + visibleRows.length} of {filteredRows.length} patients</p>
-          <div className={styles.paginationControls} aria-label="Patient pages">
-            <button type="button" aria-label="Previous page" disabled={safePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}><AppIcon name="chevronLeft" width={18} height={18} /></button>
+          <p>{t('showing', { from: visibleRows.length ? pageStart + 1 : 0, to: pageStart + visibleRows.length, total: filteredRows.length })}</p>
+          <div className={styles.paginationControls} aria-label={t('patientPages')}>
+            <button type="button" aria-label={t('previousPage')} disabled={safePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}><AppIcon name="chevronLeft" width={18} height={18} /></button>
             {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
               <button key={page} type="button" aria-current={page === safePage ? 'page' : undefined} onClick={() => setCurrentPage(page)}>{page}</button>
             ))}
-            <button type="button" aria-label="Next page" disabled={safePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}><AppIcon name="chevronRight" width={18} height={18} /></button>
+            <button type="button" aria-label={t('nextPage')} disabled={safePage === totalPages} onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}><AppIcon name="chevronRight" width={18} height={18} /></button>
           </div>
         </footer>
       </section>
@@ -346,21 +348,21 @@ export function PatientsPageContent() {
         <div className={styles.modalOverlay} role="presentation" onMouseDown={() => setEditing(null)}>
           <section aria-labelledby="edit-patient-title" aria-modal="true" className={styles.queueModal} role="dialog" onMouseDown={(event) => event.stopPropagation()}>
             <header className={styles.modalHeader}>
-              <div><h2 id="edit-patient-title">Edit Patient</h2><p>{editing.fullName}</p></div>
-              <button type="button" aria-label="Close edit patient" className={styles.modalClose} onClick={() => setEditing(null)}><AppIcon name="x" width={20} height={20} /></button>
+              <div><h2 id="edit-patient-title">{t('editPatient')}</h2><p>{editing.fullName}</p></div>
+              <button type="button" aria-label={t('closeEdit')} className={styles.modalClose} onClick={() => setEditing(null)}><AppIcon name="x" width={20} height={20} /></button>
             </header>
             <div className={styles.modalBody}>
               <div className={styles.twoColumnFields}>
-                <EditField label="Full Name" value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} />
-                <EditField label="NIK" value={draft.nik} onChange={(value) => setDraft({ ...draft, nik: value })} />
-                <EditField label="Phone" value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
-                <EditField label="Address" value={draft.address} onChange={(value) => setDraft({ ...draft, address: value })} />
-                <EditField label="Gestational Age" value={draft.gestationalAge} onChange={(value) => setDraft({ ...draft, gestationalAge: value })} />
-                <EditField label="ANC Visit" value={draft.ancVisit} onChange={(value) => setDraft({ ...draft, ancVisit: value })} />
-                <label className={styles.fieldGroup}><span className={styles.fieldLabel}>Risk Level</span><select value={draft.riskLevel} onChange={(event) => setDraft({ ...draft, riskLevel: event.target.value as PregnancyRiskLevel })}><option value="LOW">LOW</option><option value="MEDIUM">MEDIUM</option><option value="HIGH">HIGH</option></select></label>
+                <EditField label={t('fullName')} value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} />
+                <EditField label={t('nik')} value={draft.nik} onChange={(value) => setDraft({ ...draft, nik: value })} />
+                <EditField label={t('phone')} value={draft.phone} onChange={(value) => setDraft({ ...draft, phone: value })} />
+                <EditField label={t('address')} value={draft.address} onChange={(value) => setDraft({ ...draft, address: value })} />
+                <EditField label={t('gestationalAge')} value={draft.gestationalAge} onChange={(value) => setDraft({ ...draft, gestationalAge: value })} />
+                <EditField label={t('ancVisit')} value={draft.ancVisit} onChange={(value) => setDraft({ ...draft, ancVisit: value })} />
+                <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('riskLevel')}</span><select value={draft.riskLevel} onChange={(event) => setDraft({ ...draft, riskLevel: event.target.value as PregnancyRiskLevel })}><option value="LOW">LOW</option><option value="MEDIUM">MEDIUM</option><option value="HIGH">HIGH</option></select></label>
               </div>
             </div>
-            <footer className={styles.modalFooter}><button type="button" className={styles.cancelButton} onClick={() => setEditing(null)}>Cancel</button><button type="button" className={styles.enterQueueButton} onClick={() => void saveEdit()}>Save Changes</button></footer>
+            <footer className={styles.modalFooter}><button type="button" className={styles.cancelButton} onClick={() => setEditing(null)}>{t('cancel')}</button><button type="button" className={styles.enterQueueButton} onClick={() => void saveEdit()}>{t('saveChanges')}</button></footer>
           </section>
         </div>
       ) : null}
@@ -369,8 +371,9 @@ export function PatientsPageContent() {
 }
 
 function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { patient: PatientRecord; draft: QueueDraft; onChange: (draft: QueueDraft) => void; onClose: () => void; onSubmit: () => void }) {
+  const t = useTranslations('patients');
   const pregnancy = activePregnancy(patient);
-  const priority = inferPriority(patient, draft);
+  const priority = inferPriority(patient, draft, t);
   const initials = patient.fullName.trim().charAt(0).toUpperCase() || 'P';
 
   function toggle(list: keyof Pick<QueueDraft, 'riskFactors' | 'routineMedication'>, value: string) {
@@ -382,65 +385,65 @@ function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { 
     <div className={styles.modalOverlay} role="presentation" onMouseDown={onClose}>
       <section aria-labelledby="queue-screening-title" aria-modal="true" className={styles.queueModal} role="dialog" onMouseDown={(event) => event.stopPropagation()}>
         <header className={styles.modalHeader}>
-          <div><h2 id="queue-screening-title">Pre-Queue Screening</h2><p>Complete today&apos;s visit data before the patient enters the queue.</p></div>
-          <button type="button" aria-label="Close pre-queue screening" className={styles.modalClose} onClick={onClose}><AppIcon name="x" width={20} height={20} /></button>
+          <div><h2 id="queue-screening-title">{t('screeningTitle')}</h2><p>{t('screeningSubtitle')}</p></div>
+          <button type="button" aria-label={t('closeScreening')} className={styles.modalClose} onClick={onClose}><AppIcon name="x" width={20} height={20} /></button>
         </header>
         <div className={styles.patientStrip}>
           <span className={styles.patientAvatar}>{initials}</span>
           <div className={styles.patientSummaryText}>
             <div className={styles.patientSummaryTitle}><strong>{patient.fullName}</strong><span>ID: {patient.id}</span></div>
             <div className={styles.patientBadges}>
-              <span><AppIcon name="user" width={12} height={12} />{pregnancy?.gestationalAge ?? '-'} Weeks</span>
+              <span><AppIcon name="user" width={12} height={12} />{pregnancy?.gestationalAge ? t('weeks', { count: pregnancy.gestationalAge }) : '-'}</span>
               <span><AppIcon name="calendar" width={12} height={12} />{formatDueDate(pregnancy?.edd)}</span>
-              <span><AppIcon name="clock" width={12} height={12} />Last: {pregnancy?.ancVisit ?? '-'}</span>
-              {pregnancy?.riskLevel === 'HIGH' || priority.level === 'HIGH' ? <b>High Risk</b> : null}
+              <span><AppIcon name="clock" width={12} height={12} />{t('lastVisit', { visit: pregnancy?.ancVisit ?? '-' })}</span>
+              {pregnancy?.riskLevel === 'HIGH' || priority.level === 'HIGH' ? <b>{t('highRisk')}</b> : null}
             </div>
           </div>
         </div>
         <div className={styles.modalBody}>
           <section className={styles.modalSection}>
-            <h3><span />I. Today&apos;s Visit</h3>
-            <span className={styles.fieldLabel}>Reason for Visit</span>
+            <h3><span />{t('todayVisit')}</h3>
+            <span className={styles.fieldLabel}>{t('reasonForVisit')}</span>
             <div className={styles.reasonGrid}>
-              {reasonOptions.map((reason) => <button key={reason.label} type="button" className={[styles.reasonCard, draft.reason === reason.label ? styles.reasonActive : '', reason.danger ? styles.reasonDanger : ''].join(' ')} onClick={() => onChange({ ...draft, reason: reason.label })}>{draft.reason === reason.label ? <AppIcon className={styles.reasonCheck} name="checkCircle" width={14} height={14} /> : null}<AppIcon name={reason.icon} width={20} height={20} />{reason.label}</button>)}
+              {reasonOptions.map((reason) => <button key={reason.label} type="button" className={[styles.reasonCard, draft.reason === reason.label ? styles.reasonActive : '', reason.danger ? styles.reasonDanger : ''].join(' ')} onClick={() => onChange({ ...draft, reason: reason.label })}>{draft.reason === reason.label ? <AppIcon className={styles.reasonCheck} name="checkCircle" width={14} height={14} /> : null}<AppIcon name={reason.icon} width={20} height={20} />{t(reason.label === 'ANC Checkup' ? 'reasonAnc' : reason.label === 'Complaint' ? 'reasonComplaint' : reason.label === 'Referral' ? 'reasonReferral' : 'reasonEmergency')}</button>)}
             </div>
             <div className={styles.twoColumnFields}>
-              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>ANC Visit Type</span><select value={draft.ancVisit} onChange={(event) => onChange({ ...draft, ancVisit: event.target.value })}><option>ANC K1 (Trimester 1)</option><option>ANC K2 (Trimester 2)</option><option>ANC K3 (Trimester 3)</option><option>ANC K4 (Trimester 3)</option></select></label>
-              <EditField label="Complaint Notes (Optional)" value={draft.complaint} onChange={(value) => onChange({ ...draft, complaint: value })} />
+              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('ancVisitType')}</span><select value={draft.ancVisit} onChange={(event) => onChange({ ...draft, ancVisit: event.target.value })}><option>ANC K1 (Trimester 1)</option><option>ANC K2 (Trimester 2)</option><option>ANC K3 (Trimester 3)</option><option>ANC K4 (Trimester 3)</option></select></label>
+              <EditField label={t('complaintNotes')} value={draft.complaint} onChange={(value) => onChange({ ...draft, complaint: value })} />
             </div>
           </section>
           <section className={styles.modalSection}>
-            <h3><span />II. Vital Signs</h3>
+            <h3><span />{t('vitalSigns')}</h3>
             <div className={styles.vitalGrid}>
-              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>Blood Pressure (mmHg)</span><span className={styles.bpFields}><input placeholder="Sys" value={draft.systolic} onChange={(event) => onChange({ ...draft, systolic: event.target.value })} /><span>/</span><input placeholder="Dia" value={draft.diastolic} onChange={(event) => onChange({ ...draft, diastolic: event.target.value })} /></span><small>Previous visit: 130/85</small></label>
-              <EditField label="Weight (kg)" value={draft.weight} onChange={(value) => onChange({ ...draft, weight: value })} helper="Previous visit: 66.2 kg" />
-              <EditField label="Height (cm)" value={draft.height} onChange={(value) => onChange({ ...draft, height: value })} helper="BMI: 27.4 (Overweight)" strong />
-              <EditField label="MUAC (cm)" value={draft.muac} onChange={(value) => onChange({ ...draft, muac: value })} helper="Normal (>23.5cm)" good />
-              <EditField label="Fetal Heart Rate (bpm)" value={draft.fetalHeartRate} onChange={(value) => onChange({ ...draft, fetalHeartRate: value })} helper="Normal: 120-160 bpm" />
-              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>Temperature & Pulse</span><span className={styles.tempFields}><input value={draft.temperature} onChange={(event) => onChange({ ...draft, temperature: event.target.value })} /><input value={draft.pulse} onChange={(event) => onChange({ ...draft, pulse: event.target.value })} /></span></label>
+              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('bloodPressure')}</span><span className={styles.bpFields}><input placeholder={t('sys')} value={draft.systolic} onChange={(event) => onChange({ ...draft, systolic: event.target.value })} /><span>/</span><input placeholder={t('dia')} value={draft.diastolic} onChange={(event) => onChange({ ...draft, diastolic: event.target.value })} /></span><small>{t('previousVisit', { value: '130/85' })}</small></label>
+              <EditField label={t('weight')} value={draft.weight} onChange={(value) => onChange({ ...draft, weight: value })} helper={t('previousVisit', { value: '66.2 kg' })} />
+              <EditField label={t('height')} value={draft.height} onChange={(value) => onChange({ ...draft, height: value })} helper="BMI: 27.4 (Overweight)" strong />
+              <EditField label={t('muac')} value={draft.muac} onChange={(value) => onChange({ ...draft, muac: value })} helper="Normal (>23.5cm)" good />
+              <EditField label={t('fetalHeartRate')} value={draft.fetalHeartRate} onChange={(value) => onChange({ ...draft, fetalHeartRate: value })} helper="Normal: 120-160 bpm" />
+              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('temperaturePulse')}</span><span className={styles.tempFields}><input value={draft.temperature} onChange={(event) => onChange({ ...draft, temperature: event.target.value })} /><input value={draft.pulse} onChange={(event) => onChange({ ...draft, pulse: event.target.value })} /></span></label>
             </div>
           </section>
           <section className={styles.modalSection}>
-            <h3><span />III. Risk & Medication Confirmation</h3>
+            <h3><span />{t('riskMedication')}</h3>
             <div className={styles.confirmationGrid}>
-              <Checklist title="Detected Risk Factors" items={riskOptions} values={draft.riskFactors} tone="risk" onToggle={(item) => toggle('riskFactors', item)} />
-              <Checklist title="Routine Medication" items={medicationOptions} values={draft.routineMedication} tone="medication" onToggle={(item) => toggle('routineMedication', item)} />
+              <Checklist title={t('detectedRisk')} items={riskOptions} values={draft.riskFactors} tone="risk" onToggle={(item) => toggle('riskFactors', item)} />
+              <Checklist title={t('routineMedication')} items={medicationOptions} values={draft.routineMedication} tone="medication" onToggle={(item) => toggle('routineMedication', item)} />
             </div>
           </section>
           <section className={styles.modalSection}>
-            <h3><span />IV. Assessment & Placement</h3>
+            <h3><span />{t('assessmentPlacement')}</h3>
             <div className={styles.assessmentBox}>
               <div className={styles.assessmentMain}>
-                <label className={styles.fieldGroup}><span className={styles.fieldLabel}>Attending Physician (DPJP)</span><select value={draft.responsibleDoctor} onChange={(event) => onChange({ ...draft, responsibleDoctor: event.target.value })}><option>dr. Ratna Wulandari, Sp.OG</option><option>dr. Siti Rahma, Sp.OG</option><option>dr. Ahmad Pratama, Sp.OG</option></select></label>
+                <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('attendingPhysician')}</span><select value={draft.responsibleDoctor} onChange={(event) => onChange({ ...draft, responsibleDoctor: event.target.value })}><option>dr. Ratna Wulandari, Sp.OG</option><option>dr. Siti Rahma, Sp.OG</option><option>dr. Ahmad Pratama, Sp.OG</option></select></label>
                 <p className={styles.riskNote}>{priority.message}</p>
               </div>
-              <div className={styles.priorityCard}><span>Queue Priority</span><strong>{priority.level}</strong><small><AppIcon name="zap" width={12} height={12} />Estimated: {priority.minutes} Minutes</small></div>
+              <div className={styles.priorityCard}><span>{t('queuePriority')}</span><strong>{priority.level}</strong><small><AppIcon name="zap" width={12} height={12} />{t('estimatedMinutes', { count: priority.minutes })}</small></div>
             </div>
           </section>
         </div>
         <footer className={styles.modalFooter}>
-          <p><AppIcon name="info" width={14} height={14} />Visit data will be saved to the patient&apos;s examination history.</p>
-          <div className={styles.modalFooterActions}><button type="button" className={styles.cancelButton} onClick={onClose}>Cancel</button><button type="button" className={styles.enterQueueButton} onClick={onSubmit}><AppIcon name="plus" width={14} height={14} />Enter into Queue</button></div>
+          <p><AppIcon name="info" width={14} height={14} />{t('saveHistoryNote')}</p>
+          <div className={styles.modalFooterActions}><button type="button" className={styles.cancelButton} onClick={onClose}>{t('cancel')}</button><button type="button" className={styles.enterQueueButton} onClick={onSubmit}><AppIcon name="plus" width={14} height={14} />{t('enterQueue')}</button></div>
         </footer>
       </section>
     </div>

@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { RecommendationStatus, TrackingStatus } from '@prisma/client';
+import { Prisma, RecommendationStatus, TrackingStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AiService, type AiAllocateRequest } from '../ai/ai.service';
 import {
   CreateAllocationPlanDto,
+  CreateShipmentRequestDto,
   ListRecommendationsQueryDto,
+  RunAiAllocationDto,
   TrackingEventDto,
   UpdateAllocationPlanDto,
   UpdateRecommendationItemDto,
@@ -44,7 +47,7 @@ type OpenMeteoResponse = {
 
 @Injectable()
 export class DistributionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly ai: AiService) {}
 
   listRecommendations(filters: ListRecommendationsQueryDto = {}) {
     return this.prisma.distributionRecommendation.findMany({
@@ -149,6 +152,104 @@ export class DistributionService {
       await tx.shipmentTrackingEvent.create({ data: { recommendationId: id, status: TrackingStatus.REJECTED, actorUserId, note: trimmedNote } });
       return updated;
     });
+  }
+
+  async createShipmentRequest(data: CreateShipmentRequestDto, actorUserId: string) {
+    if (!data.items.length) throw new BadRequestException('Shipment request must contain at least one item');
+    const id = `REQ-${data.puskesmasId}-${data.periode.slice(0, 10)}-${Date.now()}`;
+    return this.prisma.$transaction(async (tx) => {
+      const recommendation = await tx.distributionRecommendation.create({
+        data: {
+          id,
+          puskesmasId: data.puskesmasId,
+          periode: toDate(data.periode),
+          status: RecommendationStatus.PENDING,
+          urgency: data.items.some((item) => item.jumlah > 0) ? 'WARNING' : 'ROUTINE',
+          source: 'FASTAPI_AI',
+          priorityRank: 100,
+          justification: data.justification ?? 'Requested from AI demand forecast.',
+          items: { create: data.items.map((item) => ({ obatId: item.obatId, aiQuantity: item.jumlah, finalQuantity: item.jumlah })) },
+        },
+        include: { puskesmas: true, items: { include: { obat: true } } },
+      });
+      await tx.shipmentTrackingEvent.create({ data: { recommendationId: recommendation.id, status: TrackingStatus.REQUESTED, actorUserId, note: 'Requested by puskesmas from AI demand forecast.' } });
+      return recommendation;
+    });
+  }
+
+  async runAiAllocation(data: RunAiAllocationDto) {
+    const periode = toDate(data.periode);
+    const runs = await this.prisma.forecastRun.findMany({
+      where: { periode },
+      include: { puskesmas: true, prediksi: { include: { obat: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const latestByFacility = new Map<string, (typeof runs)[number]>();
+    for (const run of runs) if (!latestByFacility.has(run.puskesmasId)) latestByFacility.set(run.puskesmasId, run);
+    const latestRuns = [...latestByFacility.values()];
+    if (!latestRuns.length) throw new BadRequestException('No AI forecast runs found for allocation period');
+
+    const l1 = latestRuns.flatMap((run) => run.prediksi.map((row) => ({
+      facility_id: run.puskesmasId,
+      drug_id: row.obatId,
+      forecast_demand: row.kebutuhanObat,
+      current_stock: row.stokSaatIni,
+      total_requirement: row.totalRekomendasi,
+      forecast_period: data.periode.slice(0, 10),
+    })));
+    const byDrug = new Map<string, number>();
+    for (const row of l1) byDrug.set(row.drug_id, (byDrug.get(row.drug_id) ?? 0) + row.total_requirement);
+    const request: AiAllocateRequest = {
+      run_id: `DIST-${data.periode.slice(0, 10)}`,
+      l1_forecasts: l1,
+      ifk_stock: [...byDrug.entries()].map(([drug_id, available_units]) => ({ drug_id, available_units })),
+      stockout_history: null,
+    };
+    const allocation = await this.ai.allocate(request);
+    const routeSummary = JSON.parse(JSON.stringify(allocation.summary)) as Prisma.InputJsonValue;
+    const grouped = new Map<string, typeof allocation.allocations>();
+    for (const item of allocation.allocations) grouped.set(item.facility_id, [...(grouped.get(item.facility_id) ?? []), item]);
+    const sortedGroups = [...grouped.entries()].sort((a, b) => Math.max(...b[1].map((item) => item.priority_score)) - Math.max(...a[1].map((item) => item.priority_score)));
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const [index, [puskesmasId, items]] of sortedGroups.entries()) {
+        const recommendationId = `REC-AI-DIST-${puskesmasId}-${data.periode.slice(0, 10)}`;
+        await tx.distributionRecommendationItem.deleteMany({ where: { recommendationId } });
+        const urgency = items.some((item) => item.unmet > 0) ? 'CRITICAL' : items.some((item) => item.coverage_ratio < 1) ? 'WARNING' : 'ROUTINE';
+        const recommendation = await tx.distributionRecommendation.upsert({
+          where: { id: recommendationId },
+          update: {
+            periode,
+            status: RecommendationStatus.PENDING,
+            urgency,
+            source: 'HF_AI_LAYER2',
+            priorityRank: index + 1,
+            justification: items.find((item) => item.justification)?.justification ?? `AI allocation covers ${items.length} medicine item(s).`,
+            routeSummary,
+          },
+          create: {
+            id: recommendationId,
+            puskesmasId,
+            periode,
+            status: RecommendationStatus.PENDING,
+            urgency,
+            source: 'HF_AI_LAYER2',
+            priorityRank: index + 1,
+            justification: items.find((item) => item.justification)?.justification ?? `AI allocation covers ${items.length} medicine item(s).`,
+            routeSummary,
+          },
+        });
+        for (const item of items) {
+          await tx.distributionRecommendationItem.create({
+            data: { recommendationId: recommendation.id, obatId: item.drug_id, aiQuantity: item.allocated, finalQuantity: item.allocated },
+          });
+        }
+        const hasRequestedEvent = await tx.shipmentTrackingEvent.findFirst({ where: { recommendationId, status: TrackingStatus.REQUESTED } });
+        if (!hasRequestedEvent) await tx.shipmentTrackingEvent.create({ data: { recommendationId, status: TrackingStatus.REQUESTED, note: 'Generated by hosted AI allocation.' } });
+      }
+    });
+
+    return this.listRecommendations({ status: RecommendationStatus.PENDING });
   }
 
   async rerequestRecommendation(id: string, actorUserId: string) {

@@ -200,6 +200,38 @@
   line-height: 18px;
 }
 
+.syncStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.syncStatus[data-state='running'] {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.syncStatus[data-state='failed'] {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.syncStatus[data-state='never'] {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+  color: #4b5563;
+}
+
 .iconButton {
   position: relative;
   display: grid;

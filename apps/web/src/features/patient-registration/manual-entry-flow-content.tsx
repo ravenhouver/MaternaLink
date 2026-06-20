@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -268,6 +269,7 @@ function getPregnancyValidationErrors(form: ManualRegistrationForm) {
 }
 
 export function ManualEntryFlowContent() {
+  const t = useTranslations('registration');
   const router = useRouter();
   const stages = manualStages;
   const [stage, setStage] = useState<ManualStage>('manual-personal');
@@ -331,7 +333,7 @@ export function ManualEntryFlowContent() {
   async function submitRegistration() {
     setError(null);
     if (!form.fullName.trim() || !form.nik.trim() || !form.dateOfBirth || !form.phone.trim() || !form.address.trim() || !form.emergencyName.trim() || !form.emergencyPhone.trim() || !form.gestationalAge.trim() || !form.ancVisit.trim() || !form.visitReason.trim() || !form.pregnancyType.trim() || form.emergencySigns.length === 0) {
-      setError('Lengkapi semua field wajib sebelum submit.');
+      setError(t('requiredSubmit'));
       return;
     }
 
@@ -380,7 +382,7 @@ export function ManualEntryFlowContent() {
       await createQueue({ patientId: created.patient.id, pregnancyId: created.pregnancy.id, assignedDoctor: form.responsibleDoctor.trim() || undefined });
       router.push(routes.queue);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Registrasi gagal');
+      setError(submitError instanceof Error ? submitError.message : t('registrationFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -400,20 +402,23 @@ export function ManualEntryFlowContent() {
 }
 
 function ManualInfoBanner() {
+  const t = useTranslations('registration');
   return (
     <div className={styles.manualInfoBanner}>
       <span className={styles.manualInfoCopy}>
         <AppIcon name="edit" width={18} height={18} />
-        <strong>Manual input — fill all fields below</strong>
+        <strong>{t('manualInputInfo')}</strong>
       </span>
     </div>
   );
 }
 
 function WizardStepper({ currentStep }: { currentStep: number }) {
+  const t = useTranslations('registration');
+  const labels = [t('stepSelf'), t('stepPregnancy'), t('screeningRisk')];
   return (
-    <nav className={styles.manualStepper} aria-label="Registration steps">
-      {stepLabels.map((label, index) => {
+    <nav className={styles.manualStepper} aria-label={t('registrationSteps')}>
+      {labels.map((label, index) => {
         const stepNumber = index + 1;
         const done = stepNumber < currentStep;
         const active = stepNumber === currentStep;
@@ -433,28 +438,29 @@ function WizardStepper({ currentStep }: { currentStep: number }) {
 }
 
 function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredField, string>>; form: ManualRegistrationForm; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+  const t = useTranslations('registration');
   return (
-    <section className={styles.manualCard} aria-label="Manual patient identity form">
+    <section className={styles.manualCard} aria-label={t('manualIdentityForm')}>
       <div className={styles.manualFormBody}>
-        <FormSection icon="user" title="PATIENT IDENTITY">
+        <FormSection icon="user" title={t('patientIdentity')}>
           <div className={styles.manualFormGrid}>
-            <ManualField error={fieldErrors.fullName} label="Patient Full Name *" placeholder="Example: Siti Aminah" wide value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
-            <ManualField error={fieldErrors.nik} label="NIK *" placeholder="16 digit NIK" value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
-            <ManualField error={fieldErrors.dateOfBirth} label="Date of Birth *" placeholder="Select date" type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
-            <ManualField error={fieldErrors.address} label="Residential Address *" placeholder="Street, RT/RW, Sub-district, District" wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
-            <ManualField error={fieldErrors.phone} label="Phone Number (WhatsApp) *" placeholder="8123456789" prefix="+62" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
-            <ManualField label="BPJS / Insurance Number (Optional)" placeholder="Enter number if available" value={form.bpjsNumber} onChange={(value) => onFieldChange('bpjsNumber', value)} />
+            <ManualField error={fieldErrors.fullName} label={t('patientFullNameRequired')} placeholder={t('patientExample')} wide value={form.fullName} onChange={(value) => onFieldChange('fullName', value)} />
+            <ManualField error={fieldErrors.nik} label={t('nikRequired')} placeholder={t('nikPlaceholder')} value={form.nik} onChange={(value) => onFieldChange('nik', value)} />
+            <ManualField error={fieldErrors.dateOfBirth} label={t('dateOfBirthRequired')} placeholder={t('selectDate')} type="date" value={form.dateOfBirth} onChange={(value) => onFieldChange('dateOfBirth', value)} />
+            <ManualField error={fieldErrors.address} label={t('residentialAddressRequired')} placeholder={t('addressPlaceholder')} wide textarea value={form.address} onChange={(value) => onFieldChange('address', value)} />
+            <ManualField error={fieldErrors.phone} label={t('phoneRequired')} placeholder="8123456789" prefix="+62" value={form.phone} onChange={(value) => onFieldChange('phone', value)} />
+            <ManualField label={t('insuranceNumber')} placeholder={t('insurancePlaceholder')} value={form.bpjsNumber} onChange={(value) => onFieldChange('bpjsNumber', value)} />
           </div>
         </FormSection>
 
-        <FormSection icon="asterisk" title="EMERGENCY CONTACT & BASIC HISTORY">
+        <FormSection icon="asterisk" title={t('emergencyHistory')}>
           <div className={styles.manualFormGrid}>
-            <ManualField error={fieldErrors.emergencyName} label="Next of Kin Name *" placeholder="Husband/parent name" value={form.emergencyName} onChange={(value) => onFieldChange('emergencyName', value)} />
-            <ManualField error={fieldErrors.emergencyPhone} label="Next of Kin Phone No. *" placeholder="+62..." value={form.emergencyPhone} onChange={(value) => onFieldChange('emergencyPhone', value)} />
-            <ManualField label="Blood Type" placeholder="Select Blood Type" select options={bloodTypeOptions} value={form.bloodType} onChange={(value) => onFieldChange('bloodType', value)} />
-            <ManualField label="Drug / Food Allergies" placeholder="Use commas to separate" value={form.allergy} onChange={(value) => onFieldChange('allergy', value)} />
+            <ManualField error={fieldErrors.emergencyName} label={t('nextKinName')} placeholder={t('nextKinNamePlaceholder')} value={form.emergencyName} onChange={(value) => onFieldChange('emergencyName', value)} />
+            <ManualField error={fieldErrors.emergencyPhone} label={t('nextKinPhone')} placeholder="+62..." value={form.emergencyPhone} onChange={(value) => onFieldChange('emergencyPhone', value)} />
+            <ManualField label={t('bloodType')} placeholder={t('selectBloodType')} select options={bloodTypeOptions} value={form.bloodType} onChange={(value) => onFieldChange('bloodType', value)} />
+            <ManualField label={t('allergies')} placeholder={t('commaPlaceholder')} value={form.allergy} onChange={(value) => onFieldChange('allergy', value)} />
             <div className={styles.wideManualField}>
-              <span className={styles.manualLabel}>Chronic Disease History</span>
+              <span className={styles.manualLabel}>{t('chronicDisease')}</span>
               <div className={styles.checkboxRow}>
                 {['Hypertension', 'Diabetes', 'Heart', 'Asthma', 'Others'].map((label) => (
                   <label key={label}><input type="checkbox" checked={form.chronicDiseases.includes(label)} onChange={() => onFieldChange('chronicDiseases', toggleItem(form.chronicDiseases, label))} /> {label}</label>
@@ -465,12 +471,13 @@ function ManualPersonalPanel({ fieldErrors, form, onFieldChange, onNext }: { fie
         </FormSection>
       </div>
 
-      <ActionFooter backHref={routes.newPatient} nextLabel="Continue to Pregnancy Data" onNext={onNext} />
+      <ActionFooter backHref={routes.newPatient} nextLabel={t('continuePregnancy')} onNext={onNext} />
     </section>
   );
 }
 
 function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { fieldErrors: Partial<Record<RequiredField, string>>; form: ManualRegistrationForm; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onNext: () => void }) {
+  const t = useTranslations('registration');
   const gestationalProgress = `${Math.min(Number(form.gestationalAge) || 0, 40) * 2.5}%`;
 
   function toggleEmergencySign(label: string) {
@@ -481,23 +488,23 @@ function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { 
   }
 
   return (
-    <section className={styles.manualCard} aria-label="Pregnancy data form">
+    <section className={styles.manualCard} aria-label={t('pregnancyForm')}>
       <div className={styles.manualFormBody}>
-        <FormSection icon="user" title="I. PREGNANCY IDENTITY">
+        <FormSection icon="user" title={t('pregnancyIdentity')}>
           <div className={styles.manualFormGrid}>
-            <ManualField label="LMP (Last Menstrual Period)" placeholder="Select date" type="date" value={form.lmp} onChange={(value) => onFieldChange('lmp', value)} />
-            <ManualField label="EDD (Estimated Due Date)" placeholder="Select date" type="date" value={form.edd} onChange={(value) => onFieldChange('edd', value)} />
+            <ManualField label={t('lmp')} placeholder={t('selectDate')} type="date" value={form.lmp} onChange={(value) => onFieldChange('lmp', value)} />
+            <ManualField label={t('edd')} placeholder={t('selectDate')} type="date" value={form.edd} onChange={(value) => onFieldChange('edd', value)} />
             <div className={styles.wideManualField}>
-              <div className={styles.gestationHeader}><span>Current Gestational Age</span><strong>{form.gestationalAge || '0'} Weeks</strong></div>
-              <input className={styles.manualInput} placeholder="Auto-calculated from LMP or EDD" readOnly value={form.gestationalAge} />
+              <div className={styles.gestationHeader}><span>{t('currentGestAge')}</span><strong>{form.gestationalAge || '0'} {t('weeks')}</strong></div>
+              <input className={styles.manualInput} placeholder={t('autoGestAge')} readOnly value={form.gestationalAge} />
               <div className={styles.gestationTrack}><span style={{ width: gestationalProgress }} /></div>
-              <div className={styles.gestationScale}><small>1 Week</small><small>20 Weeks</small><small>40 Weeks</small></div>
+              <div className={styles.gestationScale}><small>{t('week1')}</small><small>{t('week20')}</small><small>{t('week40')}</small></div>
             </div>
-            <ManualField error={fieldErrors.ancVisit} label="Last ANC Visit *" placeholder="Select ANC visit" select options={ancVisitOptions} value={form.ancVisit} onChange={(value) => onFieldChange('ancVisit', value)} />
+            <ManualField error={fieldErrors.ancVisit} label={t('lastAncRequired')} placeholder={t('selectAnc')} select options={ancVisitOptions} value={form.ancVisit} onChange={(value) => onFieldChange('ancVisit', value)} />
           </div>
         </FormSection>
 
-        <FormSection icon="clipboard" title="II. PREGNANCY HISTORY">
+        <FormSection icon="clipboard" title={t('pregnancyHistory')}>
           <div className={styles.gpaGrid}>
             <ManualField label="G (Gravida)" placeholder="0" value={form.gravida} onChange={(value) => onFieldChange('gravida', value)} />
             <ManualField label="P (Para)" placeholder="0" value={form.para} onChange={(value) => onFieldChange('para', value)} />
@@ -505,20 +512,20 @@ function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { 
           </div>
         </FormSection>
 
-        <FormSection icon="stethoscope" title="III. TODAY\'S EXAMINATION (MANUAL INPUT)">
+        <FormSection icon="stethoscope" title={t('todayExamManual')}>
           <div className={styles.manualFormGrid}>
-            <ManualField error={fieldErrors.visitReason} label="Reason for Today’s Visit *" placeholder="Select reason..." select options={['ANC routine', 'Complaint', 'Follow-up', 'Emergency']} value={form.visitReason} onChange={(value) => onFieldChange('visitReason', value)} />
+            <ManualField error={fieldErrors.visitReason} label={t('visitReasonRequired')} placeholder={t('selectReason')} select options={['ANC routine', 'Complaint', 'Follow-up', 'Emergency']} value={form.visitReason} onChange={(value) => onFieldChange('visitReason', value)} />
             <div className={`${styles.manualField} ${fieldErrors.pregnancyType ? styles.invalidManualField : ''}`}>
-              <span className={styles.manualLabel}>Pregnancy Type *</span>
-              <div className={styles.radioRow}><label><input checked={form.pregnancyType === 'Single'} name="pregnancyType" type="radio" onChange={() => onFieldChange('pregnancyType', 'Single')} /> Single</label><label><input checked={form.pregnancyType === 'Multiple'} name="pregnancyType" type="radio" onChange={() => onFieldChange('pregnancyType', 'Multiple')} /> Multiple</label></div>
+              <span className={styles.manualLabel}>{t('pregnancyTypeRequired')}</span>
+              <div className={styles.radioRow}><label><input checked={form.pregnancyType === 'Single'} name="pregnancyType" type="radio" onChange={() => onFieldChange('pregnancyType', 'Single')} /> {t('single')}</label><label><input checked={form.pregnancyType === 'Multiple'} name="pregnancyType" type="radio" onChange={() => onFieldChange('pregnancyType', 'Multiple')} /> {t('multiple')}</label></div>
               {fieldErrors.pregnancyType ? <span className={styles.manualFieldError}>{fieldErrors.pregnancyType}</span> : null}
             </div>
-            <ManualField label="Chief Complaint" placeholder="Describe any complaints if any..." textarea wide value={form.chiefComplaint} onChange={(value) => onFieldChange('chiefComplaint', value)} />
+            <ManualField label={t('chiefComplaint')} placeholder={t('chiefComplaintPlaceholder')} textarea wide value={form.chiefComplaint} onChange={(value) => onFieldChange('chiefComplaint', value)} />
             <div className={`${styles.wideManualField} ${fieldErrors.emergencySigns ? styles.invalidManualField : ''}`}>
-              <span className={styles.manualLabel}>Emergency Signs Checklist *</span>
+              <span className={styles.manualLabel}>{t('emergencyChecklist')}</span>
               <div className={styles.flagGrid}>
                 {pregnancyRiskFlags.map((label) => <label key={label}><input checked={form.emergencySigns.includes(label)} type="checkbox" onChange={() => toggleEmergencySign(label)} /> {label}</label>)}
-                <label><input checked={form.emergencySigns.includes(noEmergencySignsLabel)} type="checkbox" onChange={() => toggleEmergencySign(noEmergencySignsLabel)} /> {noEmergencySignsLabel}</label>
+                <label><input checked={form.emergencySigns.includes(noEmergencySignsLabel)} type="checkbox" onChange={() => toggleEmergencySign(noEmergencySignsLabel)} /> {t('noSymptomsAbove')}</label>
               </div>
               {fieldErrors.emergencySigns ? <span className={styles.manualFieldError}>{fieldErrors.emergencySigns}</span> : null}
             </div>
@@ -526,35 +533,36 @@ function PregnancyPanel({ fieldErrors, form, onBack, onFieldChange, onNext }: { 
         </FormSection>
       </div>
 
-      <ActionFooter backLabel="Back to Personal Data" nextLabel="Continue to Screening & Risk" onBack={onBack} onNext={onNext} />
+      <ActionFooter backLabel={t('backPersonal')} nextLabel={t('continueScreening')} onBack={onBack} onNext={onNext} />
     </section>
   );
 }
 
 function ScreeningPanel({ form, isSubmitting, onBack, onFieldChange, onSubmit }: { form: ManualRegistrationForm; isSubmitting: boolean; onBack: () => void; onFieldChange: <K extends keyof ManualRegistrationForm>(key: K, value: ManualRegistrationForm[K]) => void; onSubmit: () => void }) {
+  const t = useTranslations('registration');
   const detectedRisks = autoDetectedRisks(form);
   const riskSummary = riskSummaryItems(form);
   const riskLevel = calculatedRiskLevel(form);
   const bmiValue = bmi(form.weight, form.height);
   const feverDetected = Number(form.temperature) >= 38;
   return (
-    <section className={styles.manualCard} aria-label="Screening and risk form">
+    <section className={styles.manualCard} aria-label={t('screeningRiskForm')}>
       <div className={styles.screeningLayout}>
         <div className={styles.screeningMain}>
-          <FormSection icon="activity" title="Vital Signs">
+          <FormSection icon="activity" title={t('vitalSigns')}>
             <div className={`${styles.manualFormGrid} ${styles.vitalGrid}`}>
-              <ManualField label="Blood Pressure (mmHg) *" placeholder="145 / 95" alert={Boolean(systolicPressure(form.bloodPressure) && Number(systolicPressure(form.bloodPressure)) >= 140)} value={form.bloodPressure} onChange={(value) => onFieldChange('bloodPressure', value)} />
-              <ManualField label="Weight (kg)" placeholder="72" value={form.weight} onChange={(value) => onFieldChange('weight', value)} />
-              <ManualField label="Height (cm)" placeholder="158" value={form.height} onChange={(value) => onFieldChange('height', value)} />
-              <div className={styles.bmiCard}><strong>BMI Status</strong><b>{bmiValue ? bmiValue.toFixed(1) : '-'} kg/m2</b><small>{bmiStatus(bmiValue)}</small></div>
-              <ManualField label="MUAC (cm)" placeholder="cm" value={form.muac} onChange={(value) => onFieldChange('muac', value)} />
-              <ManualField label="Pulse Rate (bpm)" placeholder="bpm" value={form.pulse} onChange={(value) => onFieldChange('pulse', value)} />
-              <ManualField label="Body Temperature (°C)" placeholder="38.2" error={feverDetected ? 'Fever detected' : undefined} value={form.temperature} onChange={(value) => onFieldChange('temperature', value)} />
-              <ManualField label="Fetal Heart Rate (bpm)" placeholder="Optional" value={form.fetalHeartRate} onChange={(value) => onFieldChange('fetalHeartRate', value)} />
+              <ManualField label={t('bloodPressureRequired')} placeholder="145 / 95" alert={Boolean(systolicPressure(form.bloodPressure) && Number(systolicPressure(form.bloodPressure)) >= 140)} value={form.bloodPressure} onChange={(value) => onFieldChange('bloodPressure', value)} />
+              <ManualField label={t('weight')} placeholder="72" value={form.weight} onChange={(value) => onFieldChange('weight', value)} />
+              <ManualField label={t('height')} placeholder="158" value={form.height} onChange={(value) => onFieldChange('height', value)} />
+              <div className={styles.bmiCard}><strong>{t('bmiStatus')}</strong><b>{bmiValue ? bmiValue.toFixed(1) : '-'} kg/m2</b><small>{bmiStatus(bmiValue)}</small></div>
+              <ManualField label={t('muac')} placeholder="cm" value={form.muac} onChange={(value) => onFieldChange('muac', value)} />
+              <ManualField label={t('pulseRate')} placeholder="bpm" value={form.pulse} onChange={(value) => onFieldChange('pulse', value)} />
+              <ManualField label={t('bodyTemperature')} placeholder="38.2" error={feverDetected ? t('feverDetected') : undefined} value={form.temperature} onChange={(value) => onFieldChange('temperature', value)} />
+              <ManualField label={t('fetalHeartRate')} placeholder={t('optional')} value={form.fetalHeartRate} onChange={(value) => onFieldChange('fetalHeartRate', value)} />
             </div>
           </FormSection>
 
-          <FormSection icon="alert" title="Pregnancy Risk Factors">
+          <FormSection icon="alert" title={t('pregnancyRiskFactors')}>
             <div className={styles.factorGrid}>
               {screeningFactors.map((factor) => (
                 <label className={styles.factorCard} key={factor.label}>
@@ -565,32 +573,32 @@ function ScreeningPanel({ form, isSubmitting, onBack, onFieldChange, onSubmit }:
               ))}
             </div>
             <div className={styles.detectedRisks}>
-              <strong>AUTO-DETECTED RISKS</strong>
-              <div>{detectedRisks.length ? detectedRisks.map((risk) => <span key={risk}>{risk}</span>) : <span>No detected risk yet</span>}</div>
+              <strong>{t('autoDetectedRisks')}</strong>
+              <div>{detectedRisks.length ? detectedRisks.map((risk) => <span key={risk}>{risk}</span>) : <span>{t('noDetectedRisk')}</span>}</div>
             </div>
           </FormSection>
         </div>
 
         <aside className={styles.screeningAside}>
           <div className={styles.sideCard}>
-            <label className={styles.manualLabel}>Responsible Doctor</label>
-            <input className={styles.manualInput} placeholder="Responsible clinician" readOnly value={form.responsibleDoctor} />
+            <label className={styles.manualLabel}>{t('responsibleDoctor')}</label>
+            <input className={styles.manualInput} placeholder={t('responsibleClinician')} readOnly value={form.responsibleDoctor} />
           </div>
-          <div className={styles.priorityCard}><small>PRIORITY SUGGESTION</small><strong>PRIORITY: {riskLevel === 'HIGH' ? 'HIGH' : riskLevel === 'MEDIUM' ? 'MEDIUM' : 'ROUTINE'}</strong><AppIcon name="alert" width={18} height={18} /></div>
+          <div className={styles.priorityCard}><small>{t('prioritySuggestion')}</small><strong>{t('priority', { level: riskLevel === 'HIGH' ? 'HIGH' : riskLevel === 'MEDIUM' ? 'MEDIUM' : 'ROUTINE' })}</strong><AppIcon name="alert" width={18} height={18} /></div>
           <div className={styles.riskSummaryCard}>
-            <strong><AppIcon name="alert" width={16} height={16} /> RISK SUMMARY</strong>
-            <ol>{riskSummary.length ? riskSummary.map((risk) => <li key={risk}>{risk}</li>) : <li>No risk factor selected or detected.</li>}</ol>
-            <p>{riskLevel === 'HIGH' ? 'System recommends close observation or referral if condition worsens within 24 hours.' : 'System recommends routine ANC monitoring based on current data.'}</p>
+            <strong><AppIcon name="alert" width={16} height={16} /> {t('riskSummary')}</strong>
+            <ol>{riskSummary.length ? riskSummary.map((risk) => <li key={risk}>{risk}</li>) : <li>{t('noRiskSelected')}</li>}</ol>
+            <p>{riskLevel === 'HIGH' ? t('highRiskAdvice') : t('routineAdvice')}</p>
           </div>
           <div className={styles.sideCard}>
-            <h3>Routine Medication</h3>
+            <h3>{t('routineMedication')}</h3>
             {['Folic Acid', 'Iron Tablets', 'Anti-hypertensive', 'Anti-diabetes'].map((label) => <label className={styles.medCheck} key={label}><input type="checkbox" checked={form.routineMedication.includes(label)} onChange={() => onFieldChange('routineMedication', toggleItem(form.routineMedication, label))} /> {label}</label>)}
-            <label className={styles.manualLabel}>Additional Notes<textarea placeholder="Write down any complaints or specific instructions..." value={form.clinicalNotes} onChange={(event) => onFieldChange('clinicalNotes', event.target.value)} /></label>
+            <label className={styles.manualLabel}>{t('note')}<textarea placeholder={t('notePlaceholder')} value={form.clinicalNotes} onChange={(event) => onFieldChange('clinicalNotes', event.target.value)} /></label>
           </div>
         </aside>
       </div>
 
-      <ActionFooter backLabel="Back to Pregnancy Data" nextLabel={isSubmitting ? 'Submitting...' : 'Submit'} onBack={onBack} onNext={onSubmit} disabled={isSubmitting} />
+      <ActionFooter backLabel={t('backPregnancy')} nextLabel={isSubmitting ? t('submitting') : t('submit')} onBack={onBack} onNext={onSubmit} disabled={isSubmitting} />
     </section>
   );
 }

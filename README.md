@@ -171,6 +171,8 @@ File: `apps/api/.env`
 | `AI_SERVICE_BASE_URL` | No | `https://azrilfahmiardi-maternalink-ai.hf.space` | Hosted MaternaLink AI base URL. |
 | `AI_SERVICE_TIMEOUT_MS` | No | `30000` | Timeout for health, Layer 0, and Layer 1 AI calls. |
 | `AI_LAYER2_TIMEOUT_MS` | No | `600000` | Timeout for long Layer 2 allocation calls. |
+| `AI_MASTER_AUTO_SYNC` | No | `true` | Enables automatic hosted AI master-data sync on API startup and schedule. Set to `false` to disable. |
+| `AI_MASTER_SYNC_INTERVAL_MS` | No | `86400000` | Interval for automatic hosted AI master-data sync. |
 | `SPEECH_STT_SERVICE_URL` | No | `http://localhost:8002` | Python speech-to-text service used for voice examination recording. |
 | `SPEECH_STT_TIMEOUT_MS` | No | `120000` | Timeout for speech-to-text transcription calls. |
 

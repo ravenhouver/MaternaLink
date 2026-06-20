@@ -19,6 +19,10 @@ export class ForecastController {
   @ApiResponse({ status: 201, description: 'Forecast run created with prediction rows' })
   @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('run') run(@Body() body: RunForecastDto) { return this.service.run(body); }
+  @ApiOperation({ summary: 'Run hosted AI stock forecast' })
+  @ApiResponse({ status: 201, description: 'Hosted AI forecast run created with prediction rows' })
+  @Roles(UserRole.BIDAN_PUSKESMAS)
+  @Post('ai/run') runAi(@Body() body: RunForecastDto, @Req() request: { user: CurrentUser }) { return this.service.runAiForCurrentUser(body, request.user); }
   @ApiOperation({ summary: 'Get prediction calendar data' })
   @ApiResponse({ status: 200, description: 'Prediction calendar data returned' })
   @Get('calendar') getCalendar(@Query() query: ForecastCalendarQueryDto, @Req() request: { user: CurrentUser }) { return this.service.getCalendar(query, request.user); }

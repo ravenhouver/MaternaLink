@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
@@ -36,6 +37,7 @@ function getChartRows(rows: StokRow[], mode: ChartMode) {
 }
 
 export function MedicationDetailContent() {
+  const t = useTranslations('medicine');
   const params = useParams<{ medicine?: string }>();
   const [medicine, setMedicine] = useState<ObatRecord | null>(null);
   const [stockRows, setStockRows] = useState<StokRow[]>([]);
@@ -52,7 +54,7 @@ export function MedicationDetailContent() {
     async function loadDetail() {
       setError(null);
       const currentUser = await getCurrentUser();
-      if (!currentUser?.puskesmasId) throw new Error('Akun ini belum terhubung ke puskesmas.');
+      if (!currentUser?.puskesmasId) throw new Error(t('notLinked'));
       const [medicines, stocks] = await Promise.all([getObat(), getStokRows({ puskesmasId: currentUser.puskesmasId })]);
       if (!mounted) return;
         const slug = params?.medicine ?? '';
@@ -64,11 +66,11 @@ export function MedicationDetailContent() {
       setStockRows(nextRows);
       setDraftStock(String(latest?.stokSaatIni ?? 0));
       setDraftUsage(String(latest?.konsumsiPeriode ?? 0));
-      if (!selected) setError('Obat tidak ditemukan untuk URL ini.');
+      if (!selected) setError(t('detailMissing'));
     }
 
     loadDetail()
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Gagal memuat detail obat'));
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : t('detailLoadError')));
     return () => { mounted = false; };
   }, [params?.medicine]);
 
@@ -88,21 +90,21 @@ export function MedicationDetailContent() {
   }));
   const historyRows = (showAllHistory ? stockRows : stockRows.slice(0, 5)).map((row) => ({
     date: new Date(row.periode).toLocaleDateString('id-ID'),
-    activity: row.konsumsiPeriode > 0 ? 'Update stok dan pemakaian' : 'Update stok',
-    amount: `${row.stokSaatIni} ${row.obat?.satuan ?? medicine?.satuan ?? 'unit'} tersisa / ${row.konsumsiPeriode} terpakai`,
+    activity: row.konsumsiPeriode > 0 ? t('updateAndUsage') : t('updateOnly'),
+    amount: t('remainingUsage', { stock: row.stokSaatIni, unit: row.obat?.satuan ?? medicine?.satuan ?? 'unit', usage: row.konsumsiPeriode }),
     person: row.puskesmas?.nama ?? row.puskesmasId,
-    status: row.konsumsiPeriode > 0 ? 'Dengan pemakaian' : 'Stok tersimpan',
+    status: row.konsumsiPeriode > 0 ? t('withUsage') : t('storedStock'),
     type: row.konsumsiPeriode > 0 ? 'out' : 'in',
   }));
 
-  const updatedLabel = latestStock ? new Date(latestStock.periode).toLocaleDateString('id-ID') : 'Belum ada update stok';
+  const updatedLabel = latestStock ? new Date(latestStock.periode).toLocaleDateString('id-ID') : t('noStockUpdate');
 
   async function saveCurrentPeriodStock() {
     if (!medicine || !puskesmasId) return;
     const nextStock = Number(draftStock);
     const nextUsage = Number(draftUsage);
     if (!Number.isFinite(nextStock) || !Number.isFinite(nextUsage) || nextStock < 0 || nextUsage < 0) {
-      setError('Stok dan pemakaian harus angka valid.');
+      setError(t('invalidUsage'));
       return;
     }
     setError(null);
@@ -110,9 +112,9 @@ export function MedicationDetailContent() {
       const saved = await upsertStok({ puskesmasId, obatId: medicine.id, periode: getCurrentPeriod(), stokAwal: nextStock + nextUsage, konsumsiPeriode: nextUsage, stokSaatIni: nextStock });
       const nextRows = [saved, ...stockRows.filter((row) => row.id !== saved.id)].sort((left, right) => getPeriodTime(right) - getPeriodTime(left));
       setStockRows(nextRows);
-      setNotice(`Stok ${medicine.nama} periode berjalan berhasil diperbarui.`);
+      setNotice(t('detailSaved', { name: medicine.nama }));
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan stok obat');
+      setError(saveError instanceof Error ? saveError.message : t('saveDetailError'));
     }
   }
 
@@ -121,44 +123,44 @@ export function MedicationDetailContent() {
       <header className={styles.detailHeader}>
         <div>
           <nav className={styles.detailBreadcrumb} aria-label="Breadcrumb">
-            <Link href={routes.medicineNeeds}>Medicine Needs</Link>
+            <Link href={routes.medicineNeeds}>{t('detailBreadcrumb')}</Link>
             <AppIcon name="chevronRight" width={14} height={14} />
-            <span>{medicine?.nama ?? 'Medication'}</span>
+            <span>{medicine?.nama ?? t('medicationFallback')}</span>
           </nav>
-          <h1>Medication Detail: {medicine?.nama ?? 'Loading...'}</h1>
+          <h1>{t('detailTitle', { name: medicine?.nama ?? t('loading') })}</h1>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}>
           <AppIcon name="printer" width={18} height={18} />
-          Print Report
+          {t('printReport')}
         </button>
       </header>
 
-      <section className={styles.statsGrid} aria-label="Medication stats">
-        <StatCard title="Current Stock" value={String(currentStock)} unit={medicine?.satuan ?? 'unit'} tone={currentStock <= 5 ? 'warning' : 'safe'} icon="package" note={currentStock <= 5 ? 'Critical' : 'Safe'} />
-        <StatCard title="Usage (Current Period)" value={String(usage)} unit={medicine?.satuan ?? 'unit'} tone="usage" icon="activity" note="From stock input" />
-        <StatCard title="Estimated Stock Empty" value={emptyDays ? String(emptyDays) : '-'} unit="Days" tone="warning" icon="clock" note="Forecast" />
+      <section className={styles.statsGrid} aria-label={t('medicationStats')}>
+        <StatCard title={t('currentStock')} value={String(currentStock)} unit={medicine?.satuan ?? 'unit'} tone={currentStock <= 5 ? 'warning' : 'safe'} icon="package" note={currentStock <= 5 ? t('critical') : t('safe')} />
+        <StatCard title={t('usageCurrent')} value={String(usage)} unit={medicine?.satuan ?? 'unit'} tone="usage" icon="activity" note={t('fromStockInput')} />
+        <StatCard title={t('estimatedStockEmpty')} value={emptyDays ? String(emptyDays) : '-'} unit={t('daysCount', { count: emptyDays || 0 }).replace(String(emptyDays || 0), '').trim() || 'Days'} tone="warning" icon="clock" note={t('forecast')} />
       </section>
 
       {error ? <p className={styles.medicineError}>{error}</p> : null}
       {notice ? <p role="status" className={styles.medicineNotice}>{notice}</p> : null}
 
-      <section className={styles.inputCard} aria-label="Update stok periode berjalan">
+      <section className={styles.inputCard} aria-label={t('updateCurrentPeriod')}>
         <div className={styles.formGrid}>
           <label className={styles.fieldGroup}>
-            <span>Stok Saat Ini</span>
+            <span>{t('currentStockInput')}</span>
             <input value={draftStock} inputMode="numeric" disabled={!medicine} onChange={(event) => setDraftStock(event.target.value)} />
           </label>
           <label className={styles.fieldGroup}>
-            <span>Pemakaian Periode Ini</span>
+            <span>{t('currentUsageInput')}</span>
             <input value={draftUsage} inputMode="numeric" disabled={!medicine} onChange={(event) => setDraftUsage(event.target.value)} />
           </label>
           <label className={styles.fieldGroup}>
-            <span>Periode</span>
+            <span>{t('period')}</span>
             <input value={getCurrentPeriod()} disabled />
           </label>
           <button type="button" className={styles.addButton} disabled={!medicine || !puskesmasId} onClick={() => void saveCurrentPeriodStock()}>
             <AppIcon name="save" width={18} height={18} />
-            Simpan Stok
+            {t('saveCurrentStock')}
           </button>
         </div>
       </section>
@@ -166,41 +168,41 @@ export function MedicationDetailContent() {
       <section className={styles.detailGrid}>
         <div className={styles.infoStack}>
           <section className={styles.detailCard}>
-            <header><h2>General Information</h2><AppIcon name="info" width={18} height={18} /></header>
+            <header><h2>{t('generalInformation')}</h2><AppIcon name="info" width={18} height={18} /></header>
             <dl className={styles.infoGrid}>
-              <div><dt>Medication Name</dt><dd>{medicine?.nama ?? '-'}</dd></div>
-              <div><dt>Type</dt><dd>{medicine?.tipe ?? '-'}</dd></div>
-              <div><dt>Unit</dt><dd>{medicine?.satuan ?? '-'}</dd></div>
-              <div><dt>Category</dt><dd>{medicine?.kategori ?? '-'}</dd></div>
-              <div><dt>Cold Chain</dt><dd>{medicine?.perluColdChain ? 'Required' : 'Not required'}</dd></div>
+              <div><dt>{t('medicationName')}</dt><dd>{medicine?.nama ?? '-'}</dd></div>
+              <div><dt>{t('type')}</dt><dd>{medicine?.tipe ?? '-'}</dd></div>
+              <div><dt>{t('unit')}</dt><dd>{medicine?.satuan ?? '-'}</dd></div>
+              <div><dt>{t('category')}</dt><dd>{medicine?.kategori ?? '-'}</dd></div>
+              <div><dt>{t('coldChain')}</dt><dd>{medicine?.perluColdChain ? t('requiredValue') : t('notRequired')}</dd></div>
             </dl>
           </section>
 
           <section className={styles.predictionCard}>
-            <div className={styles.predictionTitle}><span>AI Analysis</span><h2>Stock Prediction</h2></div>
-            <p>Prediction: current stock is {currentStock} {medicine?.satuan ?? 'unit'} with period usage {usage}. {emptyDays ? `Estimated stock coverage is ${emptyDays} days.` : 'Usage trend is not available yet.'}</p>
-            <footer><span>Updated {updatedLabel}</span><a href="#stock-history">Lihat riwayat stok <AppIcon name="chevronRight" width={14} height={14} /></a></footer>
+            <div className={styles.predictionTitle}><span>{t('aiAnalysis')}</span><h2>{t('stockPrediction')}</h2></div>
+            <p>{t('predictionText', { stock: currentStock, unit: medicine?.satuan ?? 'unit', usage, coverage: emptyDays ? t('coverageText', { days: emptyDays }) : t('noTrend') })}</p>
+            <footer><span>{t('updated', { date: updatedLabel })}</span><a href="#stock-history">{t('viewStockHistory')} <AppIcon name="chevronRight" width={14} height={14} /></a></footer>
           </section>
         </div>
 
         <section className={styles.chartCard}>
-          <header><h2>Usage Chart</h2><select className={styles.chartSelect} value={chartMode} onChange={(event) => setChartMode(event.target.value as ChartMode)}><option value="recent6">6 periode terakhir</option><option value="recent12">12 periode terakhir</option><option value="all">Semua periode</option></select></header>
-          <div className={styles.chartPlot} aria-label="Usage bar chart">
-            {chartPoints.length === 0 ? <p className={styles.chartEmpty}>Belum ada data pemakaian.</p> : null}
+          <header><h2>{t('usageChart')}</h2><select className={styles.chartSelect} value={chartMode} onChange={(event) => setChartMode(event.target.value as ChartMode)}><option value="recent6">{t('recent6')}</option><option value="recent12">{t('recent12')}</option><option value="all">{t('allPeriods')}</option></select></header>
+          <div className={styles.chartPlot} aria-label={t('usageBarChart')}>
+            {chartPoints.length === 0 ? <p className={styles.chartEmpty}>{t('noUsageRows')}</p> : null}
             {chartPoints.map((point) => <span key={point.key} title={`${point.label}: ${point.usage}`} className={point.isHigh ? styles.highBar : ''} style={{ height: point.height }} />)}
           </div>
           <div className={styles.chartAxis}>{chartPoints.map((point) => <span key={point.key}>{point.label}</span>)}</div>
-          <div className={styles.chartLegend}><span><i />High Usage</span><span><i />Average</span></div>
+          <div className={styles.chartLegend}><span><i />{t('highUsage')}</span><span><i />{t('average')}</span></div>
         </section>
       </section>
 
       <section className={styles.historyCard} id="stock-history">
-        <header><h2>Stock Update History</h2><button type="button" onClick={() => setShowAllHistory((current) => !current)}>{showAllHistory ? 'Show Recent History' : 'View All History'}</button></header>
+        <header><h2>{t('stockHistory')}</h2><button type="button" onClick={() => setShowAllHistory((current) => !current)}>{showAllHistory ? t('showRecentHistory') : t('viewAllHistory')}</button></header>
         <div className={styles.historyScroll}>
           <table className={styles.historyTable}>
-            <thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th>Personnel</th><th>Status</th></tr></thead>
+            <thead><tr><th>{t('date')}</th><th>{t('activity')}</th><th>{t('amountColumn')}</th><th>{t('personnel')}</th><th>{t('status')}</th></tr></thead>
             <tbody>
-              {historyRows.length === 0 ? <tr><td colSpan={5}>Belum ada riwayat stok.</td></tr> : null}
+              {historyRows.length === 0 ? <tr><td colSpan={5}>{t('noHistory')}</td></tr> : null}
               {historyRows.map((row) => (
                 <tr key={`${row.date}-${row.activity}`}>
                   <td>{row.date}</td>
@@ -217,7 +219,7 @@ export function MedicationDetailContent() {
 
       <footer className={styles.detailFooter}>
         <div>
-          <Link href={routes.medicineNeeds} className={styles.backButton}>Back</Link>
+          <Link href={routes.medicineNeeds} className={styles.backButton}>{t('back')}</Link>
         </div>
       </footer>
     </PageContainer>

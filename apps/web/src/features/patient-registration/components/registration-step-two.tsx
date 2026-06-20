@@ -1,17 +1,22 @@
+ 'use client';
+
 import Typography from 'antd/es/typography';
+import { useTranslations } from 'next-intl';
 import { FormField } from '@/components/ui/form-field';
 import { AppIcon } from '@/components/ui/app-icon';
 import styles from '../patient-registration.module.css';
 
 export function RegistrationStepTwo() {
+  const t = useTranslations('registration');
+
   return (
-    <section className={styles.pregnancyStepFields} aria-label="Form data kehamilan">
+    <section className={styles.pregnancyStepFields} aria-label={t('pregnancyForm')}>
       <div className={styles.pregnancyAgeSection}>
         <div className={styles.pregnancyAgeHeader}>
-          <Typography.Text>Usia kehamilan saat ini (minggu)</Typography.Text>
+          <Typography.Text>{t('currentPregnancyAge')}</Typography.Text>
           <output className={styles.pregnancyWeekValue}>
             <strong>24</strong>
-            <span>Minggu</span>
+            <span>{t('weeks')}</span>
           </output>
         </div>
         <div className={styles.pregnancySlider} aria-hidden="true">
@@ -19,26 +24,26 @@ export function RegistrationStepTwo() {
           <span className={styles.pregnancySliderThumb} />
         </div>
         <div className={styles.pregnancyScale}>
-          <span>1 Minggu</span>
-          <span>Trimester 1</span>
-          <span>Trimester 2</span>
-          <span>Trimester 3</span>
-          <span>42 Minggu</span>
+          <span>{t('week1')}</span>
+          <span>{t('trimester1')}</span>
+          <span>{t('trimester2')}</span>
+          <span>{t('trimester3')}</span>
+          <span>{t('week42')}</span>
         </div>
       </div>
 
       <div className={styles.pregnancyDataGrid}>
-        <FormField label="Hari Perkiraan Lahir (HPL)" hint="Dihitung otomatis berdasarkan HPHT">
+        <FormField label={t('dueDate')} hint={t('dueHint')}>
           <span className={styles.displayInput}>
             <AppIcon name="calendar" width={20} height={20} />
             <input type="text" value="15 Januari 2026" readOnly />
           </span>
         </FormField>
 
-        <FormField label="Kunjungan ANC Terakhir">
+        <FormField label={t('lastAnc')}>
           <span className={[styles.displayInput, styles.selectLike].join(' ')}>
             <AppIcon name="package" width={20} height={20} />
-            <select defaultValue="K3" aria-label="Kunjungan ANC Terakhir">
+            <select defaultValue="K3" aria-label={t('lastAnc')}>
               <option>K1</option>
               <option>K2</option>
               <option>K3</option>
@@ -49,13 +54,11 @@ export function RegistrationStepTwo() {
         </FormField>
       </div>
 
-      <aside className={styles.trimesterStatusCard} aria-label="Status Trimester">
+      <aside className={styles.trimesterStatusCard} aria-label={t('trimesterStatus')}>
         <AppIcon name="info" width={28} height={28} />
         <div>
-          <Typography.Title level={3}>Status Trimester</Typography.Title>
-          <Typography.Paragraph>
-            Pasien saat ini berada di akhir trimester kedua. Disarankan untuk memantau tekanan darah dan detak jantung janin secara rutin setiap kunjungan.
-          </Typography.Paragraph>
+          <Typography.Title level={3}>{t('trimesterStatus')}</Typography.Title>
+          <Typography.Paragraph>{t('trimesterBody')}</Typography.Paragraph>
         </div>
       </aside>
     </section>

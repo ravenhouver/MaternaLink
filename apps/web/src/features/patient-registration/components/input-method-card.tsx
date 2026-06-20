@@ -1,5 +1,8 @@
+ 'use client';
+
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
+import { useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
 import type { InputMethod } from '../registration-data';
 import styles from '../patient-registration.module.css';
@@ -10,6 +13,8 @@ type InputMethodCardProps = {
 };
 
 export function InputMethodCard({ method, onSelectManual }: InputMethodCardProps) {
+  const t = useTranslations('registration');
+
   return (
     <article className={[styles.methodCard, method.featured ? styles.featuredMethod : ''].filter(Boolean).join(' ')}>
       {method.featured || method.visual ? <span className={styles.methodOrb} /> : null}
@@ -19,7 +24,7 @@ export function InputMethodCard({ method, onSelectManual }: InputMethodCardProps
       <div className={styles.methodCopy}>
         <div className={styles.methodTitleRow}>
           <h3>{method.title}</h3>
-          {method.featured ? <span className={styles.popularPill}>POPULER</span> : null}
+          {method.featured ? <span className={styles.popularPill}>{t('popular')}</span> : null}
         </div>
         <Typography.Text className={styles.methodSubtitle}>{method.subtitle}</Typography.Text>
         <Typography.Paragraph>{method.description}</Typography.Paragraph>
