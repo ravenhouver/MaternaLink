@@ -183,6 +183,19 @@ jobs:
 
           printf '%s' "${GHCR_TOKEN}" | podman login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
 
+          ${COMPOSE} -f podman-compose.prod.yml down --remove-orphans || true
+          for port in 41873 41874 41875; do
+            CONTAINERS="$(podman ps -a --format '{{.ID}} {{.Ports}}' | awk -v pattern=":${port}->" '$0 ~ pattern { print $1 }')"
+            if [ -n "${CONTAINERS}" ]; then
+              podman rm -f ${CONTAINERS}
+            fi
+          done
+
+          APP_IMAGES="$(podman images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | awk '$1 ~ /ghcr.io\/ravenhouver\/(maternalink|furap-jogja)-/ { print $2 }' | sort -u)"
+          if [ -n "${APP_IMAGES}" ]; then
+            podman rmi -f ${APP_IMAGES} || true
+          fi
+
           podman container prune -f || true
           podman image prune -af || true
           podman system prune -af || true
