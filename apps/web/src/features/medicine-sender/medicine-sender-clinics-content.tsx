@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
@@ -62,6 +62,7 @@ function ClinicsSidebar({ detail }: { detail: boolean }) {
 }
 
 function ClinicsTopbar({ detail }: { detail: boolean }) {
+  const [message, setMessage] = useState<string | null>(null);
   return (
     <header className={styles.clinicsTopbar}>
       <div className={styles.clinicsCrumbs}>
@@ -73,19 +74,20 @@ function ClinicsTopbar({ detail }: { detail: boolean }) {
       </div>
       <div className={styles.clinicsTopbarActions}>
         <strong>Petugas IFK</strong>
-        <button type="button" aria-label="Notifikasi" disabled><AppIcon name="bell" width={18} height={18} /></button>
-        <button type="button" aria-label="Bantuan" disabled><AppIcon name="info" width={18} height={18} /></button>
+        <button type="button" aria-label="Notifikasi" onClick={() => setMessage('Notifikasi fasilitas muncul dari alert distribusi aktif.')}><AppIcon name="bell" width={18} height={18} /></button>
+        <button type="button" aria-label="Bantuan" onClick={() => setMessage('Gunakan filter risiko, buka detail fasilitas, atau export CSV untuk audit.')}><AppIcon name="info" width={18} height={18} /></button>
         <span className={styles.clinicsAvatar}><AppIcon name="clipboard" width={16} height={16} /></span>
       </div>
+      {message ? <p role="status">{message}</p> : null}
     </header>
   );
 }
 
-function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+function ClinicTable({ onPageChange, onRiskChange, onView, page, pageRows, risk, rows, totalPages }: { onPageChange: (page: number) => void; onRiskChange: (risk: ClinicRiskFilter) => void; onView: (clinic: ClinicRow) => void; page: number; pageRows: ClinicRow[]; risk: ClinicRiskFilter; rows: ClinicRow[]; totalPages: number }) {
   return (
     <div className={styles.clinicTableCard}>
       <div className={styles.clinicFilters}>
-        <button type="button" disabled><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
+        <label><AppIcon name="filter" width={16} height={16} />Filter <select value={risk} onChange={(event) => onRiskChange(event.target.value as ClinicRiskFilter)}><option value="ALL">All risk</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="routine">Routine</option></select></label>
       </div>
       <table className={styles.clinicTable}>
         <thead>
@@ -101,7 +103,7 @@ function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
           </tr>
         </thead>
         <tbody>
-          {rows.map((clinic) => (
+          {pageRows.map((clinic) => (
             <tr key={clinic.id}>
               <td>
                 <strong>{splitName(clinic.name).map((part, index) => <span key={`${clinic.id}-name-${index}`}>{part}</span>)}</strong>
@@ -121,26 +123,36 @@ function ClinicTable({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
               <td>
                 <span className={styles.clinicActions}>
                   <button type="button" aria-label={`Lihat ${clinic.name}`} onClick={() => onView(clinic)}><AppIcon name="eye" width={18} height={18} /></button>
-                  <button type="button" aria-label={`Menu ${clinic.name}`} disabled><AppIcon name="moreVertical" width={18} height={18} /></button>
+                  <button type="button" aria-label={`Menu ${clinic.name}`} onClick={() => onView(clinic)}><AppIcon name="moreVertical" width={18} height={18} /></button>
                 </span>
               </td>
             </tr>
           ))}
+          {pageRows.length === 0 ? <tr><td colSpan={8}>Belum ada fasilitas untuk filter ini.</td></tr> : null}
         </tbody>
       </table>
       <div className={styles.clinicPagination}>
-        <span>Showing {rows.length} health facilities</span>
+        <span>Showing {pageRows.length} of {rows.length} health facilities</span>
         <div>
-          <button type="button" aria-label="Halaman sebelumnya" disabled><AppIcon name="chevronLeft" width={14} height={14} /></button>
-          <button type="button" className={styles.currentPage}>1</button>
-          <button type="button" aria-label="Halaman berikutnya" disabled><AppIcon name="chevronRight" width={14} height={14} /></button>
+          <button type="button" aria-label="Halaman sebelumnya" disabled={page <= 1} onClick={() => onPageChange(page - 1)}><AppIcon name="chevronLeft" width={14} height={14} /></button>
+          <button type="button" className={styles.currentPage}>{page}</button>
+          <button type="button" aria-label="Halaman berikutnya" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}><AppIcon name="chevronRight" width={14} height={14} /></button>
         </div>
       </div>
     </div>
   );
 }
 
-function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+type ClinicRiskFilter = 'ALL' | ClinicRow['risk'];
+
+function ClinicsList({ onRefresh, onView, rows }: { onRefresh: () => void; onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
+  const [risk, setRisk] = useState<ClinicRiskFilter>('ALL');
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
+  const filteredRows = useMemo(() => risk === 'ALL' ? rows : rows.filter((row) => row.risk === risk), [risk, rows]);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
   const stats: Array<{ label: string; value: string; tone: string; delta?: string }> = [
     { label: 'Total Facilities', value: String(rows.length), tone: 'clinicStatBlue' },
     { label: 'Critical (Stockout)', value: String(rows.filter((row) => row.risk === 'critical').length), tone: 'clinicStatRed' },
@@ -158,7 +170,7 @@ function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
         </div>
         <div className={styles.clinicsHeaderActions}>
           <Button className={styles.clinicsGhostButton} icon={<AppIcon name="upload" width={16} height={16} />} onClick={() => downloadClinicCsv(rows)}>Export CSV</Button>
-          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="plus" width={16} height={16} />} disabled>Add Clinic</Button>
+          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="rotateCcw" width={16} height={16} />} onClick={onRefresh}>Refresh Registry</Button>
         </div>
       </section>
 
@@ -172,7 +184,7 @@ function ClinicsList({ onView, rows }: { onView: (clinic: ClinicRow) => void; ro
       </section>
 
       <section className={styles.clinicRegistry} aria-label="Registry filters and table">
-        <ClinicTable rows={rows} onView={onView} />
+        <ClinicTable rows={filteredRows} pageRows={pageRows} page={safePage} totalPages={totalPages} risk={risk} onRiskChange={(next) => { setRisk(next); setPage(1); }} onPageChange={setPage} onView={onView} />
       </section>
     </main>
   );
@@ -295,10 +307,14 @@ export function MedicineSenderClinicsContent() {
   const [selectedClinic, setSelectedClinic] = useState<ClinicRow | null>(null);
   const [rows, setRows] = useState<ClinicRow[]>([]);
 
-  useEffect(() => {
+  async function refreshRows() {
     getIfkFacilities()
       .then(setRows)
       .catch(() => setRows([]));
+  }
+
+  useEffect(() => {
+    void refreshRows();
   }, []);
 
   const selectedRecommendation = selectedClinic?.activeRecommendation ?? undefined;
@@ -309,7 +325,7 @@ export function MedicineSenderClinicsContent() {
       <ClinicsSidebar detail={Boolean(selectedClinic)} />
       <div className={styles.clinicsWorkspace}>
         <ClinicsTopbar detail={Boolean(selectedClinic)} />
-        {selectedClinic ? <ClinicDetail clinic={selectedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onView={setSelectedClinic} />}
+        {selectedClinic ? <ClinicDetail clinic={selectedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onRefresh={() => void refreshRows()} onView={setSelectedClinic} />}
       </div>
     </div>
   );

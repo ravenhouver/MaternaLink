@@ -754,6 +754,14 @@ export async function createExamination(payload: CreateExaminationPayload) {
   return apiFetch('/examinations', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Pemeriksaan berhasil disimpan', errorMessage: 'Gagal menyimpan pemeriksaan' });
 }
 
+export async function getExaminations(params?: { patientId?: string; puskesmasId?: string }): Promise<ExaminationRecord[]> {
+  const query = new URLSearchParams();
+  if (params?.patientId) query.set('patientId', params.patientId);
+  if (params?.puskesmasId) query.set('puskesmasId', params.puskesmasId);
+  const suffix = query.size ? `?${query.toString()}` : '';
+  return apiFetch(`/examinations${suffix}`);
+}
+
 export async function createAiExaminationDraft(payload: { complaint: string; period?: string }): Promise<AiExaminationDraft> {
   return apiFetch('/examinations/ai/draft', { method: 'POST', body: JSON.stringify(payload), successMessage: 'Draft AI pemeriksaan berhasil dibuat', errorMessage: 'Gagal membuat draft AI pemeriksaan' });
 }

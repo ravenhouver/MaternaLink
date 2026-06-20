@@ -43,6 +43,7 @@ export function PatientQueueContent() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   async function refreshRows() {
     setIsLoading(true);
@@ -84,6 +85,10 @@ export function PatientQueueContent() {
   }, [filters, rows, search]);
 
   const doctors = useMemo(() => Array.from(new Set(rows.map((row) => row.assignedDoctor).filter(Boolean))) as string[], [rows]);
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   async function handleCall(row: QueueRecord) {
     setError(null);
@@ -135,7 +140,7 @@ export function PatientQueueContent() {
             {t('filter')}
             <AppIcon name="chevronDown" width={16} height={16} />
           </button>
-          {isFilterOpen ? <QueueFilterDialog doctors={doctors} filters={filters} onApply={(next) => { setFilters(next); setIsFilterOpen(false); }} onReset={() => setFilters(defaultFilters)} /> : null}
+          {isFilterOpen ? <QueueFilterDialog doctors={doctors} filters={filters} onApply={(next) => { setFilters(next); setPage(1); setIsFilterOpen(false); }} onReset={() => { setFilters(defaultFilters); setPage(1); }} /> : null}
         </div>
       </section>
 
@@ -156,7 +161,7 @@ export function PatientQueueContent() {
             <tbody>
               {isLoading ? <tr><td colSpan={5}>{t('loadingQueue')}</td></tr> : null}
               {!isLoading && filteredRows.length === 0 ? <tr><td colSpan={5}>{t('noRows')}</td></tr> : null}
-              {filteredRows.map((row) => {
+              {pageRows.map((row) => {
                 const isHighRisk = row.pregnancy.riskLevel === 'HIGH';
                 return (
                   <tr className={row.status === 'EXAMINING' ? styles.highlightedRow : undefined} key={row.id}>
@@ -192,11 +197,11 @@ export function PatientQueueContent() {
           </table>
         </div>
         <footer className={styles.paginationFooter}>
-          <p>{t('showingQueue', { shown: filteredRows.length, total: rows.length })}</p>
+          <p>{t('showingQueue', { shown: pageRows.length, total: filteredRows.length })}</p>
           <div className={styles.paginationControls}>
-            <button type="button" aria-label={t('previousPage')} disabled><AppIcon name="chevronLeft" width={18} height={18} /></button>
-            <button type="button" aria-current="page">1</button>
-            <button type="button" aria-label={t('nextPage')} disabled><AppIcon name="chevronRight" width={18} height={18} /></button>
+            <button type="button" aria-label={t('previousPage')} disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><AppIcon name="chevronLeft" width={18} height={18} /></button>
+            <button type="button" aria-current="page">{safePage}</button>
+            <button type="button" aria-label={t('nextPage')} disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><AppIcon name="chevronRight" width={18} height={18} /></button>
           </div>
         </footer>
       </section>

@@ -31,6 +31,7 @@ export function SuperAdminHealthCentersContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
   const [form, setForm] = useState<FormState | null>(null);
+  const [detail, setDetail] = useState<PuskesmasRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<AiMasterSyncStatus | null>(null);
 
@@ -92,7 +93,7 @@ export function SuperAdminHealthCentersContent() {
                   <tr key={row.id}>
                     <td><strong className={styles.registryId}>{row.id}</strong></td><td><strong>{row.nama}</strong></td><td>{row.kecamatan}</td>
                     <td><span className={styles.activeBadge}>{tCommon('active')}</span></td><td>{t('userCount', { count: userCounts[row.id] ?? 0 })}</td>
-                    <td><div className={styles.textActions}><button type="button" onClick={() => setForm(toForm(row))}>{tCommon('edit')}</button><button type="button" onClick={() => setForm(toForm(row))}>{tCommon('detail')}</button><button type="button" onClick={() => void removeRow(row)}>{tCommon('delete')}</button></div></td>
+                    <td><div className={styles.textActions}><button type="button" onClick={() => setForm(toForm(row))}>{tCommon('edit')}</button><button type="button" onClick={() => setDetail(row)}>{tCommon('detail')}</button><button type="button" onClick={() => void removeRow(row)}>{tCommon('delete')}</button></div></td>
                   </tr>
                 ))}
                 {filteredRows.length === 0 ? <tr><td colSpan={6}>{t('noHealthCentersForFilter')}</td></tr> : null}
@@ -104,7 +105,35 @@ export function SuperAdminHealthCentersContent() {
       </div>
 
       {form ? <PuskesmasModal form={form} setForm={setForm} submitForm={submitForm} close={() => setForm(null)} /> : null}
+      {detail ? <PuskesmasDetailModal row={detail} users={userCounts[detail.id] ?? 0} close={() => setDetail(null)} /> : null}
     </AdminShell>
+  );
+}
+
+function PuskesmasDetailModal({ close, row, users }: { close: () => void; row: PuskesmasRecord; users: number }) {
+  const t = useTranslations('admin');
+  return (
+    <div className={styles.modalBackdrop} role="presentation" onMouseDown={close}>
+      <section className={styles.modalCard} role="dialog" aria-modal="true" aria-labelledby="puskesmas-detail-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header className={styles.drawerHeader}><h2 id="puskesmas-detail-title">{row.nama}</h2><button type="button" onClick={close}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+        <label>ID<input readOnly value={row.id} /></label>
+        <label>{t('district')}<input readOnly value={row.kecamatan} /></label>
+        <label>{t('city')}<input readOnly value={row.kabupatenKota ?? '-'} /></label>
+        <label>{t('province')}<input readOnly value={row.provinsi ?? '-'} /></label>
+        <label>{t('type')}<input readOnly value={row.tipe} /></label>
+        <label>{t('rainAccess')}<input readOnly value={row.rainyAccess} /></label>
+        <label>{t('leadTime')}<input readOnly value={row.leadTimeHari == null ? '-' : `${row.leadTimeHari} hari`} /></label>
+        <label>{t('distanceIfk')}<input readOnly value={row.jarakKeIfkKm == null ? '-' : `${row.jarakKeIfkKm} km`} /></label>
+        <label>{t('capacity')}<input readOnly value={row.kapasitasSimpanObat == null ? '-' : `${row.kapasitasSimpanObat} unit`} /></label>
+        <label>{t('accessibilityScore')}<input readOnly value={row.skorAksesibilitas} /></label>
+        <label>Users<input readOnly value={users} /></label>
+        <label>Coordinates<input readOnly value={row.latitude == null || row.longitude == null ? '-' : `${row.latitude}, ${row.longitude}`} /></label>
+        <label className={styles.checkboxRow}><input type="checkbox" readOnly checked={row.coldChainReady} /> {t('coldChainReady')}</label>
+        <label className={styles.checkboxRow}><input type="checkbox" readOnly checked={row.ketersediaanLab} /> {t('labAvailable')}</label>
+        <label className={styles.checkboxRow}><input type="checkbox" readOnly checked={row.statusEndemisMalaria} /> {t('malariaEndemic')}</label>
+        <div className={styles.modalActions}><button className={styles.primaryButton} type="button" onClick={close}>OK</button></div>
+      </section>
+    </div>
   );
 }
 

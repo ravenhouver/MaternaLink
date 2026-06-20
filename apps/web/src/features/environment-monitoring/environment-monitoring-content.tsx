@@ -76,7 +76,7 @@ function Topbar({ user }: { user: CurrentUser | null }) {
       </nav>
       <div className={styles.topbarActions}>
         {user ? <NotificationCenter user={user} /> : null}
-        <button type="button" aria-label="Pengaturan" disabled><AppIcon name="settings" width={20} height={20} /></button>
+        <button type="button" aria-label="Pengaturan" onClick={() => window.location.assign(routes.ifkClinics)}><AppIcon name="settings" width={20} height={20} /></button>
         <div className={styles.topbarProfile}>
           <div>
             <strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong>

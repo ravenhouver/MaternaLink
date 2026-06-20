@@ -17,6 +17,7 @@ export function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,10 +110,11 @@ export function LoginPageContent() {
                 <input type="checkbox" name="remember" />
                 <span>{t('rememberMe')}</span>
               </label>
-              <a href="#forgot-password">{t('forgotPassword')}</a>
+              <button type="button" onClick={() => setNotice('Reset password dilakukan oleh Super Admin melalui menu Admin Users.')}>{t('forgotPassword')}</button>
             </div>
 
             {error ? <p className={styles.errorMessage}>{error}</p> : null}
+            {notice ? <p role="status" className={styles.errorMessage}>{notice}</p> : null}
 
             <button type="submit" className={styles.submitButton} disabled={isSubmitting}>{isSubmitting ? t('processing') : t('submit')}</button>
           </form>

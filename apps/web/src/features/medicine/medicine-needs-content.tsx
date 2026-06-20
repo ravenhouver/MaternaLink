@@ -56,6 +56,7 @@ export function MedicineNeedsContent() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isForecasting, setIsForecasting] = useState(false);
+  const [page, setPage] = useState(1);
 
   async function refreshRows() {
     setError(null);
@@ -115,6 +116,10 @@ export function MedicineNeedsContent() {
   const selectedObat = useMemo(() => obatRows.find((item) => item.id === selectedObatId), [obatRows, selectedObatId]);
   const closeModal = () => setActiveModal(null);
   const safeRows = rows.filter(isMedicationRow);
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(safeRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = safeRows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   async function saveStock() {
     if (!selectedObatId) {
@@ -238,7 +243,7 @@ export function MedicineNeedsContent() {
             </thead>
             <tbody>
               {safeRows.length === 0 ? <tr><td colSpan={7}>{t('emptyStock')}</td></tr> : null}
-              {safeRows.map((item) => (
+              {pageRows.map((item) => (
                 <tr key={item.slug}>
                   <td data-label={t('medicationName')}><strong>{item.name}</strong></td>
                   <td data-label={t('stock')}>{item.stock}</td>
@@ -278,11 +283,11 @@ export function MedicineNeedsContent() {
         </div>
 
         <footer className={styles.pagination}>
-          <p>{t('showingEntries', { count: rows.length })}</p>
+          <p>{t('showingEntries', { count: pageRows.length })}</p>
           <div className={styles.paginationControls}>
-            <button type="button" aria-label={t('previousPage')} disabled><AppIcon name="chevronLeft" width={16} height={16} /></button>
-            <button type="button" aria-current="page">1</button>
-            <button type="button" aria-label={t('nextPage')} disabled><AppIcon name="chevronRight" width={16} height={16} /></button>
+            <button type="button" aria-label={t('previousPage')} disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><AppIcon name="chevronLeft" width={16} height={16} /></button>
+            <button type="button" aria-current="page">{safePage}</button>
+            <button type="button" aria-label={t('nextPage')} disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><AppIcon name="chevronRight" width={16} height={16} /></button>
           </div>
         </footer>
       </section>

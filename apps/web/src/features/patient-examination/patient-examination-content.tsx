@@ -7,11 +7,11 @@ import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
-import { createAiExaminationDraft, createExamination, getGejala, getKondisi, getObat, getTodayQueue, transcribeSpeech, type AiExaminationDraft, type ExaminationSource, type GejalaRecord, type KondisiRecord, type ObatRecord, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
+import { createAiExaminationDraft, createExamination, getExaminations, getGejala, getKondisi, getObat, getTodayQueue, transcribeSpeech, type AiExaminationDraft, type ExaminationRecord, type ExaminationSource, type GejalaRecord, type KondisiRecord, type ObatRecord, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
 
-type FlowMode = 'method' | 'recording' | 'transcript' | 'manual';
+type FlowMode = 'method' | 'recording' | 'transcript' | 'manual' | 'detail';
 type FieldStatus = 'verified' | 'manual' | 'empty' | 'ai' | 'review';
 
 type ExaminationField = {
@@ -108,11 +108,12 @@ export function PatientExaminationContent() {
   const [conditions, setConditions] = useState<KondisiRecord[]>([]);
   const [symptomOptions, setSymptomOptions] = useState<GejalaRecord[]>([]);
   const [medicines, setMedicines] = useState<ObatRecord[]>([]);
+  const [completedExamination, setCompletedExamination] = useState<ExaminationRecord | null>(null);
   const [aiDraft, setAiDraft] = useState<AiDraftMeta | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isFormMode = mode === 'transcript' || mode === 'manual';
-  const pageTitle = mode === 'transcript' ? t('transcriptTitle') : mode === 'manual' ? t('manualTitle') : t('title');
+  const pageTitle = mode === 'detail' ? t('examination') : mode === 'transcript' ? t('transcriptTitle') : mode === 'manual' ? t('manualTitle') : t('title');
   const pageSubtitle = isFormMode ? t('formSubtitle') : t('subtitle');
 
   useEffect(() => {
@@ -129,6 +130,17 @@ export function PatientExaminationContent() {
           bloodPressure: vitalSignValue(activeQueue.pregnancy.vitalSigns, ['bloodPressure', 'blood_pressure', 'bp']) ?? current.bloodPressure,
           pulse: vitalSignValue(activeQueue.pregnancy.vitalSigns, ['pulse', 'pulseRate', 'pulse_rate']) ?? current.pulse,
         }));
+        if (queueId && activeQueue.status === 'COMPLETED') {
+          getExaminations({ patientId: activeQueue.patient.id })
+            .then((records) => {
+              if (cancelled) return;
+              setCompletedExamination(records.find((item) => item.queueId === activeQueue.id) ?? records[0] ?? null);
+              setMode('detail');
+            })
+            .catch(() => {
+              if (!cancelled) setMode('detail');
+            });
+        }
       }
     }).catch((loadError) => setError(loadError instanceof Error ? loadError.message : t('loadQueueError')));
     return () => {
@@ -263,9 +275,46 @@ export function PatientExaminationContent() {
 
       {mode === 'method' ? <MethodSelector onManual={() => { setSource('MANUAL'); setMode('manual'); }} onRecord={() => setMode('recording')} /> : null}
       {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={(audio) => void finishRecording(audio)} /> : null}
+      {mode === 'detail' ? <CompletedExaminationDetail examination={completedExamination} queue={queue} /> : null}
       {mode === 'transcript' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} medicines={medicines} mode="transcript" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
       {mode === 'manual' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} medicines={medicines} mode="manual" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
     </PageContainer>
+  );
+}
+
+function jsonList(value: unknown, fallback = '-') {
+  if (!value) return fallback;
+  if (Array.isArray(value)) return value.length ? value.map((item) => typeof item === 'object' && item !== null ? Object.values(item).join(' ') : String(item)).join(', ') : fallback;
+  if (typeof value === 'object') return Object.entries(value as Record<string, unknown>).map(([key, item]) => `${key}: ${String(item)}`).join(', ');
+  return String(value);
+}
+
+function CompletedExaminationDetail({ examination, queue }: { examination: ExaminationRecord | null; queue: QueueRecord | null }) {
+  const t = useTranslations('examination');
+  if (!examination) {
+    return (
+      <section className={styles.formCard} aria-label={t('examinationData')}>
+        <div className={styles.formHeader}><AppIcon name="clipboardCheck" width={20} height={20} /><h2>{t('examinationDataTitle')}</h2></div>
+        <p>{queue ? 'Pemeriksaan sudah selesai, tetapi detail pemeriksaan belum ditemukan.' : 'Data antrian belum ditemukan.'}</p>
+        <footer className={styles.formFooter}><Link className={styles.outlineAction} href={routes.queue}>{t('queue')}</Link></footer>
+      </section>
+    );
+  }
+
+  return (
+    <section className={styles.formCard} aria-label="Completed examination detail">
+      <div className={styles.formHeader}><AppIcon name="clipboardCheck" width={20} height={20} /><h2>{t('examinationDataTitle')}</h2></div>
+      <div className={styles.formGrid}>
+        <label className={`${styles.formField} ${styles.wideField}`}><span className={styles.fieldLabelRow}><span>{t('chiefComplaint')}</span><FieldStatusTag status="verified" /></span><span className={`${styles.inputShell} ${styles.textareaShell}`}><textarea readOnly value={examination.complaint ?? '-'} /></span></label>
+        <label className={styles.formField}><span className={styles.fieldLabelRow}><span>{t('gestationalAge')}</span><FieldStatusTag status="verified" /></span><span className={styles.inputShell}><input readOnly value={examination.gestationalAge ?? '-'} /><small>{t('weeks', { count: '' })}</small></span></label>
+        <label className={styles.formField}><span className={styles.fieldLabelRow}><span>{t('ancVisit')}</span><FieldStatusTag status="verified" /></span><span className={styles.inputShell}><input readOnly value={examination.ancVisit ?? '-'} /></span></label>
+        <label className={`${styles.formField} ${styles.wideField}`}><span className={styles.fieldLabelRow}><span>{t('symptoms')}</span><FieldStatusTag status="verified" /></span><span className={styles.inputShell}><input readOnly value={jsonList(examination.symptoms)} /></span></label>
+        <label className={`${styles.formField} ${styles.wideField}`}><span className={styles.fieldLabelRow}><span>{t('diagnosis')}</span><FieldStatusTag status="verified" /></span><span className={styles.inputShell}><input readOnly value={jsonList(examination.diagnosis)} /></span></label>
+        <label className={`${styles.formField} ${styles.wideField}`}><span className={styles.fieldLabelRow}><span>{t('medicationGivenTitle')}</span><FieldStatusTag status="verified" /></span><span className={styles.inputShell}><input readOnly value={jsonList(examination.medication)} /></span></label>
+        <label className={`${styles.formField} ${styles.wideField}`}><span className={styles.fieldLabelRow}><span>{t('additionalNotes')}</span></span><span className={`${styles.inputShell} ${styles.textareaShell}`}><textarea readOnly value={examination.notes ?? '-'} /></span></label>
+      </div>
+      <footer className={styles.formFooter}><Link className={styles.outlineAction} href={routes.queue}>{t('queue')}</Link></footer>
+    </section>
   );
 }
 
