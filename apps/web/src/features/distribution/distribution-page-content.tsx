@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useLocale } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { addTrackingEvent, getRecommendations, rerequestRecommendation, type DistributionRecommendation, type RecommendationStatus, type TrackingEvent, type TrackingStatus } from '@/lib/api';
+import { getMedicineName } from '@/lib/medicine-i18n';
 import styles from './distribution.module.css';
 
 type ShipmentStatus = 'transit' | 'awaiting' | 'delivered' | 'rejected' | 'issue';
@@ -21,6 +23,7 @@ type Shipment = {
   borderTone: string;
   source: DistributionRecommendation;
   trackingEvents: TrackingEvent[];
+  locale: string;
 };
 
 type RouteSummary = {
@@ -42,7 +45,11 @@ function matchesFilter(shipment: Shipment, filter: string) {
   return false;
 }
 
-function mapRecommendation(row: DistributionRecommendation): Shipment {
+function recommendationItemName(item: { obatId: string; obat?: { id: string; nama: string } }, locale: string) {
+  return getMedicineName(item.obat ? { id: item.obat.id, nama: item.obat.nama } : { id: item.obatId }, locale);
+}
+
+function mapRecommendation(row: DistributionRecommendation, locale: string): Shipment {
   const statusMap: Record<RecommendationStatus, Pick<Shipment, 'status' | 'statusLabel' | 'icon' | 'borderTone'>> = {
     PENDING: { status: 'awaiting', statusLabel: 'Awaiting IFK Approval', icon: 'hourglass', borderTone: 'brown' },
     APPROVED: { status: 'transit', statusLabel: 'Approved', icon: 'package', borderTone: 'blue' },
@@ -57,7 +64,7 @@ function mapRecommendation(row: DistributionRecommendation): Shipment {
   const hasOpenIssue = row.status === 'DISPATCHED' && latestEvent?.status === 'ISSUE_REPORTED';
   return {
     id: row.id,
-    medicine: row.items.map((item) => item.obat?.nama ?? item.obatId).join(', ') || row.id,
+    medicine: row.items.map((item) => recommendationItemName(item, locale)).join(', ') || row.id,
     quantity: row.items.map((item) => `${item.finalQuantity} ${item.obat?.satuan ?? 'unit'}`).join(', '),
     code: row.id,
     status: hasOpenIssue ? 'issue' : mapped.status,
@@ -68,6 +75,7 @@ function mapRecommendation(row: DistributionRecommendation): Shipment {
     borderTone: hasOpenIssue ? 'red' : mapped.borderTone,
     source: row,
     trackingEvents,
+    locale,
   };
 }
 
@@ -157,6 +165,7 @@ function printShipmentsReport(shipments: Shipment[], analytics: { activeShipment
 }
 
 export function DistributionPageContent() {
+  const locale = useLocale();
   const [recommendations, setRecommendations] = useState<DistributionRecommendation[]>([]);
   const [activeFilter, setActiveFilter] = useState('All');
   const [error, setError] = useState<string | null>(null);
@@ -170,13 +179,13 @@ export function DistributionPageContent() {
   }, []);
 
   const shipments = useMemo(() => {
-    const rows = recommendations.map(mapRecommendation);
+    const rows = recommendations.map((row) => mapRecommendation(row, locale));
     if (activeFilter === 'All') return rows;
     return rows.filter((row) => matchesFilter(row, activeFilter));
-  }, [activeFilter, recommendations]);
+  }, [activeFilter, locale, recommendations]);
 
   const analytics = useMemo(() => {
-    const allShipments = recommendations.map(mapRecommendation);
+    const allShipments = recommendations.map((row) => mapRecommendation(row, locale));
     const totalShipments = allShipments.length;
     const receivedShipments = allShipments.filter((shipment) => shipment.status === 'delivered').length;
     const activeShipments = allShipments.filter((shipment) => shipment.status === 'transit' || shipment.status === 'awaiting').length;
@@ -188,7 +197,7 @@ export function DistributionPageContent() {
       totalItems,
       averageDuration: durationText(averageDeliveryDuration(allShipments)),
     };
-  }, [recommendations]);
+  }, [locale, recommendations]);
 
   const openShipmentIds = useMemo(() => {
     const ids = new Set(shipments.filter((shipment) => shipment.expanded).map((shipment) => shipment.id));
@@ -238,7 +247,7 @@ export function DistributionPageContent() {
           <h1>Medicine Shipping</h1>
           <p>Monitor the status of medicine requests and shipments to your health center</p>
         </div>
-        <button type="button" className={styles.exportButton} onClick={() => printShipmentsReport(recommendations.map(mapRecommendation), analytics)}>
+        <button type="button" className={styles.exportButton} onClick={() => printShipmentsReport(recommendations.map((row) => mapRecommendation(row, locale)), analytics)}>
           <AppIcon name="fileText" width={16} height={16} />
           Print Report
         </button>
@@ -379,7 +388,7 @@ function ExpandedTransitDetails({ shipment }: { shipment: Shipment }) {
           {shipment.source.items.map((item) => (
             <p className={styles.contentChip} key={item.id}>
               <AppIcon name="package" width={15} height={15} />
-              {item.obat?.nama ?? item.obatId} - {item.finalQuantity} {item.obat?.satuan ?? 'unit'}
+              {recommendationItemName(item, shipment.locale)} - {item.finalQuantity} {item.obat?.satuan ?? 'unit'}
             </p>
           ))}
         </section>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useLocale } from 'next-intl';
 import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -23,6 +24,7 @@ import {
   type TrackingEvent,
   type TrackingStatus,
 } from '@/lib/api';
+import { getMedicineName } from '@/lib/medicine-i18n';
 import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
@@ -90,6 +92,7 @@ function RecommendationsTopbar({ user }: { user: CurrentUser | null }) {
 }
 
 export function MedicineSenderRecommendationsContent() {
+  const locale = useLocale();
   const [rows, setRows] = useState<DistributionRecommendation[]>([]);
   const [modal, setModal] = useState<ModalKind>(null);
   const [selected, setSelected] = useState<DistributionRecommendation | null>(null);
@@ -214,6 +217,7 @@ export function MedicineSenderRecommendationsContent() {
           </section>
           {error ? <p className={styles.recoError}>{error}</p> : null}
           <RecommendationTable
+            locale={locale}
             isLoading={isLoading}
             rows={rows}
             page={page}
@@ -222,11 +226,11 @@ export function MedicineSenderRecommendationsContent() {
             onDrop={dropOn}
             onOpen={(kind, row) => { setSelected(row); setModal(kind); }}
           />
-          {modal === 'edit' && selected ? <EditModal row={selected} onClose={() => setModal(null)} onSaved={refreshRows} /> : null}
-          {modal === 'track' && selected ? <TrackModal row={selected} onClose={() => setModal(null)} onSaved={refreshRows} /> : null}
+          {modal === 'edit' && selected ? <EditModal locale={locale} row={selected} onClose={() => setModal(null)} onSaved={refreshRows} /> : null}
+          {modal === 'track' && selected ? <TrackModal locale={locale} row={selected} onClose={() => setModal(null)} onSaved={refreshRows} /> : null}
           {modal === 'filter' ? <FilterModal statusFilter={statusFilter} onApply={(next) => { setStatusFilter(next); setModal(null); }} onClose={() => setModal(null)} /> : null}
-          {modal === 'approve' && selected ? <ConfirmModal kind="approve" row={selected} onClose={() => setModal(null)} onConfirm={() => void decide('approve')} /> : null}
-          {modal === 'reject' && selected ? <ConfirmModal kind="reject" row={selected} onClose={() => setModal(null)} onConfirm={(note) => void decide('reject', note)} /> : null}
+          {modal === 'approve' && selected ? <ConfirmModal locale={locale} kind="approve" row={selected} onClose={() => setModal(null)} onConfirm={() => void decide('approve')} /> : null}
+          {modal === 'reject' && selected ? <ConfirmModal locale={locale} kind="reject" row={selected} onClose={() => setModal(null)} onConfirm={(note) => void decide('reject', note)} /> : null}
           {modal === 'delete' && selected ? <DeleteModal row={selected} onClose={() => setModal(null)} onConfirm={() => void removeSelected()} /> : null}
           <RecommendationInsights rows={rows} isApproving={isBulkApproving} onApproveAll={() => void approveAllPending()} />
         </main>
@@ -250,6 +254,10 @@ function recommendationDispatchTime(row: DistributionRecommendation) {
 
 function medicineUnit(unit?: string) {
   return unit ? `(${unit})` : '(unit)';
+}
+
+function recommendationItemName(item: { obatId: string; obat?: { id: string; nama: string } }, locale: string) {
+  return getMedicineName(item.obat ? { id: item.obat.id, nama: item.obat.nama } : { id: item.obatId }, locale);
 }
 
 function routeEstimate(row: DistributionRecommendation) {
@@ -328,7 +336,7 @@ function RecommendationInsights({ isApproving, onApproveAll, rows }: { isApprovi
   );
 }
 
-function RecommendationTable({ isLoading, onDragStart, onDrop, onOpen, onPageChange, page, rows }: { isLoading: boolean; onDragStart: (id: string) => void; onDrop: (id: string) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; onPageChange: (page: number) => void; page: number; rows: DistributionRecommendation[] }) {
+function RecommendationTable({ isLoading, locale, onDragStart, onDrop, onOpen, onPageChange, page, rows }: { isLoading: boolean; locale: string; onDragStart: (id: string) => void; onDrop: (id: string) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; onPageChange: (page: number) => void; page: number; rows: DistributionRecommendation[] }) {
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -349,7 +357,7 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onOpen, onPageCha
                 <td><AppIcon name="gripVertical" width={16} height={16} /></td>
                 <td>{(safePage - 1) * pageSize + index + 1}</td>
                 <td><strong>{row.puskesmas?.nama ?? row.puskesmasId}</strong><span className={[styles.recoSourceTag, styles.blue].join(' ')}>{row.source}</span><p>{row.justification ?? '-'}</p></td>
-                <td>{row.items.map((item) => `${item.obat?.nama ?? item.obatId} (${item.finalQuantity} ${item.obat?.satuan ?? ''})`).join(', ')}</td>
+                <td>{row.items.map((item) => `${recommendationItemName(item, locale)} (${item.finalQuantity} ${item.obat?.satuan ?? ''})`).join(', ')}</td>
                 <td><strong>{new Date(row.periode).toLocaleDateString('id-ID')}</strong><small>Priority #{row.priorityRank}</small></td>
                 <td><StatusBadge urgency={row.urgency} /></td>
                 <td>{row.status === 'PENDING' ? <em>Pending Approval</em> : <span className={recommendationStatusLabel(row) === 'ISSUE_REPORTED' ? styles.issuePill : styles.approvedPill}>{recommendationStatusLabel(row)}</span>}</td>
@@ -369,7 +377,7 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onOpen, onPageCha
   );
 }
 
-function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: () => Promise<void>; row: DistributionRecommendation }) {
+function EditModal({ locale, onClose, onSaved, row }: { locale: string; onClose: () => void; onSaved: () => Promise<void>; row: DistributionRecommendation }) {
   const [date, setDate] = useState(dateInputValue(row.periode));
   const [priority, setPriority] = useState(String(row.priorityRank));
   const [dispatchTime, setDispatchTime] = useState(recommendationDispatchTime(row));
@@ -452,12 +460,13 @@ function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: ()
                 const quantity = Number(quantities[item.id] ?? item.finalQuantity);
                 const diff = quantity - item.aiQuantity;
                 const changed = diff !== 0;
-                return <tr key={item.id}><td><strong>{item.obat?.nama ?? item.obatId}</strong><small>{medicineUnit(item.obat?.satuan)}</small></td><td>{item.aiQuantity}</td><td><input className={changed ? styles.changedQty : undefined} inputMode="numeric" value={quantities[item.id] ?? ''} onChange={(event) => updateQuantity(item.id, event.target.value)} /></td><td className={changed ? styles.differenceDanger : styles.differenceNeutral}>{changed ? diff : '-'}</td><td><button aria-label={`Reset ${item.obat?.nama ?? item.obatId}`} type="button" onClick={() => resetItem(item.id, item.aiQuantity)}><AppIcon name="trash" width={16} height={16} /></button></td></tr>;
+                const itemName = recommendationItemName(item, locale);
+                return <tr key={item.id}><td><strong>{itemName}</strong><small>{medicineUnit(item.obat?.satuan)}</small></td><td>{item.aiQuantity}</td><td><input className={changed ? styles.changedQty : undefined} inputMode="numeric" value={quantities[item.id] ?? ''} onChange={(event) => updateQuantity(item.id, event.target.value)} /></td><td className={changed ? styles.differenceDanger : styles.differenceNeutral}>{changed ? diff : '-'}</td><td><button aria-label={`Reset ${itemName}`} type="button" onClick={() => resetItem(item.id, item.aiQuantity)}><AppIcon name="trash" width={16} height={16} /></button></td></tr>;
               })}</tbody>
             </table>
           </div>
         </section>
-        {aiFocus ? <section className={styles.aiBox}><h3><AppIcon name="archive" width={16} height={16} />AI Analysis</h3><p>{firstChanged ? (firstChangedDiff < 0 ? 'Reducing' : 'Increasing') : 'Maintaining'} {aiFocus.item.obat?.nama ?? aiFocus.item.obatId}: {aiFocus.item.aiQuantity} to {aiFocus.quantity} {aiFocus.item.obat?.satuan ?? 'unit'}</p><div><strong>Coverage <b>{Math.max(1, Math.round(aiFocus.item.aiQuantity / 5))} days to {Math.max(1, Math.round(aiFocus.quantity / 5))} days</b></strong><span><i />{firstChanged ? (firstChangedDiff < 0 ? 'Stockout risk increased sharply' : 'Coverage buffer increased') : 'AI recommendation is unchanged'}</span></div></section> : null}
+        {aiFocus ? <section className={styles.aiBox}><h3><AppIcon name="archive" width={16} height={16} />AI Analysis</h3><p>{firstChanged ? (firstChangedDiff < 0 ? 'Reducing' : 'Increasing') : 'Maintaining'} {recommendationItemName(aiFocus.item, locale)}: {aiFocus.item.aiQuantity} to {aiFocus.quantity} {aiFocus.item.obat?.satuan ?? 'unit'}</p><div><strong>Coverage <b>{Math.max(1, Math.round(aiFocus.item.aiQuantity / 5))} days to {Math.max(1, Math.round(aiFocus.quantity / 5))} days</b></strong><span><i />{firstChanged ? (firstChangedDiff < 0 ? 'Stockout risk increased sharply' : 'Coverage buffer increased') : 'AI recommendation is unchanged'}</span></div></section> : null}
         <section>
           <h3>Reason for Change <b>Required</b></h3>
           <textarea value={reason} placeholder="e.g., reserve stock already sent directly to the clinic" onChange={(event) => setReason(event.target.value)} />
@@ -557,7 +566,7 @@ function shipmentHistoryText(event: TrackingEvent, row: DistributionRecommendati
   return event.note?.trim() || labels[event.status];
 }
 
-function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: () => Promise<void>; row: DistributionRecommendation }) {
+function TrackModal({ locale, onClose, onSaved, row }: { locale: string; onClose: () => void; onSaved: () => Promise<void>; row: DistributionRecommendation }) {
   const [events, setEvents] = useState<TrackingEvent[]>([]);
   const options = trackingOptions(row);
   const [status, setStatus] = useState<TrackingStatus>(options[0] ?? 'DISPATCHED');
@@ -623,7 +632,7 @@ function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: (
           </dl>
           <div className={styles.etaBox}><span>Est. Arrival</span><strong>{shipmentEta(row)}</strong></div>
           <h4>Shipment Contents</h4>
-          <ul className={styles.shipmentContentList}>{row.items.slice(0, 4).map((item) => <li key={item.id}>{item.obat?.nama ?? item.obatId} ({item.finalQuantity} {item.obat?.satuan ?? 'unit'})</li>)}</ul>
+          <ul className={styles.shipmentContentList}>{row.items.slice(0, 4).map((item) => <li key={item.id}>{recommendationItemName(item, locale)} ({item.finalQuantity} {item.obat?.satuan ?? 'unit'})</li>)}</ul>
         </section>
         <section className={styles.travelHistoryPanel}>
           <h3><AppIcon name="clock" width={16} height={16} />Travel History</h3>
@@ -696,7 +705,7 @@ function FilterModal({ onApply, onClose, statusFilter }: { onApply: (status: Rec
   );
 }
 
-function ConfirmModal({ kind, onClose, onConfirm, row }: { kind: 'approve' | 'reject'; onClose: () => void; onConfirm: (note?: string) => void; row: DistributionRecommendation }) {
+function ConfirmModal({ kind, locale, onClose, onConfirm, row }: { kind: 'approve' | 'reject'; locale: string; onClose: () => void; onConfirm: (note?: string) => void; row: DistributionRecommendation }) {
   const approve = kind === 'approve';
   const clinicName = row.puskesmas?.nama ?? row.puskesmasId;
   return (
@@ -708,7 +717,7 @@ function ConfirmModal({ kind, onClose, onConfirm, row }: { kind: 'approve' | 're
         </div>
         <p>You are about to {approve ? 'approve' : 'reject'} shipment recommendation <b>#{row.id}</b> for <b>{clinicName}</b>. {approve ? 'The shipment will be immediately sent to the logistics operator for processing.' : 'Rejection will immediately notify the clinic and the request will be moved to the archive.'}</p>
         <div className={styles.shipmentSummaryBox}>
-          <div><small>Main Content</small><strong>{row.items.slice(0, 2).map((item) => `${item.obat?.nama ?? item.obatId} (${item.finalQuantity} ${item.obat?.satuan ?? 'unit'})`).join(', ') || '-'}</strong></div>
+          <div><small>Main Content</small><strong>{row.items.slice(0, 2).map((item) => `${recommendationItemName(item, locale)} (${item.finalQuantity} ${item.obat?.satuan ?? 'unit'})`).join(', ') || '-'}</strong></div>
           <div><small>Dispatch</small><strong>{new Date(row.periode).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}</strong></div>
         </div>
         <footer><button type="button" onClick={onClose}>Cancel</button><button className={styles.modalPrimaryAction} type="button" onClick={() => onConfirm(approve ? undefined : 'Rejected by IFK review.')}>{approve ? 'Approve & Dispatch' : 'Reject'}</button></footer>

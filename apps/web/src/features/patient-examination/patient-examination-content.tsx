@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
 import { LiveWaveform } from '@/components/ui/live-waveform';
 import { createAiExaminationDraft, createExamination, getExaminations, getGejala, getKondisi, getObat, getTodayQueue, transcribeSpeech, type AiExaminationDraft, type ExaminationRecord, type ExaminationSource, type GejalaRecord, type KondisiRecord, type ObatRecord, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
+import { getMedicineName } from '@/lib/medicine-i18n';
 import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
 
@@ -95,6 +96,7 @@ function createMedicationRow(seed?: Partial<MedicationFormRow>): MedicationFormR
 
 export function PatientExaminationContent() {
   const t = useTranslations('examination');
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queueId = searchParams?.get('queueId') ?? undefined;
@@ -265,8 +267,8 @@ export function PatientExaminationContent() {
       {mode === 'method' ? <MethodSelector onManual={() => { setSource('MANUAL'); setMode('manual'); }} onRecord={() => setMode('recording')} /> : null}
       {mode === 'recording' ? <RecordingPanel onBack={() => setMode('method')} onFinish={(audio) => void finishRecording(audio)} /> : null}
       {mode === 'detail' ? <CompletedExaminationDetail examination={completedExamination} queue={queue} /> : null}
-      {mode === 'transcript' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} medicines={medicines} mode="transcript" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
-      {mode === 'manual' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} medicines={medicines} mode="manual" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
+      {mode === 'transcript' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={transcriptFields} form={form} isSaving={isSaving} locale={locale} medicines={medicines} mode="transcript" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
+      {mode === 'manual' ? <ExaminationForm aiDraft={aiDraft} conditions={conditions} fields={manualFields} form={form} isSaving={isSaving} locale={locale} medicines={medicines} mode="manual" symptoms={symptomOptions} onAddMedication={addMedication} onChange={updateForm} onListChange={updateFormList} onMedicationChange={updateMedication} onRecordAgain={() => setMode('recording')} onRemoveMedication={removeMedication} onSave={saveExamination} /> : null}
     </PageContainer>
   );
 }
@@ -594,7 +596,7 @@ function recorderOptions(): MediaRecorderOptions | undefined {
   return undefined;
 }
 
-function ExaminationForm({ aiDraft, conditions, fields, form, isSaving, medicines, mode, symptoms, onAddMedication, onChange, onListChange, onMedicationChange, onRecordAgain, onRemoveMedication, onSave }: { aiDraft: AiDraftMeta | null; conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onAddMedication: () => void; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void; onMedicationChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRecordAgain: () => void; onRemoveMedication: (id: string) => void; onSave: () => void }) {
+function ExaminationForm({ aiDraft, conditions, fields, form, isSaving, locale, medicines, mode, symptoms, onAddMedication, onChange, onListChange, onMedicationChange, onRecordAgain, onRemoveMedication, onSave }: { aiDraft: AiDraftMeta | null; conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; locale: string; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onAddMedication: () => void; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void; onMedicationChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRecordAgain: () => void; onRemoveMedication: (id: string) => void; onSave: () => void }) {
   const t = useTranslations('examination');
   const manualCount = fields.filter((field) => field.status === 'manual').length;
   const mainFields = fields.filter((field) => field.id !== 'notes');
@@ -608,9 +610,9 @@ function ExaminationForm({ aiDraft, conditions, fields, form, isSaving, medicine
       </div>
 
       <div className={styles.formGrid}>
-        {mainFields.map((field) => <FormField aiDraft={aiDraft} conditions={conditions} key={field.id} field={field} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} />)}
-        <MedicationPanel form={form} medicines={medicines} onAdd={onAddMedication} onChange={onMedicationChange} onRemove={onRemoveMedication} />
-        {notesField ? <FormField aiDraft={aiDraft} conditions={conditions} field={notesField} form={form} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} /> : null}
+        {mainFields.map((field) => <FormField aiDraft={aiDraft} conditions={conditions} key={field.id} field={field} form={form} locale={locale} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} />)}
+        <MedicationPanel form={form} locale={locale} medicines={medicines} onAdd={onAddMedication} onChange={onMedicationChange} onRemove={onRemoveMedication} />
+        {notesField ? <FormField aiDraft={aiDraft} conditions={conditions} field={notesField} form={form} locale={locale} medicines={medicines} symptoms={symptoms} onChange={onChange} onListChange={onListChange} /> : null}
       </div>
 
       <footer className={styles.formFooter}>
@@ -638,7 +640,7 @@ function ExaminationForm({ aiDraft, conditions, fields, form, isSaving, medicine
   );
 }
 
-function FormField({ aiDraft, conditions, field, form, medicines, symptoms, onChange, onListChange }: { aiDraft: AiDraftMeta | null; conditions: KondisiRecord[]; field: ExaminationField; form: ExaminationFormState; medicines: ObatRecord[]; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void }) {
+function FormField({ aiDraft, conditions, field, form, locale, medicines, symptoms, onChange, onListChange }: { aiDraft: AiDraftMeta | null; conditions: KondisiRecord[]; field: ExaminationField; form: ExaminationFormState; locale: string; medicines: ObatRecord[]; symptoms: GejalaRecord[]; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void }) {
   const t = useTranslations('examination');
   const status = fieldStatus(field, form, aiDraft);
   const className = [styles.formField, field.wide ? styles.wideField : '', status === 'manual' ? styles.manualField : '', status === 'verified' ? styles.verifiedField : '', status === 'ai' ? styles.aiField : '', status === 'review' ? styles.reviewField : ''].filter(Boolean).join(' ');
@@ -646,7 +648,7 @@ function FormField({ aiDraft, conditions, field, form, medicines, symptoms, onCh
   const value = form[key] ?? '';
   const multiKey: 'symptomIds' | 'diagnosisIds' | null = field.id === 'symptomIds' ? 'symptomIds' : field.id === 'diagnosisIds' ? 'diagnosisIds' : null;
   const selectedValues = multiKey === 'symptomIds' ? form.symptomIds : multiKey === 'diagnosisIds' ? form.diagnosisIds : [];
-  const options = selectOptions(field.id, conditions, symptoms, medicines);
+  const options = selectOptions(field.id, conditions, symptoms, medicines, locale);
 
   function removeSelected(nextValue: string) {
     if (!multiKey) return;
@@ -728,7 +730,7 @@ function fieldStatus(field: ExaminationField, form: ExaminationFormState, draft:
   return field.status;
 }
 
-function MedicationPanel({ form, medicines, onAdd, onChange, onRemove }: { form: ExaminationFormState; medicines: ObatRecord[]; onAdd: () => void; onChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRemove: (id: string) => void }) {
+function MedicationPanel({ form, locale, medicines, onAdd, onChange, onRemove }: { form: ExaminationFormState; locale: string; medicines: ObatRecord[]; onAdd: () => void; onChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRemove: (id: string) => void }) {
   const t = useTranslations('examination');
   return (
     <section className={styles.medicationPanel} aria-label={t('medicationGiven')}>
@@ -746,7 +748,7 @@ function MedicationPanel({ form, medicines, onAdd, onChange, onRemove }: { form:
               <span>{t('medicationName')}</span>
               <select aria-label={`${t('medicationName')} ${index + 1}`} value={row.medicine} onChange={(event) => onChange(row.id, 'medicine', event.target.value)}>
                 <option value="">{t('selectMedicine')}</option>
-                {medicines.map((item) => <option key={item.id} value={item.id}>{item.nama}</option>)}
+                {medicines.map((item) => <option key={item.id} value={item.id}>{getMedicineName(item, locale)}</option>)}
               </select>
             </label>
             <label className={styles.compactField}>
@@ -792,11 +794,11 @@ function MedicationPanel({ form, medicines, onAdd, onChange, onRemove }: { form:
   );
 }
 
-function selectOptions(fieldId: string, conditions: KondisiRecord[], symptoms: GejalaRecord[], medicines: ObatRecord[]): SelectOption[] {
+function selectOptions(fieldId: string, conditions: KondisiRecord[], symptoms: GejalaRecord[], medicines: ObatRecord[], locale: string): SelectOption[] {
   if (fieldId === 'ancVisit') return ['K1', 'K2', 'K3', 'K4', 'K5', 'K6'].map((value) => ({ value, label: value }));
   if (fieldId === 'symptomIds') return symptoms.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}`, shortLabel: item.nama }));
   if (fieldId === 'diagnosisIds') return conditions.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}`, shortLabel: item.nama }));
-  if (fieldId === 'medicine') return medicines.map((item) => ({ value: item.id, label: `${item.id} - ${item.nama}` }));
+  if (fieldId === 'medicine') return medicines.map((item) => ({ value: item.id, label: `${item.id} - ${getMedicineName(item, locale)}` }));
   if (fieldId === 'unit') return ['Tablet', 'Ampul', 'Botol', 'Strip', 'Vial'].map((value) => ({ value, label: value }));
   return [];
 }

@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
 import { createObat, deleteObat, getAiMasterSyncStatus, getCurrentUser, getObat, updateObat, type AiMasterSyncStatus, type CurrentUser, type ObatRecord, type UpsertObatPayload } from '@/lib/api';
+import { getMedicineName } from '@/lib/medicine-i18n';
 import { AdminShell } from './admin-shell';
 import styles from './super-admin-dashboard.module.css';
 
@@ -13,7 +14,7 @@ type FormState = UpsertObatPayload;
 const emptyForm: FormState = { id: '', nama: '', kategori: 'OBAT', tipe: 'TABLET', perluColdChain: false, satuan: 'tablet', dosisStandarHarian: 0, durasiPengobatanHari: 0 };
 
 function formatDailyDosage(row: ObatRecord) { return row.dosisStandarHarian ? `${row.dosisStandarHarian} ${row.satuan}/day` : '-'; }
-function mapMedicineRows(rows: ObatRecord[]): MedicineRow[] { return rows.map((row) => ({ id: row.id, name: row.nama, unit: row.satuan, category: row.kategori, dailyDosage: formatDailyDosage(row), coldChain: row.perluColdChain })); }
+function mapMedicineRows(rows: ObatRecord[], locale: string): MedicineRow[] { return rows.map((row) => ({ id: row.id, name: getMedicineName(row, locale), unit: row.satuan, category: row.kategori, dailyDosage: formatDailyDosage(row), coldChain: row.perluColdChain })); }
 function toForm(row: ObatRecord): FormState { return { id: row.id, nama: row.nama, kategori: row.kategori as FormState['kategori'], tipe: row.tipe as FormState['tipe'], perluColdChain: row.perluColdChain, satuan: row.satuan, dosisStandarHarian: row.dosisStandarHarian ?? 0, durasiPengobatanHari: row.durasiPengobatanHari ?? 0 }; }
 function categoryTone(category: string) { return category === 'VAKSIN' ? 'essential' : category === 'ALAT_KESEHATAN' ? 'routine' : 'emergency'; }
 function syncLabel(status: AiMasterSyncStatus | null) {
@@ -39,6 +40,7 @@ function downloadCsv(filename: string, rows: MedicineRow[]) {
 export function SuperAdminMedicinesContent() {
   const t = useTranslations('admin');
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const [rawRows, setRawRows] = useState<ObatRecord[]>([]);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
@@ -57,7 +59,7 @@ export function SuperAdminMedicinesContent() {
 
   useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : t('unableLoadMedicineData'))); }, [t]);
 
-  const rows = useMemo(() => mapMedicineRows(rawRows), [rawRows]);
+  const rows = useMemo(() => mapMedicineRows(rawRows, locale), [locale, rawRows]);
   const categories = useMemo(() => ['All', ...Array.from(new Set(rows.map((row) => row.category)))], [rows]);
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

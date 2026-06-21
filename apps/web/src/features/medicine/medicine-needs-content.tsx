@@ -3,9 +3,10 @@
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createShipmentRequest, generateLplpo, getCurrentUser, getLplpoRows, getObat, getStokRows, runAiForecast, upsertStok, type LplpoRow, type ObatRecord } from '@/lib/api';
+import { getMedicineName } from '@/lib/medicine-i18n';
 import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
@@ -46,6 +47,7 @@ function printMedicineReport(rows: MedicationRow[], puskesmasId: string | null, 
 
 export function MedicineNeedsContent() {
   const t = useTranslations('medicine');
+  const locale = useLocale();
   const [activeModal, setActiveModal] = useState<'edit' | 'shipment' | null>(null);
   const [rows, setRows] = useState<MedicationRow[]>([]);
   const [obatRows, setObatRows] = useState<ObatRecord[]>([]);
@@ -89,7 +91,7 @@ export function MedicineNeedsContent() {
         return {
           obatId: row.obatId,
           slug: row.obatId.toLowerCase(),
-          name: row.obat?.nama ?? row.obatId,
+          name: getMedicineName(row.obat ? { id: row.obat.id, nama: row.obat.nama } : { id: row.obatId }, locale),
           stock,
           unit: row.obat?.satuan ?? 'unit',
           estimatedEmpty: days == null ? t('noUsageData') : t('daysCount', { count: Math.max(1, Math.round(days)) }),
@@ -207,7 +209,7 @@ export function MedicineNeedsContent() {
             <span>{t('medicationName')}</span>
             <select value={selectedObatId} onChange={(event) => setSelectedObatId(event.target.value)}>
               <option value="" disabled>{t('selectMedication')}</option>
-              {obatRows.map((item) => <option value={item.id} key={item.id}>{item.nama}</option>)}
+              {obatRows.map((item) => <option value={item.id} key={item.id}>{getMedicineName(item, locale)}</option>)}
             </select>
           </label>
           <label className={styles.fieldGroup}>

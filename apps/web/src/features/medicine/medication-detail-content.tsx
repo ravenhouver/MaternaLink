@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { getCurrentUser, getObat, getStokRows, upsertStok, type ObatRecord, type StokRow } from '@/lib/api';
+import { getMedicineName } from '@/lib/medicine-i18n';
 import { routes } from '@/lib/routes';
 import styles from './medicine.module.css';
 
@@ -38,6 +39,7 @@ function getChartRows(rows: StokRow[], mode: ChartMode) {
 
 export function MedicationDetailContent() {
   const t = useTranslations('medicine');
+  const locale = useLocale();
   const params = useParams<{ medicine?: string }>();
   const [medicine, setMedicine] = useState<ObatRecord | null>(null);
   const [stockRows, setStockRows] = useState<StokRow[]>([]);
@@ -103,6 +105,7 @@ export function MedicationDetailContent() {
   useEffect(() => { if (historyPage > historyTotalPages) setHistoryPage(historyTotalPages); }, [historyPage, historyTotalPages]);
 
   const updatedLabel = latestStock ? new Date(latestStock.periode).toLocaleDateString('id-ID') : t('noStockUpdate');
+  const medicineDisplayName = medicine ? getMedicineName(medicine, locale) : t('medicationFallback');
 
   async function saveCurrentPeriodStock() {
     if (!medicine || !puskesmasId) return;
@@ -117,7 +120,7 @@ export function MedicationDetailContent() {
       const saved = await upsertStok({ puskesmasId, obatId: medicine.id, periode: getCurrentPeriod(), stokAwal: nextStock + nextUsage, konsumsiPeriode: nextUsage, stokSaatIni: nextStock });
       const nextRows = [saved, ...stockRows.filter((row) => row.id !== saved.id)].sort((left, right) => getPeriodTime(right) - getPeriodTime(left));
       setStockRows(nextRows);
-      setNotice(t('detailSaved', { name: medicine.nama }));
+      setNotice(t('detailSaved', { name: medicineDisplayName }));
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : t('saveDetailError'));
     }
@@ -130,9 +133,9 @@ export function MedicationDetailContent() {
           <nav className={styles.detailBreadcrumb} aria-label="Breadcrumb">
             <Link href={routes.medicineNeeds}>{t('detailBreadcrumb')}</Link>
             <AppIcon name="chevronRight" width={14} height={14} />
-            <span>{medicine?.nama ?? t('medicationFallback')}</span>
+            <span>{medicineDisplayName}</span>
           </nav>
-          <h1>{t('detailTitle', { name: medicine?.nama ?? t('loading') })}</h1>
+          <h1>{t('detailTitle', { name: medicine ? medicineDisplayName : t('loading') })}</h1>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}>
           <AppIcon name="printer" width={18} height={18} />
@@ -175,7 +178,7 @@ export function MedicationDetailContent() {
           <section className={styles.detailCard}>
             <header><h2>{t('generalInformation')}</h2><AppIcon name="info" width={18} height={18} /></header>
             <dl className={styles.infoGrid}>
-              <div><dt>{t('medicationName')}</dt><dd>{medicine?.nama ?? '-'}</dd></div>
+              <div><dt>{t('medicationName')}</dt><dd>{medicine ? medicineDisplayName : '-'}</dd></div>
               <div><dt>{t('type')}</dt><dd>{medicine?.tipe ?? '-'}</dd></div>
               <div><dt>{t('unit')}</dt><dd>{medicine?.satuan ?? '-'}</dd></div>
               <div><dt>{t('category')}</dt><dd>{medicine?.kategori ?? '-'}</dd></div>

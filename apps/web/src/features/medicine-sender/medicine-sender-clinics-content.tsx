@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocale } from 'next-intl';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getIfkFacilities, runIfkAiAllocation, type DistributionRecommendation, type IfkFacilityRecord } from '@/lib/api';
+import { getMedicineName } from '@/lib/medicine-i18n';
 import styles from './medicine-sender.module.css';
 
 type WeatherTone = 'danger' | 'neutral';
@@ -58,6 +60,10 @@ function recommendationSourceLabel(recommendation?: DistributionRecommendation) 
   if (recommendation.source === 'SEEDED_DETERMINISTIC') return 'Demo seed';
   if (recommendation.source === 'RULE_BASED_FALLBACK') return 'Rule fallback';
   return recommendation.source;
+}
+
+function recommendationItemName(item: { obatId: string; obat?: { id: string; nama: string } }, locale: string) {
+  return getMedicineName(item.obat ? { id: item.obat.id, nama: item.obat.nama } : { id: item.obatId }, locale);
 }
 
 function ClinicsTopbar({ detail }: { detail: boolean }) {
@@ -204,8 +210,8 @@ function DetailMetric({ label, value, tone }: { label: string; value: string; to
   );
 }
 
-function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: ClinicRow; nearbyRows: ClinicRow[]; onBack: () => void; recommendation?: DistributionRecommendation }) {
-  const itemSummary = recommendation?.items.map((item) => `${item.obat?.nama ?? item.obatId}: ${item.finalQuantity} ${item.obat?.satuan ?? 'unit'}`).join(', ') ?? 'Belum ada rekomendasi distribusi aktif.';
+function ClinicDetail({ clinic, locale, nearbyRows, onBack, recommendation }: { clinic: ClinicRow; locale: string; nearbyRows: ClinicRow[]; onBack: () => void; recommendation?: DistributionRecommendation }) {
+  const itemSummary = recommendation?.items.map((item) => `${recommendationItemName(item, locale)}: ${item.finalQuantity} ${item.obat?.satuan ?? 'unit'}`).join(', ') ?? 'Belum ada rekomendasi distribusi aktif.';
   const urgencyScore = `${Math.min(100, clinic.criticalStockCount * 25 + clinic.highRiskPregnancies * 10 + (clinic.risk === 'critical' ? 40 : clinic.risk === 'warning' ? 20 : 0))}/100`;
   const history = recommendation?.trackingEvents ?? [];
   return (
@@ -247,7 +253,7 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
                 </thead>
                 <tbody>
                   <tr>
-                    <td>{recommendation?.items[0]?.obat?.nama ?? 'Cold chain facility'}</td>
+                    <td>{recommendation?.items[0] ? recommendationItemName(recommendation.items[0], locale) : 'Cold chain facility'}</td>
                     <td className={clinic.risk === 'critical' ? styles.danger : styles.safe}>{stockItems(clinic)}</td>
                     <td>{recommendation?.items[0]?.finalQuantity ?? clinic.criticalStockCount}</td>
                     <td><span>{stockStatus(clinic)}</span></td>
@@ -309,6 +315,7 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
 }
 
 export function MedicineSenderClinicsContent() {
+  const locale = useLocale();
   const [selectedClinic, setSelectedClinic] = useState<ClinicRow | null>(null);
   const [rows, setRows] = useState<ClinicRow[]>([]);
   const didStartAllocation = useRef(false);
@@ -347,7 +354,7 @@ export function MedicineSenderClinicsContent() {
     <div className={styles.clinicsShell}>
       <div className={styles.clinicsWorkspace}>
         <ClinicsTopbar detail={Boolean(selectedClinic)} />
-        {displayedClinic ? <ClinicDetail clinic={displayedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onRefresh={() => void refreshRows()} onView={setSelectedClinic} />}
+        {displayedClinic ? <ClinicDetail clinic={displayedClinic} locale={locale} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onRefresh={() => void refreshRows()} onView={setSelectedClinic} />}
       </div>
     </div>
   );

@@ -8,6 +8,12 @@ import { login } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './login-page.module.css';
 
+const demoCredentials = [
+  { role: 'Super Admin', username: 'admin', password: 'password123' },
+  { role: 'Bidan Puskesmas', username: 'bidan', password: 'password123' },
+  { role: 'Admin IFK', username: 'ifk', password: 'password123' },
+] as const;
+
 export function LoginPageContent() {
   const router = useRouter();
   const t = useTranslations('login');
@@ -32,6 +38,13 @@ export function LoginPageContent() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function fillCredential(credential: (typeof demoCredentials)[number]) {
+    setUsername(credential.username);
+    setPassword(credential.password);
+    setError(null);
+    setNotice(null);
   }
 
   return (
@@ -80,6 +93,20 @@ export function LoginPageContent() {
           </div>
 
           <form className={styles.card} onSubmit={handleSubmit}>
+            <div className={styles.roleButtons} aria-label="Isi otomatis login berdasarkan role">
+              {demoCredentials.map((credential) => (
+                <button
+                  type="button"
+                  className={styles.roleButton}
+                  key={credential.username}
+                  onClick={() => fillCredential(credential)}
+                >
+                  <span>{credential.role}</span>
+                  <small>{credential.username}</small>
+                </button>
+              ))}
+            </div>
+
             <label className={styles.field}>
               <span>{tCommon('username')}</span>
               <span className={styles.inputWrap}>

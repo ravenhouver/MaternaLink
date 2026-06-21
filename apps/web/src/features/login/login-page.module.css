@@ -250,6 +250,58 @@
   box-shadow: 0 1px 1px rgb(0 0 0 / 0.05);
 }
 
+.roleButtons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.roleButton {
+  display: flex;
+  min-width: 0;
+  min-height: 58px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.roleButton:hover,
+.roleButton:focus-visible {
+  border-color: #1a73e8;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgb(26 115 232 / 0.12);
+  outline: none;
+}
+
+.roleButton span,
+.roleButton small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleButton span {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.roleButton small {
+  color: #475569;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 15px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -502,6 +554,14 @@
 
   .card {
     padding: 25px 20px 32px;
+  }
+
+  .roleButtons {
+    grid-template-columns: 1fr;
+  }
+
+  .roleButton {
+    min-height: 50px;
   }
 
   .optionsRow {
