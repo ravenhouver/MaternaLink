@@ -44,7 +44,7 @@ services:
   speech-stt:
     image: ${SPEECH_STT_IMAGE:-ghcr.io/ravenhouver/maternalink-speech-stt:latest}
     environment:
-      STT_MODEL_SIZE: ${STT_MODEL_SIZE:-small}
+      STT_MODEL_SIZE: ${STT_MODEL_SIZE:-turbo}
       STT_DEVICE: ${STT_DEVICE:-cpu}
       STT_COMPUTE_TYPE: ${STT_COMPUTE_TYPE:-int8}
     ports:

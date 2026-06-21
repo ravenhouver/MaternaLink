@@ -46,7 +46,7 @@ class TranscriptionResult(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"service": "MaternaLink Speech STT", "status": "ok", "model": env_value("STT_MODEL_SIZE", "small")}
+    return {"service": "MaternaLink Speech STT", "status": "ok", "model": env_value("STT_MODEL_SIZE", "turbo")}
 
 
 @app.post("/v1/stt/transcribe", response_model=TranscriptionResult)
@@ -96,7 +96,7 @@ def get_model():
     from faster_whisper import WhisperModel
 
     return WhisperModel(
-        env_value("STT_MODEL_SIZE", "small"),
+        env_value("STT_MODEL_SIZE", "turbo"),
         device=env_value("STT_DEVICE", "cpu"),
         compute_type=env_value("STT_COMPUTE_TYPE", "int8"),
     )
