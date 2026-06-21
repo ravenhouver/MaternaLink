@@ -3603,6 +3603,17 @@
   font-weight: 800;
 }
 
+.issuePill {
+  display: inline-flex;
+  border-radius: 999px;
+  background: #fff4e5;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .recoHighlightedRow {
   background: #fffbeb;
 }
@@ -3836,7 +3847,7 @@
 .recoOverlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: var(--z-app-modal);
   display: grid;
   place-items: center;
   overflow: auto;

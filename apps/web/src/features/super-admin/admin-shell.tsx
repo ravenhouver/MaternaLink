@@ -22,7 +22,7 @@ const navItems: Array<{ key: AdminPageKey; labelKey: string; icon: AppIconName; 
 ];
 
 export function AdminShell({ active, breadcrumb, user, children }: { active: AdminPageKey; breadcrumb: string; user: CurrentUser | null; children: ReactNode }) {
-  const [panel, setPanel] = useState<'settings' | 'help' | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const t = useTranslations('admin');
   const tCommon = useTranslations('common');
   const tNav = useTranslations('nav');
@@ -47,7 +47,7 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <button type="button" className={styles.navItem} onClick={() => setPanel('help')}><AppIcon name="info" width={20} height={20} /><span>{tCommon('help')}</span></button>
+          <LanguageSwitcher className={styles.adminLanguageSwitcher} />
           <RoleLogoutButton className={styles.navItem} />
         </div>
       </aside>
@@ -61,8 +61,7 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
           </nav>
           <div className={styles.topbarActions}>
             {user ? <NotificationCenter user={user} /> : null}
-            <LanguageSwitcher className={styles.adminLanguageSwitcher} />
-            <button className={styles.iconButton} type="button" aria-label={tCommon('settings')} onClick={() => setPanel('settings')}><AppIcon name="settings" width={20} height={20} /></button>
+            <button className={styles.iconButton} type="button" aria-label={tCommon('settings')} onClick={() => setIsSettingsOpen(true)}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>{t('superAdmin')}</small></span>
               <span className={styles.avatar} aria-hidden="true">{initials}</span>
@@ -73,14 +72,14 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
         {children}
       </section>
 
-      {panel ? (
-        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setPanel(null)}>
-          <section className={styles.sideDrawer} role="dialog" aria-modal="true" aria-label={panel === 'settings' ? t('settingsTitle') : t('helpTitle')} onMouseDown={(event) => event.stopPropagation()}>
+      {isSettingsOpen ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setIsSettingsOpen(false)}>
+          <section className={styles.sideDrawer} role="dialog" aria-modal="true" aria-label={t('settingsTitle')} onMouseDown={(event) => event.stopPropagation()}>
             <header className={styles.drawerHeader}>
-              <h2>{panel === 'settings' ? t('settingsTitle') : t('helpTitle')}</h2>
-              <button type="button" aria-label={tCommon('closeMenu')} onClick={() => setPanel(null)}><AppIcon name="circleStop" width={18} height={18} /></button>
+              <h2>{t('settingsTitle')}</h2>
+              <button type="button" aria-label={tCommon('closeMenu')} onClick={() => setIsSettingsOpen(false)}><AppIcon name="circleStop" width={18} height={18} /></button>
             </header>
-            {panel === 'settings' ? <AdminSettings user={user} /> : <AdminHelp />}
+            <AdminSettings user={user} />
           </section>
         </div>
       ) : null}
@@ -99,20 +98,6 @@ function AdminSettings({ user }: { user: CurrentUser | null }) {
         <div><dt>{t('session')}</dt><dd>{t('settingsSession')}</dd></div>
       </dl>
       <RoleLogoutButton className={styles.primaryButton} />
-    </div>
-  );
-}
-
-function AdminHelp() {
-  const t = useTranslations('admin');
-  return (
-    <div className={styles.drawerBody}>
-      <p>{t('helpBody')}</p>
-      <ul className={styles.helpList}>
-        <li>{t('helpUserAccounts')}</li>
-        <li>{t('helpHealthCenters')}</li>
-        <li>{t('helpMedicines')}</li>
-      </ul>
     </div>
   );
 }

@@ -128,10 +128,10 @@ export class DistributionController {
   @ApiOperation({ summary: 'Add shipment tracking event' })
   @ApiResponse({ status: 201, description: 'Tracking event added' })
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.IFK_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN)
   @Post('recommendations/:id/tracking/events')
   addTrackingEvent(@Param('id') id: string, @Body() body: TrackingEventDto, @Req() request: { user: CurrentUser }) {
-    return this.service.addTrackingEvent(id, request.user.id, body);
+    return this.service.addTrackingEvent(id, request.user, body);
   }
 
   @ApiOperation({ summary: 'List distribution alerts' })

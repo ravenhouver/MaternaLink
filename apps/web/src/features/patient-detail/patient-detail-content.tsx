@@ -2,15 +2,17 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
-import { createQueue, getPatient, type ExaminationRecord, type PatientRecord, type PregnancyRecord } from '@/lib/api';
+import { createQueue, getPatient, getTodayQueue, type ExaminationRecord, type PatientRecord, type PregnancyRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patient-detail.module.css';
 
 type DetailTab = 'medical' | 'personal';
 
 export function PatientDetailContent({ patientId }: { patientId: string }) {
+  const router = useRouter();
   const [patient, setPatient] = useState<PatientRecord | null>(null);
   const [tab, setTab] = useState<DetailTab>('medical');
   const [isLoading, setIsLoading] = useState(true);
@@ -51,6 +53,24 @@ export function PatientDetailContent({ patientId }: { patientId: string }) {
     }
   }
 
+  async function startExamination() {
+    if (!patient || !pregnancy) return;
+    setIsQueueing(true);
+    setError(null);
+    try {
+      const queue = await createQueue({ patientId: patient.id, pregnancyId: pregnancy.id });
+      router.push(`${routes.examination}?queueId=${encodeURIComponent(queue.id)}`);
+    } catch (queueError) {
+      const activeQueue = await getTodayQueue()
+        .then((rows) => rows.find((row) => row.patient.id === patient.id && row.pregnancy.id === pregnancy.id && row.status !== 'COMPLETED' && row.status !== 'CANCELLED'))
+        .catch(() => null);
+      if (activeQueue) router.push(`${routes.examination}?queueId=${encodeURIComponent(activeQueue.id)}`);
+      else setError(queueError instanceof Error ? queueError.message : 'Gagal memulai pemeriksaan');
+    } finally {
+      setIsQueueing(false);
+    }
+  }
+
   if (isLoading) return <PageContainer size="wide" className={styles.page}><section className={styles.emptyState}>Loading patient detail...</section></PageContainer>;
   if (!patient) return <PageContainer size="wide" className={styles.page}><section className={styles.emptyState}>{error ?? 'Patient not found'}</section></PageContainer>;
 
@@ -78,7 +98,7 @@ export function PatientDetailContent({ patientId }: { patientId: string }) {
         </button>
       </div>
 
-      {tab === 'medical' ? <MedicalRecordTab patient={patient} pregnancy={pregnancy} exams={exams} /> : <PersonalInfoTab patient={patient} pregnancy={pregnancy} />}
+      {tab === 'medical' ? <MedicalRecordTab patient={patient} pregnancy={pregnancy} exams={exams} isQueueing={isQueueing} onStartExamination={startExamination} /> : <PersonalInfoTab patient={patient} pregnancy={pregnancy} />}
     </PageContainer>
   );
 }
@@ -106,7 +126,7 @@ function PatientHeader({ patient, pregnancy, isQueueing, onQueue }: { patient: P
           <AppIcon name="plus" width={18} height={18} />
           {isQueueing ? 'Queueing...' : 'Queue'}
         </button>
-        <Link className={styles.secondaryButton} href={routes.patients}>Edit Patient</Link>
+        <Link className={styles.secondaryButton} href={`${routes.patients}?edit=${encodeURIComponent(patient.id)}`}>Edit Patient</Link>
       </div>
     </section>
   );
@@ -116,7 +136,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   return <div><span>{label}</span><strong>{value}</strong></div>;
 }
 
-function MedicalRecordTab({ patient, pregnancy, exams }: { patient: PatientRecord; pregnancy: PregnancyRecord | null; exams: ExaminationRecord[] }) {
+function MedicalRecordTab({ exams, isQueueing, onStartExamination, patient, pregnancy }: { patient: PatientRecord; pregnancy: PregnancyRecord | null; exams: ExaminationRecord[]; isQueueing: boolean; onStartExamination: () => void }) {
   const latestExam = exams[0] ?? null;
   return (
     <div className={styles.medicalGrid}>
@@ -125,7 +145,7 @@ function MedicalRecordTab({ patient, pregnancy, exams }: { patient: PatientRecor
           <KeyValue label="LMP" value={formatDate(pregnancy?.lmp)} />
           <KeyValue label="EDD" value={formatDate(pregnancy?.edd)} />
           <KeyValue label="Gest. Age" value={pregnancy?.gestationalAge ? `${pregnancy.gestationalAge} weeks (${trimester(pregnancy.gestationalAge)})` : '-'} accent />
-          <KeyValue label="Preg. Type" value={pregnancy?.pregnancyType ?? 'Single'} />
+          <KeyValue label="Preg. Type" value={pregnancy?.pregnancyType ?? '-'} />
           <KeyValue label="G/P/A" value={`G${pregnancy?.gravida ?? 0} / P${pregnancy?.para ?? 0} / A${pregnancy?.abortus ?? 0}`} />
           <AncProgress visit={pregnancy?.ancVisit} />
         </InfoCard>
@@ -133,7 +153,7 @@ function MedicalRecordTab({ patient, pregnancy, exams }: { patient: PatientRecor
           <ChipList items={jsonStrings(pregnancy?.riskFactors, fallbackRisks(pregnancy))} tone="danger" empty="No active risk factor" />
         </InfoCard>
         <InfoCard title="Routine Medication">
-          <CheckList items={jsonStrings(pregnancy?.routineMedication, ['Folic Acid', 'Iron Supplement'])} />
+          <CheckList items={jsonStrings(pregnancy?.routineMedication)} />
         </InfoCard>
         <InfoCard title="Medical Background">
           <div className={styles.compactGrid}>
@@ -147,7 +167,7 @@ function MedicalRecordTab({ patient, pregnancy, exams }: { patient: PatientRecor
       <main className={styles.historyPanel}>
         <div className={styles.sectionTitleRow}>
           <h2>Examination History <span>({exams.length} records)</span></h2>
-          <Link href={routes.examination} className={styles.primaryButton}><AppIcon name="plus" width={18} height={18} />New Examination</Link>
+          <button type="button" disabled={!pregnancy || isQueueing} onClick={onStartExamination} className={styles.primaryButton}><AppIcon name="plus" width={18} height={18} />{isQueueing ? 'Queueing...' : 'New Examination'}</button>
         </div>
         {latestExam ? <FeaturedExam exam={latestExam} pregnancy={pregnancy} /> : <section className={styles.emptyExam}>No examination record yet.</section>}
         <div className={styles.examList}>
@@ -343,7 +363,7 @@ function shortId(id: string) {
 }
 
 function doctorName(exam: ExaminationRecord) {
-  return exam.createdBy?.displayName ?? exam.createdBy?.username ?? 'Dr. Siti Aminah';
+  return exam.createdBy?.displayName ?? exam.createdBy?.username ?? '-';
 }
 
 function jsonStrings(value: unknown, fallback: string[] = []) {

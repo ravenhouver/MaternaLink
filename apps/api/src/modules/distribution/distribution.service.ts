@@ -286,12 +286,13 @@ export class DistributionService {
     });
   }
 
-  async addTrackingEvent(id: string, actorUserId: string, data: TrackingEventDto) {
+  async addTrackingEvent(id: string, user: CurrentUser, data: TrackingEventDto) {
     const recommendation = await this.prisma.distributionRecommendation.findUniqueOrThrow({ where: { id } });
+    this.assertTrackingActor(user, recommendation.puskesmasId, data.status);
     this.assertTrackingTransition(recommendation.status, data.status);
     return this.prisma.$transaction(async (tx) => {
       const event = await tx.shipmentTrackingEvent.create({
-        data: { recommendationId: id, status: data.status, note: data.note?.trim() || null, actorUserId },
+        data: { recommendationId: id, status: data.status, note: data.note?.trim() || null, actorUserId: user.id },
       });
 
       if (data.status === TrackingStatus.DISPATCHED) {
@@ -302,6 +303,19 @@ export class DistributionService {
       }
       return event;
     });
+  }
+
+  private assertTrackingActor(user: CurrentUser, puskesmasId: string, next: TrackingStatus) {
+    if (user.role === UserRole.BIDAN_PUSKESMAS) {
+      assertOwnPuskesmas(user, puskesmasId);
+      if (next !== TrackingStatus.RECEIVED) throw new BadRequestException('Bidan can only confirm received shipments');
+      return;
+    }
+    if (user.role === UserRole.IFK_ADMIN) {
+      if (next === TrackingStatus.RECEIVED) throw new BadRequestException('Received shipments must be confirmed by puskesmas');
+      return;
+    }
+    throw new BadRequestException('User role cannot update shipment tracking');
   }
 
   private assertTrackingTransition(current: RecommendationStatus, next: TrackingStatus) {

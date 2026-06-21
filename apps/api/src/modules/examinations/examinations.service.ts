@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
 import { assertOwnPuskesmas } from '../../common/auth/scope-utils';
@@ -37,12 +37,12 @@ export class ExaminationsService {
       records: [{ record_id: `DRAFT-${Date.now()}`, facility_id: user.puskesmasId, transcript: data.complaint }],
     });
     const result = extraction.extraction_results[0];
-    const symptomIds = this.parseSymptomIds(result?.validated_symptoms || result?.extracted_symptoms);
-    const diagnosisIds = extraction.condition_estimates
+    const symptomIds = await this.validGejalaIds(this.parseSymptomIds(result?.validated_symptoms || result?.extracted_symptoms));
+    const diagnosisIds = await this.validKondisiIds(extraction.condition_estimates
       .filter((item) => item.estimated_total_cases > 0)
       .sort((a, b) => b.estimated_total_cases - a.estimated_total_cases)
       .map((item) => item.condition_id)
-      .slice(0, 3);
+      .slice(0, 3));
     return {
       symptomIds,
       diagnosisIds,
@@ -54,18 +54,23 @@ export class ExaminationsService {
 
   create(data: CreateExaminationDto, user: CurrentUser) {
     return this.prisma.$transaction(async (tx) => {
-      const pregnancy = await tx.pregnancy.findUniqueOrThrow({ where: { id: data.pregnancyId } });
+      const pregnancy = await tx.pregnancy.findUnique({ where: { id: data.pregnancyId } });
+      if (!pregnancy) throw new NotFoundException('Pregnancy not found');
       if (pregnancy.patientId !== data.patientId) throw new ConflictException('Patient and pregnancy do not match');
       assertOwnPuskesmas(user, pregnancy.puskesmasId);
       const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId ?? pregnancy.puskesmasId : pregnancy.puskesmasId;
       if (data.queueId) {
-        await tx.patientQueue.findFirstOrThrow({
+        const queue = await tx.patientQueue.findFirst({
           where: { id: data.queueId, patientId: data.patientId, pregnancyId: data.pregnancyId, puskesmasId },
+          include: { examination: true },
         });
+        if (!queue) throw new NotFoundException('Queue not found');
+        if (queue.examination) return queue.examination;
       }
       const diagnosis = data.diagnosis ?? [];
       const symptoms = data.symptoms ?? [];
       const medication = normalizeMedication(data.medication);
+      await this.assertValidReferences(tx, diagnosis, symptoms, medication);
       const period = currentPeriod();
 
       const examination = await tx.examination.create({
@@ -198,5 +203,46 @@ export class ExaminationsService {
       return [];
     }
     return [];
+  }
+
+  private async validKondisiIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.kondisi.findMany({ where: { id: { in: ids } }, select: { id: true } });
+    const valid = new Set(rows.map((row) => row.id));
+    return ids.filter((id) => valid.has(id));
+  }
+
+  private async validGejalaIds(ids: string[]) {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.gejala.findMany({ where: { id: { in: ids } }, select: { id: true } });
+    const valid = new Set(rows.map((row) => row.id));
+    return ids.filter((id) => valid.has(id));
+  }
+
+  private async assertValidReferences(
+    tx: Prisma.TransactionClient,
+    diagnosis: NonNullable<CreateExaminationDto['diagnosis']>,
+    symptoms: NonNullable<CreateExaminationDto['symptoms']>,
+    medication: ReturnType<typeof normalizeMedication>,
+  ) {
+    const [validKondisi, validGejala, validObat] = await Promise.all([
+      tx.kondisi.findMany({ where: { id: { in: diagnosis.map((item) => item.kondisiId) } }, select: { id: true } }),
+      tx.gejala.findMany({ where: { id: { in: symptoms.map((item) => item.gejalaId) } }, select: { id: true } }),
+      tx.obat.findMany({ where: { id: { in: medication.map((item) => item.obatId) } }, select: { id: true } }),
+    ]);
+    const missingKondisi = this.missingIds(diagnosis.map((item) => item.kondisiId), validKondisi.map((item) => item.id));
+    const missingGejala = this.missingIds(symptoms.map((item) => item.gejalaId), validGejala.map((item) => item.id));
+    const missingObat = this.missingIds(medication.map((item) => item.obatId), validObat.map((item) => item.id));
+    const errors = [
+      missingKondisi.length ? `Invalid diagnosis ids: ${missingKondisi.join(', ')}` : null,
+      missingGejala.length ? `Invalid symptom ids: ${missingGejala.join(', ')}` : null,
+      missingObat.length ? `Invalid medication ids: ${missingObat.join(', ')}` : null,
+    ].filter(Boolean);
+    if (errors.length) throw new BadRequestException(errors.join('; '));
+  }
+
+  private missingIds(input: string[], valid: string[]) {
+    const validSet = new Set(valid);
+    return [...new Set(input.filter((id) => !validSet.has(id)))];
   }
 }

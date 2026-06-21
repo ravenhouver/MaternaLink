@@ -1,12 +1,14 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { ExaminationSource } from '@prisma/client';
-import { IsArray, IsEnum, IsInt, IsNumber, IsObject, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsEnum, IsInt, IsNumber, IsObject, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 
 export class ExaminationDiagnosisDto {
   @IsString()
   kondisiId!: string;
 
   @IsInt()
+  @Min(1)
   jumlahKasus!: number;
 }
 
@@ -15,6 +17,7 @@ export class ExaminationSymptomDto {
   gejalaId!: string;
 
   @IsInt()
+  @Min(1)
   jumlah!: number;
 }
 
@@ -23,6 +26,7 @@ export class ExaminationMedicationDto {
   obatId!: string;
 
   @IsInt()
+  @Min(1)
   quantity!: number;
 
   @IsOptional()
@@ -31,6 +35,7 @@ export class ExaminationMedicationDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(1)
   duration?: number;
 
   @IsOptional()
@@ -39,6 +44,7 @@ export class ExaminationMedicationDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(1)
   frequency?: number;
 
   @IsOptional()
@@ -71,6 +77,7 @@ export class CreateExaminationDto {
 
   @IsOptional()
   @IsInt()
+  @Min(1)
   gestationalAge?: number;
 
   @IsOptional()
@@ -79,14 +86,20 @@ export class CreateExaminationDto {
 
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExaminationDiagnosisDto)
   diagnosis?: ExaminationDiagnosisDto[];
 
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExaminationSymptomDto)
   symptoms?: ExaminationSymptomDto[];
 
   @IsOptional()
   @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExaminationMedicationDto)
   medication?: ExaminationMedicationDto[];
 
   @IsOptional()

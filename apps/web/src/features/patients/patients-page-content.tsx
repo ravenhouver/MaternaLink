@@ -166,6 +166,13 @@ export function PatientsPageContent() {
     void refreshRows();
   }, []);
 
+  useEffect(() => {
+    const editId = new URLSearchParams(window.location.search).get('edit');
+    if (!editId || !rows.length || editing?.id === editId) return;
+    const patient = rows.find((row) => row.id === editId);
+    if (patient) openEdit(patient);
+  }, [editing?.id, rows]);
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
@@ -240,6 +247,12 @@ export function PatientsPageContent() {
     setDraft(toDraft(patient));
   }
 
+  function closeEdit() {
+    setEditing(null);
+    setDraft(null);
+    if (new URLSearchParams(window.location.search).get('edit')) window.history.replaceState(null, '', routes.patients);
+  }
+
   async function saveEdit() {
     if (!editing || !draft) return;
     setError(null);
@@ -253,8 +266,7 @@ export function PatientsPageContent() {
         ancVisit: draft.ancVisit.trim(),
         riskLevel: draft.riskLevel,
       });
-      setEditing(null);
-      setDraft(null);
+      closeEdit();
       await refreshRows();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : t('saveError'));
@@ -344,11 +356,11 @@ export function PatientsPageContent() {
       {queueing && queueDraft ? <QueueScreeningModal patient={queueing} draft={queueDraft} onChange={setQueueDraft} onClose={() => setQueueing(null)} onSubmit={() => void queuePatient()} /> : null}
 
       {editing && draft ? (
-        <div className={styles.modalOverlay} role="presentation" onMouseDown={() => setEditing(null)}>
+        <div className={styles.modalOverlay} role="presentation" onMouseDown={closeEdit}>
           <section aria-labelledby="edit-patient-title" aria-modal="true" className={styles.queueModal} role="dialog" onMouseDown={(event) => event.stopPropagation()}>
             <header className={styles.modalHeader}>
               <div><h2 id="edit-patient-title">{t('editPatient')}</h2><p>{editing.fullName}</p></div>
-              <button type="button" aria-label={t('closeEdit')} className={styles.modalClose} onClick={() => setEditing(null)}><AppIcon name="x" width={20} height={20} /></button>
+              <button type="button" aria-label={t('closeEdit')} className={styles.modalClose} onClick={closeEdit}><AppIcon name="x" width={20} height={20} /></button>
             </header>
             <div className={styles.modalBody}>
               <div className={styles.twoColumnFields}>
@@ -361,7 +373,7 @@ export function PatientsPageContent() {
                 <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('riskLevel')}</span><select value={draft.riskLevel} onChange={(event) => setDraft({ ...draft, riskLevel: event.target.value as PregnancyRiskLevel })}><option value="LOW">LOW</option><option value="MEDIUM">MEDIUM</option><option value="HIGH">HIGH</option></select></label>
               </div>
             </div>
-            <footer className={styles.modalFooter}><button type="button" className={styles.cancelButton} onClick={() => setEditing(null)}>{t('cancel')}</button><button type="button" className={styles.enterQueueButton} onClick={() => void saveEdit()}>{t('saveChanges')}</button></footer>
+            <footer className={styles.modalFooter}><button type="button" className={styles.cancelButton} onClick={closeEdit}>{t('cancel')}</button><button type="button" className={styles.enterQueueButton} onClick={() => void saveEdit()}>{t('saveChanges')}</button></footer>
           </section>
         </div>
       ) : null}

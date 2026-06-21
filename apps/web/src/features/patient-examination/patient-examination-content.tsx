@@ -48,6 +48,7 @@ type MedicationFormRow = {
   dosage: string;
   unit: string;
   duration: string;
+  durationUnit: string;
   frequency: string;
 };
 
@@ -87,6 +88,7 @@ function createMedicationRow(seed?: Partial<MedicationFormRow>): MedicationFormR
     dosage: seed?.dosage ?? '',
     unit: seed?.unit ?? '',
     duration: seed?.duration ?? '',
+    durationUnit: seed?.durationUnit ?? 'day',
     frequency: seed?.frequency ?? '',
   };
 }
@@ -219,21 +221,13 @@ export function PatientExaminationContent() {
         pregnancyId: queue.pregnancy.id,
         source,
         complaint: finalForm.complaint,
-        vitalSigns: { bloodPressure: finalForm.bloodPressure || null, pulse: finalForm.pulse ? Number(finalForm.pulse) : null },
-        gestationalAge: Number(finalForm.gestationalAge),
-        ancVisit: finalForm.ancVisit,
+        vitalSigns: buildVitalSigns(finalForm),
+        gestationalAge: optionalInteger(finalForm.gestationalAge),
+        ancVisit: optionalString(finalForm.ancVisit),
         diagnosis: finalForm.diagnosisIds.map((kondisiId) => ({ kondisiId, jumlahKasus: 1 })),
         symptoms: finalForm.symptomIds.map((gejalaId) => ({ gejalaId, jumlah: 1 })),
-        medication: finalForm.medications.filter((item) => item.medicine).map((item) => ({
-          obatId: item.medicine,
-          quantity: Math.max(1, Math.round(toMedicationNumber(item.dosage, 1))),
-          unit: item.unit || null,
-          duration: item.duration ? toMedicationNumber(item.duration, 0) : null,
-          durationUnit: item.duration ? 'day' : null,
-          frequency: item.frequency ? toMedicationNumber(item.frequency, 0) : null,
-          frequencyUnit: item.frequency ? 'x/day' : null,
-        })),
-        notes: finalForm.notes,
+        medication: finalForm.medications.filter((item) => item.medicine).map(buildMedicationPayload),
+        notes: optionalString(finalForm.notes),
         riskSummary: buildExaminationRiskSummary(finalForm, queue.pregnancy.riskLevel),
       });
       router.push(routes.forecastCalendar);
@@ -371,6 +365,43 @@ function toMedicationNumber(value: string, fallback: number) {
   const normalized = value.trim().replace(/\./g, '').replace(',', '.');
   const parsed = Number(normalized || fallback);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function optionalString(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function optionalInteger(value: string) {
+  const parsed = Number(value.trim());
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function optionalPositiveNumber(value: string) {
+  const parsed = toMedicationNumber(value, 0);
+  return parsed > 0 ? parsed : undefined;
+}
+
+function buildMedicationPayload(item: MedicationFormRow) {
+  const duration = optionalPositiveNumber(item.duration);
+  const frequency = optionalPositiveNumber(item.frequency);
+  return {
+    obatId: item.medicine,
+    quantity: Math.max(1, Math.round(toMedicationNumber(item.dosage, 1))),
+    unit: optionalString(item.unit),
+    duration,
+    durationUnit: duration ? item.durationUnit : undefined,
+    frequency,
+    frequencyUnit: frequency ? 'x/day' : undefined,
+  };
+}
+
+function buildVitalSigns(form: ExaminationFormState) {
+  const pulse = optionalPositiveNumber(form.pulse);
+  return {
+    ...(form.bloodPressure.trim() ? { bloodPressure: form.bloodPressure.trim() } : {}),
+    ...(pulse ? { pulse } : {}),
+  };
 }
 
 function buildExaminationRiskSummary(form: ExaminationFormState, pregnancyRiskLevel: string) {
@@ -736,7 +767,7 @@ function MedicationPanel({ form, medicines, onAdd, onChange, onRemove }: { form:
               <span>{t('duration')}</span>
               <div className={styles.comboInput}>
                 <input aria-label={`${t('duration')} ${index + 1}`} placeholder="1.000,00" value={row.duration} onChange={(event) => onChange(row.id, 'duration', event.target.value)} />
-                <select aria-label={`${t('duration')} ${t('unit')} ${index + 1}`} value={row.duration ? 'day' : 'day'} onChange={() => undefined}>
+                <select aria-label={`${t('duration')} ${t('unit')} ${index + 1}`} value={row.durationUnit} onChange={(event) => onChange(row.id, 'durationUnit', event.target.value)}>
                   <option value="day">{t('day')}</option>
                   <option value="week">{t('week')}</option>
                 </select>

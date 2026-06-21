@@ -347,7 +347,7 @@
 
 .modalOverlay {
   position: fixed;
-  z-index: 50;
+  z-index: var(--z-app-modal);
   display: flex;
   overflow-y: auto;
   align-items: flex-start;

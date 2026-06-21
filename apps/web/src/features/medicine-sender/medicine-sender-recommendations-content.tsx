@@ -36,6 +36,14 @@ function StatusBadge({ urgency }: { urgency: RecommendationUrgency }) {
   return <span className={[styles.recoBadge, styles[urgencyLabel[urgency]]].join(' ')}>{urgency}</span>;
 }
 
+function latestTrackingStatus(row: DistributionRecommendation) {
+  return [...(row.trackingEvents ?? [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.status;
+}
+
+function recommendationStatusLabel(row: DistributionRecommendation) {
+  return row.status === 'DISPATCHED' && latestTrackingStatus(row) === 'ISSUE_REPORTED' ? 'ISSUE_REPORTED' : row.status;
+}
+
 function RecommendationsSidebar() {
   return (
     <aside className={styles.recoSidebar} aria-label="Medicine sender navigation">
@@ -238,7 +246,7 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, r
                 <td>{row.items.map((item) => `${item.obat?.nama ?? item.obatId} (${item.finalQuantity} ${item.obat?.satuan ?? ''})`).join(', ')}</td>
                 <td><strong>{new Date(row.periode).toLocaleDateString('id-ID')}</strong><small>Priority #{row.priorityRank}</small></td>
                 <td><StatusBadge urgency={row.urgency} /></td>
-                <td>{row.status === 'PENDING' ? <em>Pending Approval</em> : <span className={styles.approvedPill}>{row.status}</span>}</td>
+                <td>{row.status === 'PENDING' ? <em>Pending Approval</em> : <span className={recommendationStatusLabel(row) === 'ISSUE_REPORTED' ? styles.issuePill : styles.approvedPill}>{recommendationStatusLabel(row)}</span>}</td>
                 <td><div className={styles.recoActions}>
                   {row.status === 'PENDING' ? <button type="button" className={styles.approveButton} onClick={() => onOpen('approve', row)}>Approve</button> : <button type="button" className={styles.trackButton} onClick={() => onOpen('track', row)}>Track</button>}
                   {row.status === 'PENDING' ? <button type="button" className={styles.rejectButton} onClick={() => onOpen('reject', row)}>Reject</button> : null}
@@ -279,7 +287,7 @@ function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: ()
 
 function trackingOptions(row: DistributionRecommendation): TrackingStatus[] {
   if (row.status === 'APPROVED') return ['DISPATCHED'];
-  if (row.status === 'DISPATCHED') return ['RECEIVED', 'ISSUE_REPORTED'];
+  if (row.status === 'DISPATCHED') return ['ISSUE_REPORTED'];
   return [];
 }
 
@@ -319,7 +327,7 @@ function FilterModal({ onApply, onClose, statusFilter }: { onApply: (status: Rec
 function ConfirmModal({ kind, onClose, onConfirm, row }: { kind: 'approve' | 'reject'; onClose: () => void; onConfirm: (note?: string) => void; row: DistributionRecommendation }) {
   const [note, setNote] = useState('Rejected by IFK review.');
   const approve = kind === 'approve';
-  return <ModalShell onClose={onClose} size="confirm"><div className={styles.confirmBox}><span className={approve ? styles.confirmIcon : styles.rejectIcon}>{approve ? <AppIcon name="checkCircle" width={24} height={24} /> : <AppIcon name="x" width={24} height={24} />}</span><h2>{approve ? 'Shipment Confirmation' : 'Reject Shipment'}</h2><p>You are about to {approve ? 'approve' : 'reject'} recommendation <b>{row.id} for {row.puskesmas?.nama ?? row.puskesmasId}.</b></p>{approve ? null : <textarea value={note} onChange={(event) => setNote(event.target.value)} />}<footer><button type="button" onClick={onClose}>Cancel</button><button type="button" onClick={() => onConfirm(approve ? undefined : note)}>{approve ? 'Approve & Dispatch' : 'Reject'}</button></footer></div></ModalShell>;
+  return <ModalShell onClose={onClose} size="confirm"><div className={styles.confirmBox}><span className={approve ? styles.confirmIcon : styles.rejectIcon}>{approve ? <AppIcon name="checkCircle" width={24} height={24} /> : <AppIcon name="x" width={24} height={24} />}</span><h2>{approve ? 'Approve Recommendation' : 'Reject Shipment'}</h2><p>You are about to {approve ? 'approve' : 'reject'} recommendation <b>{row.id} for {row.puskesmas?.nama ?? row.puskesmasId}.</b></p>{approve ? null : <textarea value={note} onChange={(event) => setNote(event.target.value)} />}<footer><button type="button" onClick={onClose}>Cancel</button><button type="button" onClick={() => onConfirm(approve ? undefined : note)}>{approve ? 'Approve' : 'Reject'}</button></footer></div></ModalShell>;
 }
 
 function ModalShell({ children, onClose, size }: { children: ReactNode; onClose: () => void; size: 'edit' | 'track' | 'filter' | 'confirm' }) {

@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
-import { getRecommendations, rerequestRecommendation, type DistributionRecommendation, type RecommendationStatus, type TrackingEvent, type TrackingStatus } from '@/lib/api';
+import { addTrackingEvent, getRecommendations, rerequestRecommendation, type DistributionRecommendation, type RecommendationStatus, type TrackingEvent, type TrackingStatus } from '@/lib/api';
 import styles from './distribution.module.css';
 
-type ShipmentStatus = 'transit' | 'awaiting' | 'delivered' | 'rejected';
+type ShipmentStatus = 'transit' | 'awaiting' | 'delivered' | 'rejected' | 'issue';
 
 type Shipment = {
   id: string;
@@ -29,11 +29,12 @@ type RouteSummary = {
   estimateMinutes?: number;
 };
 
-const filterChips = ['All', 'In Transit', 'Awaiting Approval', 'Approved', 'Received', 'Rejected'];
+const filterChips = ['All', 'In Transit', 'Issue', 'Awaiting Approval', 'Approved', 'Received', 'Rejected'];
 
 function matchesFilter(shipment: Shipment, filter: string) {
   if (filter === 'All') return true;
   if (filter === 'In Transit') return shipment.status === 'transit' && shipment.statusLabel === 'In Transit';
+  if (filter === 'Issue') return shipment.status === 'issue';
   if (filter === 'Awaiting Approval') return shipment.status === 'awaiting';
   if (filter === 'Approved') return shipment.status === 'transit' && shipment.statusLabel === 'Approved';
   if (filter === 'Received') return shipment.status === 'delivered';
@@ -53,17 +54,18 @@ function mapRecommendation(row: DistributionRecommendation): Shipment {
   const mapped = statusMap[row.status];
   const trackingEvents = [...(row.trackingEvents ?? [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const latestEvent = trackingEvents[0];
+  const hasOpenIssue = row.status === 'DISPATCHED' && latestEvent?.status === 'ISSUE_REPORTED';
   return {
     id: row.id,
     medicine: row.items.map((item) => item.obat?.nama ?? item.obatId).join(', ') || row.id,
     quantity: row.items.map((item) => `${item.finalQuantity} ${item.obat?.satuan ?? 'unit'}`).join(', '),
     code: row.id,
-    status: mapped.status,
-    statusLabel: mapped.statusLabel,
+    status: hasOpenIssue ? 'issue' : mapped.status,
+    statusLabel: hasOpenIssue ? 'Issue Reported' : mapped.statusLabel,
     statusMeta: latestEvent ? `${trackingStatusLabel(latestEvent.status)} ${formatDateTime(latestEvent.createdAt)}` : `Requested ${formatDate(row.periode)}`,
-    icon: mapped.icon,
+    icon: hasOpenIssue ? 'x' : mapped.icon,
     expanded: false,
-    borderTone: mapped.borderTone,
+    borderTone: hasOpenIssue ? 'red' : mapped.borderTone,
     source: row,
     trackingEvents,
   };
@@ -159,6 +161,7 @@ export function DistributionPageContent() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [error, setError] = useState<string | null>(null);
   const [manuallyToggled, setManuallyToggled] = useState<Set<string>>(() => new Set());
+  const [receivingId, setReceivingId] = useState<string | null>(null);
 
   useEffect(() => {
     getRecommendations()
@@ -215,6 +218,19 @@ export function DistributionPageContent() {
     }
   }
 
+  async function handleReceive(id: string) {
+    setError(null);
+    setReceivingId(id);
+    try {
+      await addTrackingEvent(id, { status: 'RECEIVED', note: 'Shipment received by puskesmas.' });
+      setRecommendations(await getRecommendations());
+    } catch (receiveError) {
+      setError(receiveError instanceof Error ? receiveError.message : 'Gagal mengonfirmasi penerimaan');
+    } finally {
+      setReceivingId(null);
+    }
+  }
+
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.pageHeader}>
@@ -244,7 +260,7 @@ export function DistributionPageContent() {
       <section className={styles.shipmentList} aria-label="Medicine shipments">
         {shipments.length === 0 ? <article className={styles.shipmentCard}><div className={styles.cardContent}>Belum ada data pengiriman.</div></article> : null}
         {shipments.map((shipment) => (
-          <ShipmentCard expanded={openShipmentIds.has(shipment.id)} onRerequest={() => void handleRerequest(shipment.id)} onToggle={() => toggleShipment(shipment.id)} shipment={shipment} key={shipment.id} />
+          <ShipmentCard expanded={openShipmentIds.has(shipment.id)} isReceiving={receivingId === shipment.id} onReceive={() => void handleReceive(shipment.id)} onRerequest={() => void handleRerequest(shipment.id)} onToggle={() => toggleShipment(shipment.id)} shipment={shipment} key={shipment.id} />
         ))}
       </section>
 
@@ -273,7 +289,7 @@ export function DistributionPageContent() {
   );
 }
 
-function ShipmentCard({ expanded, onRerequest, onToggle, shipment }: { expanded: boolean; onRerequest: () => void; onToggle: () => void; shipment: Shipment }) {
+function ShipmentCard({ expanded, isReceiving, onReceive, onRerequest, onToggle, shipment }: { expanded: boolean; isReceiving: boolean; onReceive: () => void; onRerequest: () => void; onToggle: () => void; shipment: Shipment }) {
   return (
     <article className={`${styles.shipmentCard} ${styles[shipment.borderTone]}`}>
       <div className={styles.cardContent}>
@@ -301,6 +317,13 @@ function ShipmentCard({ expanded, onRerequest, onToggle, shipment }: { expanded:
 
         {expanded ? <ExpandedTransitDetails shipment={shipment} /> : null}
 
+        {shipment.source.status === 'DISPATCHED' ? (
+          <div className={styles.receiveNote}>
+            <p><strong>Shipment in transit.</strong> Confirm only after the medicines are physically received.</p>
+            <button type="button" disabled={isReceiving} onClick={onReceive}>{isReceiving ? 'Saving...' : 'Confirm Received'}</button>
+          </div>
+        ) : null}
+
         {shipment.status === 'rejected' ? (
           <div className={styles.rejectionNote}>
             <p><strong>Reason:</strong> {rejectionReason(shipment)}</p>
@@ -316,6 +339,7 @@ function StatusIcon({ status }: { status: ShipmentStatus }) {
   if (status === 'transit') return <AppIcon name="truck" width={12} height={12} />;
   if (status === 'awaiting') return <AppIcon name="hourglass" width={12} height={12} />;
   if (status === 'delivered') return <AppIcon name="checkCircle" width={12} height={12} />;
+  if (status === 'issue') return <AppIcon name="alert" width={12} height={12} />;
   return <AppIcon name="x" width={12} height={12} />;
 }
 

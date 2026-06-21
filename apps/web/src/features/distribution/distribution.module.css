@@ -31,6 +31,7 @@
 .filterRow span,
 .statusCluster small,
 .performanceCard p,
+.receiveNote p,
 .rejectionNote p {
   margin: 0;
 }
@@ -235,6 +236,7 @@
 .transit { background: #d8e2ff; color: #005bbf; }
 .awaiting { background: #fff7f7; color: #8a2d48; border: 1px solid #d7a5b5; }
 .delivered { background: #e6f4ea; color: #137333; }
+.issue { background: #fff4e5; color: #9a3412; border: 1px solid #fed7aa; }
 .rejected { background: #fde8e8; color: #ba1a1a; }
 
 .statusCluster small {
@@ -449,6 +451,7 @@
   line-height: 16px;
 }
 
+.receiveNote,
 .rejectionNote {
   display: flex;
   align-items: center;
@@ -456,19 +459,32 @@
   gap: 16px;
   padding: 12px;
   border-radius: 8px;
+}
+
+.receiveNote {
+  background: #f0f9ff;
+}
+
+.rejectionNote {
   background: #fff7f7;
 }
 
+.receiveNote p,
 .rejectionNote p {
   color: #414754;
   font-size: 14px;
   line-height: 20px;
 }
 
+.receiveNote strong {
+  color: #005bbf;
+}
+
 .rejectionNote strong {
   color: #ba1a1a;
 }
 
+.receiveNote button,
 .rejectionNote button {
   border: 0;
   background: transparent;
@@ -478,6 +494,11 @@
   font-size: 12px;
   font-weight: 800;
   text-decoration: underline;
+}
+
+.receiveNote button:disabled {
+  color: #64748b;
+  cursor: progress;
 }
 
 .visualGrid {
@@ -685,6 +706,7 @@
   .filterRow,
   .cardTop,
   .statusCluster,
+  .receiveNote,
   .rejectionNote {
     align-items: flex-start;
     flex-direction: column;
