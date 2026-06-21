@@ -22,7 +22,7 @@ type LiveWeather = {
   humidityPct?: number | null;
   precipitationMm?: number | null;
   rainMm?: number | null;
-  windKph?: number | null;
+  windKnots?: number | null;
   weatherCode?: number | null;
   maxPrecipitationProbabilityPct: number;
   maxDailyPrecipitationMm: number;
@@ -351,6 +351,18 @@ export class DistributionService {
     const safe = puskesmas.filter((item) => !activeFacilityIds.has(item.id)).length;
     const totalRisk = Math.max(1, critical + warning + safe + pending);
 
+    const weatherRows = (await Promise.all(puskesmas.map(async (facility) => {
+      if (facility.latitude == null || facility.longitude == null) return null;
+      return this.fetchLiveWeather(facility.latitude, facility.longitude);
+    }))).filter((item): item is LiveWeather => Boolean(item));
+
+    const weatherOverlay = weatherRows.length ? {
+      precipitationProbabilityPct: Math.max(...weatherRows.map((item) => item.maxPrecipitationProbabilityPct)),
+      windKnots: Math.round(Math.max(...weatherRows.map((item) => item.windKnots ?? 0))),
+      source: 'OPEN_METEO' as const,
+      fetchedAt: weatherRows[0].fetchedAt,
+    } : null;
+
     const actions = recommendations.slice(0, 3).map((item) => {
       const alert = alerts.find((row) => row.puskesmasId === item.puskesmasId);
       return {
@@ -386,11 +398,22 @@ export class DistributionService {
         { label: 'Pending approval', value: pending, delta: 'review queue', tone: 'primary', progress: Math.round((pending / Math.max(1, recommendations.length)) * 100), icon: 'clipboardCheck' },
       ],
       actions,
-      mapPoints: actions.flatMap((item) => item.position ? [{ id: item.id, name: item.name, status: item.pointStatus, position: item.position }] : []),
+      mapPoints: puskesmas.flatMap((facility) => {
+        if (facility.latitude == null || facility.longitude == null) return [];
+        const alert = alerts.find((row) => row.puskesmasId === facility.id);
+        const activeRecommendation = recommendations.find((item) => item.puskesmasId === facility.id && item.status !== RecommendationStatus.RECEIVED && item.status !== RecommendationStatus.CANCELLED);
+        const status = alert?.severity === 'CRITICAL' || activeRecommendation?.urgency === 'CRITICAL'
+          ? 'critical'
+          : alert || activeRecommendation?.urgency === 'WARNING'
+            ? 'anticipatory'
+            : 'regular';
+        return [{ id: facility.id, name: facility.nama, status, position: [facility.latitude, facility.longitude] }];
+      }),
       approvalLogs,
       syncFrequencySeconds: 30,
       alertCount: alerts.length,
       routeCount: recommendations.length,
+      weatherOverlay,
     };
   }
 
@@ -681,6 +704,7 @@ export class DistributionService {
     url.searchParams.set('current', 'temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m');
     url.searchParams.set('hourly', 'precipitation_probability,precipitation,rain');
     url.searchParams.set('forecast_days', '7');
+    url.searchParams.set('wind_speed_unit', 'kn');
     url.searchParams.set('timezone', 'auto');
 
     try {
@@ -715,7 +739,7 @@ export class DistributionService {
       humidityPct: data.current?.relative_humidity_2m ?? null,
       precipitationMm: data.current?.precipitation ?? null,
       rainMm: data.current?.rain ?? null,
-      windKph: data.current?.wind_speed_10m ?? null,
+      windKnots: data.current?.wind_speed_10m ?? null,
       weatherCode: data.current?.weather_code ?? null,
       maxPrecipitationProbabilityPct: Math.round(maxProbability),
       maxDailyPrecipitationMm: this.round1(maxDailyPrecipitation),

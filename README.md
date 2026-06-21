@@ -260,7 +260,6 @@ Do not commit real production credentials or secrets.
 | `/ifk/recommendations` | IFK recommendation review with drag/drop reorder. |
 | `/ifk/clinics` | Clinic delivery context. |
 | `/ifk/environment` | Environment/risk context view. |
-| `/ifk/decision-history` | Decision history view. |
 
 Role entry routes are `/admin` for super admin, `/dashboard` for bidan, and `/ifk` for IFK.
 
@@ -677,7 +676,7 @@ Recommended demo order:
 9. Open `/ifk/recommendations`.
 10. Drag a recommendation row or use move buttons; order persists through the API.
 11. Edit quantity with reason, then approve, reject, or request revision.
-12. Add tracking events and open `/ifk/decision-history` to inspect final decisions.
+12. Add tracking events and inspect the shipment timeline from the tracking modal.
 
 ## Testing
 

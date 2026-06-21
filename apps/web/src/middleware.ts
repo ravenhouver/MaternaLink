@@ -22,7 +22,6 @@ const protectedRoutes: Array<{ href: string; roles: UserRole[] }> = [
   { href: '/forecast-calendar', roles: ['BIDAN_PUSKESMAS'] },
   { href: '/medicine-needs', roles: ['BIDAN_PUSKESMAS'] },
   { href: '/deliveries', roles: ['BIDAN_PUSKESMAS'] },
-  { href: '/ifk/decision-history', roles: ['IFK_ADMIN'] },
   { href: '/ifk/environment', roles: ['IFK_ADMIN'] },
   { href: '/ifk/clinics', roles: ['IFK_ADMIN'] },
   { href: '/ifk/recommendations', roles: ['IFK_ADMIN'] },

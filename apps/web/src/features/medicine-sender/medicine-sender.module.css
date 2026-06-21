@@ -960,14 +960,17 @@
   text-transform: uppercase;
 }
 
-.overlayHeader > span:last-child {
+.overlayHeader button {
   width: 24px;
   height: 14px;
+  border: 0;
   border-radius: 999px;
   background: #2f63e6;
+  cursor: pointer;
+  padding: 0;
 }
 
-.overlayHeader > span:last-child::after {
+.overlayHeader button::after {
   display: block;
   width: 10px;
   height: 10px;
@@ -975,6 +978,14 @@
   border-radius: 999px;
   background: #ffffff;
   content: '';
+}
+
+.overlayHeader button[aria-pressed='false'] {
+  background: #cbd5e1;
+}
+
+.overlayHeader button[aria-pressed='false']::after {
+  margin: 2px auto 2px 2px;
 }
 
 .mapOverlay div {
@@ -996,6 +1007,16 @@
 
 .mapOverlay div span svg {
   color: #2f63e6;
+}
+
+.overlayOff {
+  margin: 0;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .mapCaption {

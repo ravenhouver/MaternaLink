@@ -277,6 +277,7 @@ export type IfkDashboardResponse = {
   syncFrequencySeconds: number;
   alertCount: number;
   routeCount: number;
+  weatherOverlay: { precipitationProbabilityPct: number; windKnots: number; source: 'OPEN_METEO'; fetchedAt: string } | null;
 };
 
 export type IfkFacilityRecord = {
@@ -303,13 +304,6 @@ export type IfkFacilityRecord = {
   longitude?: number | null;
   activeRecommendation?: DistributionRecommendation | null;
   nearbyCandidates: Array<{ id: string; name: string; distance?: number | null; riskLabel: string }>;
-};
-
-export type IfkDecisionHistoryResponse = {
-  metrics: Array<{ label: string; value: string; note: string; icon: string; tone: 'green' | 'blue' }>;
-  rows: Array<{ id: string; date: string; officer: string; clinic: string; action: string; prediction: string; decision: string; tone: 'red' | 'green' }>;
-  bars: Array<{ day: string; green: number; red: number }>;
-  compliance: { rating: number; primaryDeviationFactor: string; summary: string };
 };
 
 export type IfkEnvironmentResponse = {
@@ -687,10 +681,6 @@ export async function getIfkDashboard(): Promise<IfkDashboardResponse> {
 
 export async function getIfkFacilities(): Promise<IfkFacilityRecord[]> {
   return apiFetch('/distribution/ifk/facilities');
-}
-
-export async function getIfkDecisionHistory(): Promise<IfkDecisionHistoryResponse> {
-  return apiFetch('/distribution/ifk/decision-history');
 }
 
 export async function getIfkEnvironment(): Promise<IfkEnvironmentResponse> {

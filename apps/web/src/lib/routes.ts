@@ -19,5 +19,4 @@ export const routes = {
   ifkRecommendations: '/ifk/recommendations',
   ifkClinics: '/ifk/clinics',
   ifkEnvironment: '/ifk/environment',
-  ifkDecisionHistory: '/ifk/decision-history',
 } as const;

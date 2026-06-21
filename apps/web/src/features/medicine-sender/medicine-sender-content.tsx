@@ -24,6 +24,7 @@ const statusLabels = {
 
 export function MedicineSenderContent() {
   const [mapMode, setMapMode] = useState<'map' | 'satellite'>('map');
+  const [weatherOverlayEnabled, setWeatherOverlayEnabled] = useState(true);
   const [dashboard, setDashboard] = useState<IfkDashboardResponse | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [logPage, setLogPage] = useState(1);
@@ -41,6 +42,7 @@ export function MedicineSenderContent() {
   const actions = useMemo(() => dashboard?.actions ?? [], [dashboard]);
   const mapPoints = useMemo(() => dashboard?.mapPoints ?? [], [dashboard]);
   const approvalLogs = useMemo(() => dashboard?.approvalLogs ?? [], [dashboard]);
+  const weatherOverlay = dashboard?.weatherOverlay ?? null;
   const logPageSize = 8;
   const logTotalPages = Math.max(1, Math.ceil(approvalLogs.length / logPageSize));
   const safeLogPage = Math.min(logPage, logTotalPages);
@@ -141,13 +143,15 @@ export function MedicineSenderContent() {
                 <SenderMap points={mapPoints} mode={mapMode} center={mapPoints[0]?.position ?? [-7.7906, 110.377]} zoom={12} />
                 <aside className={styles.mapOverlay} aria-label="Cuaca dan rute">
                   <div className={styles.overlayHeader}>
-                    <Typography.Text>Route overlay</Typography.Text>
-                    <span />
+                    <Typography.Text>WEATHER OVERLAY</Typography.Text>
+                    <button type="button" aria-pressed={weatherOverlayEnabled} aria-label="Toggle weather overlay" onClick={() => setWeatherOverlayEnabled((value) => !value)} />
                   </div>
-                  <div>
-                    <span><AppIcon name="cloudRain" width={18} height={18} /> {dashboard?.alertCount ?? 0} Alerts</span>
-                    <span><AppIcon name="zap" width={18} height={18} /> {dashboard?.routeCount ?? 0} Routes</span>
-                  </div>
+                  {weatherOverlayEnabled ? (
+                    <div>
+                      <span><AppIcon name="cloudRain" width={18} height={18} /> {weatherOverlay ? `${weatherOverlay.precipitationProbabilityPct}% Prec.` : 'Live unavailable'}</span>
+                      <span><AppIcon name="zap" width={18} height={18} /> {weatherOverlay ? `${weatherOverlay.windKnots} Knots` : 'Open-Meteo'}</span>
+                    </div>
+                  ) : <p className={styles.overlayOff}>Weather hidden</p>}
                 </aside>
                 <strong className={styles.mapCaption}>{mapPoints.length ? 'Facility coordinates loaded' : 'Koordinat fasilitas belum tersedia di database'}</strong>
               </div>

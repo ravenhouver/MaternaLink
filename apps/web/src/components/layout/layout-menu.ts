@@ -26,7 +26,6 @@ export const navItems = [
   { key: routes.ifkRecommendations, href: routes.ifkRecommendations, icon: 'package', label: 'Recommendations', labelKey: 'recommendations', roles: ['IFK_ADMIN'] },
   { key: routes.ifkClinics, href: routes.ifkClinics, icon: 'users', label: 'Clinics', labelKey: 'clinics', roles: ['IFK_ADMIN'] },
   { key: routes.ifkEnvironment, href: routes.ifkEnvironment, icon: 'calendar', label: 'Environment', labelKey: 'environment', roles: ['IFK_ADMIN'] },
-  { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'fileText', label: 'Decision History', labelKey: 'decisionHistory', roles: ['IFK_ADMIN'] },
   { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', labelKey: 'deliveries', roles: ['BIDAN_PUSKESMAS'] },
 ] satisfies NavItem[];
 
@@ -51,7 +50,6 @@ export function resolveSelectedKey(pathname: string) {
   if (pathname.startsWith(routes.medicineNeeds)) return routes.medicineNeeds;
   if (pathname.startsWith(routes.deliveries)) return routes.deliveries;
   if (pathname.startsWith(routes.queue)) return routes.queue;
-  if (pathname.startsWith(routes.ifkDecisionHistory)) return routes.ifkDecisionHistory;
   if (pathname.startsWith(routes.ifkEnvironment)) return routes.ifkEnvironment;
   if (pathname.startsWith(routes.ifkClinics)) return routes.ifkClinics;
   if (pathname.startsWith(routes.ifkRecommendations)) return routes.ifkRecommendations;
