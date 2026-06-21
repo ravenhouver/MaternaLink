@@ -18,7 +18,7 @@ MaternaLink models a puskesmas medicine planning workflow from master data to pr
 
 - NestJS REST API with Prisma and PostgreSQL.
 - Next.js dashboard for bidan and IFK workflows.
-- Docker Compose stack for local API, web, and database.
+- Docker Compose stack for local API, web, speech-to-text service, and database.
 - Demo seed data and e2e tests for presentation-ready flows.
 
 Default local URLs:
@@ -29,6 +29,7 @@ Default local URLs:
 | API base | `http://localhost:3001/api` |
 | Swagger docs | `http://localhost:3001/api/docs` |
 | Hosted AI API | `https://azrilfahmiardi-maternalink-ai.hf.space` |
+| Speech STT service | `http://localhost:8002` |
 | PostgreSQL | `localhost:55432` |
 
 ## Demo Login
@@ -45,6 +46,8 @@ Seeded users all use password `password123`.
 - Puskesmas, medicine, clinical condition, and symptom master data.
 - Monthly diagnosis, symptom, context, stock, and anamnesis inputs.
 - Deterministic demand forecast per puskesmas and period.
+- Hosted AI demand forecast with local fallback when the remote service is unavailable.
+- Voice examination recording through browser microphone and local speech-to-text service.
 - Predictive LPLPO generation from forecast output.
 - Allocation plan simulation with route disruption and cold-chain alerts.
 - Responsive dashboard pages for overview, patients/master data, forecast calendar, medicine needs, and IFK flows.
@@ -58,7 +61,8 @@ Seeded users all use password `password123`.
 | Database | PostgreSQL 16, Prisma 5 |
 | Web | Next.js 15, React 18, Ant Design 5, Leaflet |
 | Test | Jest, Supertest |
-| Local runtime | Docker Compose |
+| Local runtime | Docker Compose, Python speech STT container |
+| Production runtime | GitHub Actions, GHCR images, Podman Compose |
 
 ## Repository Structure
 
@@ -91,8 +95,9 @@ Compose starts:
 1. PostgreSQL on host port `55432`.
 2. API on host port `3001`.
 3. Web dashboard on host port `3000`.
-4. Prisma migrations through API entrypoint.
-5. Demo seed data when `RUN_SEED=true`.
+4. Speech STT service on host port `8002`.
+5. Prisma migrations through API entrypoint.
+6. Demo seed data when `RUN_SEED=true`.
 
 Stop stack:
 
@@ -175,6 +180,7 @@ File: `apps/api/.env`
 | `AI_MASTER_SYNC_INTERVAL_MS` | No | `86400000` | Interval for automatic hosted AI master-data sync. |
 | `SPEECH_STT_SERVICE_URL` | No | `http://localhost:8002` | Python speech-to-text service used for voice examination recording. |
 | `SPEECH_STT_TIMEOUT_MS` | No | `120000` | Timeout for speech-to-text transcription calls. |
+| `SESSION_COOKIE_SECURE` | No | `false` | Set to `true` only when serving the app through HTTPS. |
 
 ### Web
 
@@ -229,6 +235,8 @@ Role entry routes are `/dashboard` for bidan and `/ifk` for IFK.
 
 The backend calls the hosted MaternaLink AI API directly. The frontend never calls Hugging Face directly.
 
+For Layer 1 forecast, the API automatically falls back to a local deterministic forecast when `AI_MODE` is not `remote`, or when the hosted AI forecast endpoint returns an error or times out. This keeps `/api/forecast/ai/run` usable during demos even if the remote AI service is unavailable.
+
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Service status. |
@@ -238,7 +246,23 @@ The backend calls the hosted MaternaLink AI API directly. The frontend never cal
 
 Voice examination recording is handled by a separate local Python service at `services/speech-stt`. The web app records audio with `MediaRecorder`, uploads it to the Nest API (`POST /api/speech/transcribe`), then the API proxies the audio to `SPEECH_STT_SERVICE_URL/v1/stt/transcribe` and returns a transcript plus draft examination fields for review.
 
+Browser microphone access only works on secure origins: `https://...` or `localhost`. If the deployed app is opened through plain `http://IP:port`, browsers will block `getUserMedia`; use HTTPS/domain for production voice recording.
+
 Layer 2 may take several minutes, so `/api/workflow/demo/run` starts an async backend job and `/api/workflow/demo/state` is used for polling.
+
+## Production Deploy
+
+Pushes to `main` run `.github/workflows/deploy-vps.yml`.
+
+The workflow:
+
+1. Builds API, web, and speech STT images.
+2. Pushes them to GitHub Container Registry.
+3. SSHes into the VPS.
+4. Pulls the exact commit-tagged images.
+5. Starts `podman-compose.prod.yml` with API on `41874`, web on `41873`, and speech STT on `41875`.
+
+The web Docker image must include `apps/web/public`; static UI assets under `/figma-*` are served from there in production.
 
 ## API Modules
 
