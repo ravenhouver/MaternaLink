@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/speech-stt/app ./app
 
-ENV STT_MODEL_SIZE=turbo
+ENV STT_MODEL_SIZE=base
 ENV STT_DEVICE=cpu
 ENV STT_COMPUTE_TYPE=int8
 

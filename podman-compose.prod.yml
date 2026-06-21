@@ -44,11 +44,16 @@ services:
   speech-stt:
     image: ${SPEECH_STT_IMAGE:-ghcr.io/ravenhouver/maternalink-speech-stt:latest}
     environment:
-      STT_MODEL_SIZE: ${STT_MODEL_SIZE:-turbo}
+      STT_MODEL_SIZE: ${STT_MODEL_SIZE:-base}
       STT_DEVICE: ${STT_DEVICE:-cpu}
       STT_COMPUTE_TYPE: ${STT_COMPUTE_TYPE:-int8}
     ports:
       - "41875:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=5).read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     restart: unless-stopped
 
   web:

@@ -155,7 +155,12 @@ export class AiService {
   }
 
   allocate(payload: AiAllocateRequest): Promise<AiAllocateResponse> {
-    return this.request('/api/v1/layer2/allocate', { method: 'POST', body: JSON.stringify(payload) }, 'layer2');
+    if (this.mode() !== 'remote') return Promise.resolve(this.fallbackAllocate(payload));
+
+    return this.request<AiAllocateResponse>('/api/v1/layer2/allocate', { method: 'POST', body: JSON.stringify(payload) }, 'layer2').catch((error) => {
+      this.logger.warn(`AI allocation unavailable, using local fallback: ${this.errorMessage(error)}`);
+      return this.fallbackAllocate(payload);
+    });
   }
 
   listFacilities(): Promise<AiFacility[]> {
@@ -212,6 +217,63 @@ export class AiService {
         extraction_model: 'local-fallback',
       })),
       condition_estimates: [],
+    };
+  }
+
+  private fallbackAllocate(payload: AiAllocateRequest): AiAllocateResponse {
+    const remainingByDrug = new Map(payload.ifk_stock.map((item) => [item.drug_id, Math.max(0, Math.round(item.available_units))]));
+    const stockouts = new Map((payload.stockout_history ?? []).map((item) => [`${item.facility_id}:${item.drug_id}`, item.stockouts_6m]));
+    const rows = [...payload.l1_forecasts].sort((a, b) => {
+      const aNeed = Math.max(0, a.total_requirement - a.current_stock);
+      const bNeed = Math.max(0, b.total_requirement - b.current_stock);
+      const aScore = aNeed + (stockouts.get(`${a.facility_id}:${a.drug_id}`) ?? 0) * 10;
+      const bScore = bNeed + (stockouts.get(`${b.facility_id}:${b.drug_id}`) ?? 0) * 10;
+      return bScore - aScore;
+    });
+
+    const allocations = rows.map((row) => {
+      const requirement = Math.max(0, Math.round(row.total_requirement));
+      const available = remainingByDrug.get(row.drug_id) ?? 0;
+      const allocated = Math.min(requirement, available);
+      remainingByDrug.set(row.drug_id, available - allocated);
+      const unmet = Math.max(0, requirement - allocated);
+      const coverage_ratio = requirement === 0 ? 1 : Number((allocated / requirement).toFixed(3));
+      const stockoutCount = stockouts.get(`${row.facility_id}:${row.drug_id}`) ?? 0;
+      const priority_score = Math.round((unmet * 2) + Math.max(0, row.forecast_demand - row.current_stock) + stockoutCount * 10);
+
+      return {
+        facility_id: row.facility_id,
+        facility_name: row.facility_id,
+        drug_id: row.drug_id,
+        drug_name: row.drug_id,
+        category: 'fallback',
+        requirement,
+        allocated,
+        coverage_ratio,
+        unmet,
+        priority_score,
+        factors: [
+          { factor: 'requirement', value: String(requirement), contribution: requirement },
+          { factor: 'current_stock', value: String(row.current_stock), contribution: Math.max(0, row.forecast_demand - row.current_stock) },
+          { factor: 'stockout_history_6m', value: String(stockoutCount), contribution: stockoutCount * 10 },
+        ],
+        justification: unmet > 0
+          ? `Local fallback allocated ${allocated} of ${requirement}; ${unmet} units unmet.`
+          : `Local fallback allocated ${allocated} units.`
+      };
+    });
+
+    return {
+      run_id: payload.run_id ?? `LOCAL-L2-${Date.now()}`,
+      forecast_period: rows[0]?.forecast_period ?? new Date().toISOString().slice(0, 10),
+      summary: {
+        mode: 'local-fallback',
+        total_requirement: allocations.reduce((sum, item) => sum + item.requirement, 0),
+        total_allocated: allocations.reduce((sum, item) => sum + item.allocated, 0),
+        total_unmet: allocations.reduce((sum, item) => sum + item.unmet, 0),
+      },
+      allocations,
+      redistribution: [],
     };
   }
 

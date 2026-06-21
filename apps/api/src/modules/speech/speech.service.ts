@@ -34,13 +34,14 @@ export class SpeechService {
 
   async transcribe(file: { buffer: Buffer; mimetype: string; originalname: string; size: number }): Promise<SpeechExaminationDraft> {
     if (!file) throw new BadRequestException('Audio recording is required');
-    if (!['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'].includes(file.mimetype)) {
+    const contentType = this.normalizedContentType(file.mimetype);
+    if (!['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/x-wav'].includes(contentType)) {
       throw new BadRequestException('Only WebM, OGG, MP3, M4A, or WAV audio is supported');
     }
     if (file.size > 15 * 1024 * 1024) throw new BadRequestException('Audio recording must be 15MB or smaller');
 
     const form = new FormData();
-    form.append('file', new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }), file.originalname);
+    form.append('file', new Blob([new Uint8Array(file.buffer)], { type: contentType }), file.originalname);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), Number(process.env.SPEECH_STT_TIMEOUT_MS ?? '120000'));
@@ -70,6 +71,10 @@ export class SpeechService {
     } catch {
       return 'http://speech-stt:8002';
     }
+  }
+
+  private normalizedContentType(value: string) {
+    return value.split(';', 1)[0]?.trim().toLowerCase() || value;
   }
 
   private async toDraft(transcript: string): Promise<SpeechExaminationDraft['draft']> {
