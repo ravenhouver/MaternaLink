@@ -235,8 +235,8 @@ jobs:
           ${COMPOSE} -f podman-compose.prod.yml ps
 
           CADDYFILE="/home/afif/caddy/Caddyfile"
-          if [ -f "${CADDYFILE}" ] && command -v sudo >/dev/null 2>&1; then
-            sudo awk '
+          if [ -f "${CADDYFILE}" ] && [ -w "${CADDYFILE}" ]; then
+            awk '
               /^hisyamardiansyah\.me/ { skip=1; depth=gsub(/{/, "{") - gsub(/}/, "}"); next }
               skip { depth += gsub(/{/, "{") - gsub(/}/, "}"); if (depth <= 0) skip=0; next }
               { print }
@@ -253,9 +253,9 @@ jobs:
                   }
           }
           CADDY
-            sudo cp /tmp/Caddyfile.clean "${CADDYFILE}"
-            sudo -u afif env XDG_RUNTIME_DIR=/run/user/1000 podman exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+            cp /tmp/Caddyfile.clean "${CADDYFILE}"
+            XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" podman exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
           else
-            echo "Existing rootless Caddy config not found at ${CADDYFILE}; HTTPS proxy must be configured manually" >&2
+            echo "Existing rootless Caddy config not found or not writable at ${CADDYFILE}; HTTPS proxy must be configured manually" >&2
           fi
           REMOTE
