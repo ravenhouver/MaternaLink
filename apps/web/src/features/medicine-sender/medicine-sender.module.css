@@ -3472,11 +3472,17 @@
   font-weight: 700;
 }
 
-.recoToolbar button:last-child {
+.recoToolbar .aiToolbarButton {
   border-color: #2563eb;
   background: #2563eb;
   color: #ffffff;
   padding-inline: 22px;
+}
+
+.recoToolbar .aiToolbarButton:disabled {
+  border-color: #93c5fd;
+  background: #93c5fd;
+  cursor: wait;
 }
 
 .recoTablePanel {
@@ -4835,7 +4841,7 @@
 }
 
 .recoModal.track { width: min(100%, 840px); }
-.recoModal.edit { width: min(100%, 640px); }
+.recoModal.edit { width: min(100%, 584px); }
 .recoModal.filter { width: min(100%, 560px); }
 .recoModal.confirm { width: min(100%, 460px); }
 
@@ -4860,19 +4866,19 @@
 .filterHeader {
   display: flex;
   align-items: flex-start;
-  min-height: 76px;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  padding: 20px 68px 18px 24px;
+  min-height: 64px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  padding: 16px 68px 14px 24px;
 }
 
 .editModalHeader h2,
 .trackHeader h2,
 .filterHeader h2,
 .confirmBox h2 {
-  color: #0f172a;
-  font-size: 19px;
-  line-height: 25px;
+  color: #111827;
+  font-size: 18px;
+  line-height: 24px;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -4881,9 +4887,9 @@
 .trackHeader p {
   max-width: 560px;
   overflow-wrap: anywhere;
-  color: #64748b;
-  font-size: 13px;
-  line-height: 18px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .editModalHeader > span,
@@ -4895,10 +4901,22 @@
   white-space: nowrap;
 }
 
+.editModalHeader > span {
+  margin-top: 2px;
+  border-radius: 4px;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 2px 7px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  line-height: 14px;
+}
+
 .editModalBody,
 .filterBody {
-  gap: 18px;
-  padding: 22px 24px;
+  gap: 22px;
+  padding: 20px 24px 22px;
 }
 
 .editModalBody section,
@@ -4911,19 +4929,20 @@
 .trackBody h3,
 .trackBody h4,
 .filterBody h3 {
-  margin: 0 0 12px;
-  color: #334155;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.02em;
+  margin: 0 0 14px;
+  color: #111827;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.35px;
+  text-transform: uppercase;
 }
 
 .editModalBody label {
   display: grid;
-  gap: 8px;
-  color: #475569;
-  font-size: 13px;
-  font-weight: 700;
+  gap: 7px;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .editModalBody label > span {
@@ -4937,10 +4956,10 @@
 .confirmBox textarea {
   width: 100%;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #ffffff;
   color: #0f172a;
-  padding: 11px 12px;
+  padding: 10px 12px;
   font: inherit;
   line-height: 20px;
   outline: none;
@@ -5131,10 +5150,10 @@
 }
 
 .editScheduleGrid small {
-  color: #64748b;
+  color: #6b7280;
   font-size: 11px;
   font-style: italic;
-  line-height: 15px;
+  line-height: 16px;
 }
 
 .editMedicineScroll {
@@ -5145,22 +5164,57 @@
 
 .editMedicineScroll .editMedicineTable {
   border: 0;
-  min-width: 560px;
+  min-width: 520px;
+}
+
+.editMedicineTable th,
+.editMedicineTable td {
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.editMedicineTable th:first-child,
+.editMedicineTable td:first-child {
+  padding-left: 16px;
+  text-align: left;
+}
+
+.editMedicineTable th {
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 20px;
+  text-transform: uppercase;
+}
+
+.editMedicineTable td {
+  border-top: 1px solid #f3f4f6;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 28px;
 }
 
 .editMedicineTable strong {
   display: block;
   color: #111827;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 20px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.editMedicineTable small {
+  display: block;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .editMedicineTable td input {
   width: 80px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  padding: 8px 10px;
+  padding: 9px 13px;
   text-align: center;
   font-weight: 700;
 }
@@ -5205,6 +5259,43 @@
 .aiBox h3 {
   display: flex;
   align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #78350f;
+}
+
+.aiBox {
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  background: rgb(255 251 235 / 0.5);
+  padding: 21px;
+}
+
+.aiBox p {
+  margin: 0 0 16px;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.aiBox div {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.aiBox strong {
+  min-width: 128px;
+  border: 1px solid #fef3c7;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #d97706;
+  padding: 13px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 15px;
+  text-transform: uppercase;
 }
 
 .aiBox strong b {
@@ -5213,12 +5304,56 @@
   color: #dc2626;
   font-size: 14px;
   line-height: 20px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.aiBox span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.aiBox span i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 999px;
+  background: #dc2626;
+}
+
+.editModalBody h3 b {
+  margin-left: 4px;
+  border-radius: 4px;
+  background: #dc2626;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  line-height: 14px;
+}
+
+.editModalBody textarea {
+  min-height: 78px;
+  border-color: #fecaca;
+  padding: 17px;
+  color: #111827;
+}
+
+.editModalBody textarea::placeholder {
+  color: #9ca3af;
 }
 
 .editModalFooter > button {
   border-color: #2563eb;
   border-radius: 999px;
   color: #2563eb;
+  background: #ffffff;
 }
 
 .editModalFooter span button:last-child {
@@ -5327,5 +5462,313 @@
 
   .confirmBox {
     padding: 22px;
+  }
+}
+
+/* Figma-aligned IFK recommendation filter and decision modals. */
+.recoModal.filter {
+  width: min(100%, 384px);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.recoModal.confirm {
+  width: min(100%, 448px);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.recoModal.confirm .modalClose {
+  display: none;
+}
+
+.filterHeader {
+  min-height: 56px;
+  padding: 16px 48px 16px 20px;
+}
+
+.filterHeader h2 {
+  color: #191c20;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 20px;
+}
+
+.filterBody {
+  gap: 18px;
+  padding: 20px 18px 14px;
+}
+
+.filterBody section {
+  gap: 10px;
+}
+
+.filterBody h3 {
+  margin: 0;
+  color: #727785;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+.filterBody section > div {
+  gap: 8px;
+}
+
+.filterChip,
+.filterBody .filterChip,
+.filterFooter button {
+  min-height: 31px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #44474e;
+  padding: 7px 15px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 16px;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.filterBody .filterChip.selected {
+  border-color: #005bbf;
+  background: #eff4ff;
+  color: #005bbf;
+  font-weight: 800;
+}
+
+.filterBody .filterChip.redSelected {
+  border-color: #ba1a1a;
+  background: #ba1a1a;
+  color: #ffffff;
+}
+
+.dateInputs {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px !important;
+  width: 100%;
+}
+
+.dateInputs input {
+  min-width: 0;
+  height: 42px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #44474e;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 24px;
+}
+
+.filterFooter {
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 20px 18px;
+}
+
+.filterFooter span {
+  color: #414754;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.filterFooter div {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filterFooter button:first-child,
+.filterFooter div button:first-child {
+  min-height: 37px;
+  border: 0;
+  background: transparent;
+  color: #ba1a1a;
+  padding: 8px 16px;
+  font-weight: 800;
+}
+
+.filterFooter button:last-child,
+.filterFooter div button:last-child {
+  min-height: 37px;
+  border: 1px solid #1d4ed8;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #ffffff;
+  padding: 8px 24px;
+  font-weight: 800;
+}
+
+.confirmBox {
+  display: flex;
+  flex-direction: column;
+  gap: 23px;
+  padding: 32px;
+}
+
+.confirmTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.confirmIcon,
+.rejectIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border-radius: 9999px;
+}
+
+.confirmIcon {
+  background: #e6f4ea;
+  color: #34a853;
+}
+
+.rejectIcon {
+  background: #fee4e2;
+  color: #d92d20;
+}
+
+.confirmBox h2 {
+  margin: 0;
+  color: #202124;
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 28px;
+  text-transform: uppercase;
+}
+
+.confirmBox p {
+  margin: 0;
+  padding-bottom: 1px;
+  color: rgb(32 33 36 / 0.7);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22.75px;
+}
+
+.confirmBox p b {
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.shipmentSummaryBox {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  border: 1px solid rgb(218 220 224 / 0.2);
+  border-radius: 12px;
+  background: rgb(241 243 244 / 0.5);
+  padding: 21px;
+}
+
+.shipmentSummaryBox div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.shipmentSummaryBox div:first-child {
+  max-width: 210px;
+}
+
+.shipmentSummaryBox small {
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.9px;
+  line-height: 13.5px;
+  text-transform: uppercase;
+}
+
+.shipmentSummaryBox div:last-child small {
+  color: rgb(32 33 36 / 0.5);
+  font-size: 10.4px;
+  letter-spacing: 1.04px;
+}
+
+.shipmentSummaryBox strong {
+  color: #202124;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
+.confirmBox footer {
+  display: grid;
+  grid-template-columns: minmax(0, 157px) minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.confirmBox footer button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.confirmBox footer button:first-child {
+  background: #e8eaed;
+  color: rgb(32 33 36 / 0.7);
+}
+
+.confirmBox footer .modalPrimaryAction {
+  border: 0;
+  background: #1a73e8;
+  color: #ffffff;
+}
+
+@media (max-width: 520px) {
+  .recoModal.filter,
+  .recoModal.confirm {
+    width: 100%;
+  }
+
+  .filterFooter,
+  .filterFooter div,
+  .confirmBox footer,
+  .dateInputs {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterFooter button,
+  .confirmBox footer button {
+    width: 100%;
+  }
+
+  .confirmBox {
+    padding: 24px;
+  }
+
+  .shipmentSummaryBox {
+    flex-direction: column;
   }
 }

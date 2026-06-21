@@ -14,7 +14,6 @@ import {
   getRecommendations,
   rejectRecommendation,
   reorderRecommendations,
-  runIfkAiAllocation,
   updateRecommendationMeta,
   updateRecommendationItem,
   type CurrentUser,
@@ -29,6 +28,8 @@ import styles from './medicine-sender.module.css';
 
 type ModalKind = 'edit' | 'track' | 'filter' | 'approve' | 'reject' | 'delete' | null;
 const pageSize = 8;
+type UrgencyFilter = RecommendationUrgency | 'ALL';
+type FilterOption = { label: string; value: string };
 
 const urgencyLabel: Record<RecommendationUrgency, string> = {
   CRITICAL: 'critical',
@@ -95,7 +96,6 @@ export function MedicineSenderRecommendationsContent() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'ALL'>('ALL');
   const [isLoading, setIsLoading] = useState(true);
-  const [isAllocating, setIsAllocating] = useState(false);
   const [isBulkApproving, setIsBulkApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -144,15 +144,6 @@ export function MedicineSenderRecommendationsContent() {
       setRows(previousRows);
       setError(reorderError instanceof Error ? reorderError.message : 'Gagal mengubah urutan rekomendasi');
     }
-  }
-
-  function moveRow(id: string, direction: -1 | 1) {
-    const index = rows.findIndex((row) => row.id === id);
-    const nextIndex = index + direction;
-    if (index < 0 || nextIndex < 0 || nextIndex >= rows.length) return;
-    const nextRows = [...rows];
-    [nextRows[index], nextRows[nextIndex]] = [nextRows[nextIndex], nextRows[index]];
-    void persistReorder(nextRows);
   }
 
   function dropOn(targetId: string) {
@@ -206,19 +197,6 @@ export function MedicineSenderRecommendationsContent() {
     }
   }
 
-  async function runAllocation() {
-    setIsAllocating(true);
-    setError(null);
-    try {
-      await runIfkAiAllocation({ periode: currentPeriod() });
-      await refreshRows();
-    } catch (allocationError) {
-      setError(allocationError instanceof Error ? allocationError.message : 'Gagal menjalankan alokasi AI');
-    } finally {
-      setIsAllocating(false);
-    }
-  }
-
   return (
     <div className={styles.recoShell}>
       <RecommendationsSidebar />
@@ -232,7 +210,6 @@ export function MedicineSenderRecommendationsContent() {
           <section className={styles.recoStats}>{stats.map((stat) => <article className={styles[stat.tone]} key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></article>)}</section>
           <section className={styles.recoToolbar}>
             <button type="button" onClick={() => setModal('filter')}><AppIcon name="filter" width={16} height={16} />Filter <AppIcon name="chevronDown" width={14} height={14} /></button>
-            <button type="button" disabled={isAllocating} onClick={() => void runAllocation()}><AppIcon name="zap" width={18} height={18} />{isAllocating ? 'Running AI...' : 'Run AI Allocation'}</button>
             <button type="button" onClick={() => void refreshRows()}><AppIcon name="rotateCcw" width={18} height={18} />Refresh</button>
           </section>
           {error ? <p className={styles.recoError}>{error}</p> : null}
@@ -243,7 +220,6 @@ export function MedicineSenderRecommendationsContent() {
             onPageChange={setPage}
             onDragStart={setDraggingId}
             onDrop={dropOn}
-            onMove={moveRow}
             onOpen={(kind, row) => { setSelected(row); setModal(kind); }}
           />
           {modal === 'edit' && selected ? <EditModal row={selected} onClose={() => setModal(null)} onSaved={refreshRows} /> : null}
@@ -257,11 +233,6 @@ export function MedicineSenderRecommendationsContent() {
       </div>
     </div>
   );
-}
-
-function currentPeriod() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
 function dateInputValue(value: string) {
@@ -348,7 +319,7 @@ function RecommendationInsights({ isApproving, onApproveAll, rows }: { isApprovi
   );
 }
 
-function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, onPageChange, page, rows }: { isLoading: boolean; onDragStart: (id: string) => void; onDrop: (id: string) => void; onMove: (id: string, direction: -1 | 1) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; onPageChange: (page: number) => void; page: number; rows: DistributionRecommendation[] }) {
+function RecommendationTable({ isLoading, onDragStart, onDrop, onOpen, onPageChange, page, rows }: { isLoading: boolean; onDragStart: (id: string) => void; onDrop: (id: string) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; onPageChange: (page: number) => void; page: number; rows: DistributionRecommendation[] }) {
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -377,8 +348,6 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, o
                   {row.status === 'PENDING' ? <button type="button" className={styles.approveButton} onClick={() => onOpen('approve', row)}>Approve</button> : <button type="button" className={styles.trackButton} onClick={() => onOpen('track', row)}>Track</button>}
                   {row.status === 'PENDING' ? <button type="button" className={styles.rejectButton} onClick={() => onOpen('reject', row)}>Reject</button> : null}
                   <button type="button" aria-label={`Edit ${row.id}`} onClick={() => onOpen('edit', row)}><AppIcon name="edit" width={16} height={16} /></button>
-                  <button type="button" aria-label="Move up" onClick={() => onMove(row.id, -1)}><AppIcon name="chevronLeft" width={16} height={16} /></button>
-                  <button type="button" aria-label="Move down" onClick={() => onMove(row.id, 1)}><AppIcon name="chevronRight" width={16} height={16} /></button>
                   <button type="button" aria-label={`Delete ${row.id}`} onClick={() => onOpen('delete', row)}><AppIcon name="trash" width={16} height={16} /></button>
                 </div></td>
               </tr>
@@ -405,7 +374,8 @@ function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: ()
   const requiresReason = parsedItems.some(({ item, quantity }) => quantity !== item.aiQuantity);
   const metaChanged = date !== dateInputValue(row.periode) || parsedPriority !== row.priorityRank || dispatchTime !== recommendationDispatchTime(row);
   const firstChanged = parsedItems.find(({ item, quantity }) => quantity !== item.aiQuantity);
-  const firstChangedDiff = firstChanged ? firstChanged.quantity - firstChanged.item.aiQuantity : 0;
+  const aiFocus = firstChanged ?? parsedItems[0];
+  const firstChangedDiff = aiFocus ? aiFocus.quantity - aiFocus.item.aiQuantity : 0;
 
   function updateQuantity(itemId: string, value: string) {
     setQuantities((current) => ({ ...current, [itemId]: value }));
@@ -465,7 +435,7 @@ function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: ()
           <div className={styles.infoBox}><AppIcon name="info" width={16} height={16} />Changing priorities will automatically update the route and courier schedule for this distribution cluster.</div>
         </section>
         <section>
-          <div className={styles.sectionTitleRow}><h3>Amount of Medicine Sent</h3></div>
+          <div className={styles.sectionTitleRow}><h3>Amount of Medicine Sent</h3><button type="button"><AppIcon name="plus" width={14} height={14} />Add Medication</button></div>
           <div className={styles.editMedicineScroll}>
             <table className={styles.editMedicineTable}>
               <thead><tr><th>Medication Name</th><th>AI Qty</th><th>Override Qty</th><th>Difference</th><th>Action</th></tr></thead>
@@ -478,7 +448,7 @@ function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: ()
             </table>
           </div>
         </section>
-        {firstChanged ? <section className={styles.aiBox}><h3><AppIcon name="archive" width={16} height={16} />AI Analysis</h3><p>{firstChangedDiff < 0 ? 'Reducing' : 'Increasing'} {firstChanged.item.obat?.nama ?? firstChanged.item.obatId}: {firstChanged.item.aiQuantity} to {firstChanged.quantity} {firstChanged.item.obat?.satuan ?? 'unit'}</p><div><strong>Coverage <b>{Math.max(1, Math.round(firstChanged.item.aiQuantity / 5))} days to {Math.max(1, Math.round(firstChanged.quantity / 5))} days</b></strong><span>{firstChangedDiff < 0 ? 'Stockout risk increased sharply' : 'Coverage buffer increased'}</span></div></section> : null}
+        {aiFocus ? <section className={styles.aiBox}><h3><AppIcon name="archive" width={16} height={16} />AI Analysis</h3><p>{firstChanged ? (firstChangedDiff < 0 ? 'Reducing' : 'Increasing') : 'Maintaining'} {aiFocus.item.obat?.nama ?? aiFocus.item.obatId}: {aiFocus.item.aiQuantity} to {aiFocus.quantity} {aiFocus.item.obat?.satuan ?? 'unit'}</p><div><strong>Coverage <b>{Math.max(1, Math.round(aiFocus.item.aiQuantity / 5))} days to {Math.max(1, Math.round(aiFocus.quantity / 5))} days</b></strong><span><i />{firstChanged ? (firstChangedDiff < 0 ? 'Stockout risk increased sharply' : 'Coverage buffer increased') : 'AI recommendation is unchanged'}</span></div></section> : null}
         <section>
           <h3>Reason for Change <b>Required</b></h3>
           <textarea value={reason} placeholder="e.g., reserve stock already sent directly to the clinic" onChange={(event) => setReason(event.target.value)} />
@@ -524,15 +494,83 @@ function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: (
   return <ModalShell onClose={onClose} size="track"><div className={styles.trackHeader}><div><h2>Track Shipment</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span><AppIcon name="truck" width={14} height={14} />{row.status}</span></div><div className={styles.trackBody}><section><h3><AppIcon name="clock" width={15} height={15} />Travel History</h3><div className={styles.historyTimeline}>{events.length === 0 ? <article><b>No tracking events</b><small>-</small><span>Tambahkan status pengiriman pertama.</span></article> : null}{events.map((event) => <article key={event.id}><b>{event.status}</b><small>{new Date(event.createdAt).toLocaleString('id-ID')}</small><span>{event.note ?? '-'}</span></article>)}</div></section><section><h3>Update Status</h3>{options.length ? <><select value={status} onChange={(event) => setStatus(event.target.value as TrackingStatus)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><textarea value={note} placeholder="Catatan tracking" onChange={(event) => setNote(event.target.value)} /></> : <p>Status pengiriman tidak bisa diperbarui dari tahap ini.</p>}{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.trackFooter}><span><button type="button" onClick={onClose}>Close</button><button className={styles.modalPrimaryAction} type="button" disabled={!options.length} onClick={() => void saveEvent()}>Save Status</button></span></div></ModalShell>;
 }
 
+const urgencyFilterOptions: FilterOption[] = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Critical', value: 'CRITICAL' },
+  { label: 'Warning', value: 'WARNING' },
+  { label: 'Routine', value: 'ROUTINE' },
+];
+
+const approvalFilterOptions: FilterOption[] = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Pending Approval', value: 'PENDING' },
+  { label: 'Approved', value: 'APPROVED' },
+  { label: 'Rejected', value: 'REJECTED' },
+];
+
+const medicineFilterOptions = ['Oxytocin', 'MgSO4', 'Tablet Fe', 'Vitamin K', 'Nifedipine'];
+const districtFilterOptions = ['Cangkringan', 'Depok', 'Mlati', 'Sleman'];
+const qtyFilterOptions = ['< 50', '51-100', '101-200', '> 200'];
+
+function FilterChip({ active, children, onClick, tone = 'blue' }: { active: boolean; children: ReactNode; onClick: () => void; tone?: 'blue' | 'red' }) {
+  return <button className={[styles.filterChip, active ? styles.selected : '', active && tone === 'red' ? styles.redSelected : ''].filter(Boolean).join(' ')} type="button" onClick={onClick}>{children}</button>;
+}
+
 function FilterModal({ onApply, onClose, statusFilter }: { onApply: (status: RecommendationStatus | 'ALL') => void; onClose: () => void; statusFilter: RecommendationStatus | 'ALL' }) {
   const [draft, setDraft] = useState(statusFilter);
-  return <ModalShell onClose={onClose} size="filter"><div className={styles.filterHeader}><h2>Filter Distribution Recommendations</h2></div><div className={styles.filterBody}><section><h3>Approval Status</h3><div>{(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'DISPATCHED', 'RECEIVED'] as const).map((status) => <button className={draft === status ? styles.selected : undefined} type="button" key={status} onClick={() => setDraft(status)}>{status}</button>)}</div></section></div><div className={styles.filterFooter}><button type="button" onClick={onClose}>Cancel</button><button type="button" onClick={() => onApply(draft)}>Apply Filter</button></div></ModalShell>;
+  const [urgency, setUrgency] = useState<UrgencyFilter>('CRITICAL');
+  const [medicine, setMedicine] = useState('Oxytocin');
+  const [district, setDistrict] = useState('Cangkringan');
+  const [qty, setQty] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState('2023-10-27');
+  const [endDate, setEndDate] = useState('2023-10-30');
+  const activeCount = [draft !== 'ALL', Boolean(medicine), Boolean(district)].filter(Boolean).length;
+
+  function resetAll() {
+    setUrgency('ALL');
+    setDraft('ALL');
+    setMedicine('');
+    setDistrict('');
+    setQty(null);
+    setStartDate('');
+    setEndDate('');
+  }
+
+  return (
+    <ModalShell onClose={onClose} size="filter">
+      <div className={styles.filterHeader}><h2>Filter Distribution Recommendations</h2></div>
+      <div className={styles.filterBody}>
+        <section><h3>Urgency Status</h3><div>{urgencyFilterOptions.map((option) => <FilterChip key={option.value} active={urgency === option.value} tone={option.value === 'CRITICAL' ? 'red' : 'blue'} onClick={() => setUrgency(option.value as UrgencyFilter)}>{option.label}</FilterChip>)}</div></section>
+        <section><h3>Approval Status</h3><div>{approvalFilterOptions.map((option) => <FilterChip key={option.value} active={draft === option.value} onClick={() => setDraft(option.value as RecommendationStatus | 'ALL')}>{option.label}</FilterChip>)}</div></section>
+        <section><h3>Medicine Dispatched</h3><div>{medicineFilterOptions.map((option) => <FilterChip key={option} active={medicine === option} onClick={() => setMedicine(option)}>{option}</FilterChip>)}</div></section>
+        <section><h3>District</h3><div>{districtFilterOptions.map((option) => <FilterChip key={option} active={district === option} onClick={() => setDistrict(option)}>{option}</FilterChip>)}</div></section>
+        <section><h3>Dispatch Date</h3><div className={styles.dateInputs}><input aria-label="Dispatch start date" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /><input aria-label="Dispatch end date" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div></section>
+        <section><h3>Qty Total</h3><div>{qtyFilterOptions.map((option) => <FilterChip key={option} active={qty === option} onClick={() => setQty(option)}>{option}</FilterChip>)}</div></section>
+      </div>
+      <div className={styles.filterFooter}><span>{activeCount} active filter</span><div><button type="button" onClick={resetAll}>Reset All</button><button type="button" onClick={() => onApply(draft)}>Apply Filter (8 results)</button></div></div>
+    </ModalShell>
+  );
 }
 
 function ConfirmModal({ kind, onClose, onConfirm, row }: { kind: 'approve' | 'reject'; onClose: () => void; onConfirm: (note?: string) => void; row: DistributionRecommendation }) {
-  const [note, setNote] = useState('Rejected by IFK review.');
   const approve = kind === 'approve';
-  return <ModalShell onClose={onClose} size="confirm"><div className={styles.confirmBox}><span className={approve ? styles.confirmIcon : styles.rejectIcon}>{approve ? <AppIcon name="checkCircle" width={24} height={24} /> : <AppIcon name="x" width={24} height={24} />}</span><h2>{approve ? 'Approve Recommendation' : 'Reject Shipment'}</h2><p>You are about to {approve ? 'approve' : 'reject'} recommendation <b>{row.id} for {row.puskesmas?.nama ?? row.puskesmasId}.</b></p>{approve ? null : <textarea value={note} onChange={(event) => setNote(event.target.value)} />}<footer><button type="button" onClick={onClose}>Cancel</button><button className={approve ? styles.modalPrimaryAction : styles.modalDangerAction} type="button" onClick={() => onConfirm(approve ? undefined : note)}>{approve ? 'Approve' : 'Reject'}</button></footer></div></ModalShell>;
+  const clinicName = row.puskesmas?.nama ?? row.puskesmasId;
+  return (
+    <ModalShell onClose={onClose} size="confirm">
+      <div className={styles.confirmBox}>
+        <div className={styles.confirmTitleRow}>
+          <span className={approve ? styles.confirmIcon : styles.rejectIcon}>{approve ? <AppIcon name="checkCircle" width={22} height={22} /> : <AppIcon name="x" width={22} height={22} />}</span>
+          <h2>{approve ? 'Shipment Confirmation' : 'Reject Shipment'}</h2>
+        </div>
+        <p>You are about to {approve ? 'approve' : 'reject'} shipment recommendation <b>#{row.id}</b> for <b>{clinicName}</b>. {approve ? 'The shipment will be immediately sent to the logistics operator for processing.' : 'Rejection will immediately notify the clinic and the request will be moved to the archive.'}</p>
+        <div className={styles.shipmentSummaryBox}>
+          <div><small>Main Content</small><strong>{row.items.slice(0, 2).map((item) => `${item.obat?.nama ?? item.obatId} (${item.finalQuantity} ${item.obat?.satuan ?? 'unit'})`).join(', ') || '-'}</strong></div>
+          <div><small>Dispatch</small><strong>{new Date(row.periode).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}</strong></div>
+        </div>
+        <footer><button type="button" onClick={onClose}>Cancel</button><button className={styles.modalPrimaryAction} type="button" onClick={() => onConfirm(approve ? undefined : 'Rejected by IFK review.')}>{approve ? 'Approve & Dispatch' : 'Reject'}</button></footer>
+      </div>
+    </ModalShell>
+  );
 }
 
 function DeleteModal({ onClose, onConfirm, row }: { onClose: () => void; onConfirm: () => void; row: DistributionRecommendation }) {
