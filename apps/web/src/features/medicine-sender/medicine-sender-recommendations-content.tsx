@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -466,6 +466,88 @@ function trackingOptions(row: DistributionRecommendation): TrackingStatus[] {
   return [];
 }
 
+const shipmentSteps: Array<{ status: TrackingStatus; label: string; pendingLabel: string; icon: 'checkCircle' | 'truck' | 'package' }> = [
+  { status: 'REQUESTED', label: 'Requested', pendingLabel: 'Requested', icon: 'checkCircle' },
+  { status: 'APPROVED', label: 'Approved', pendingLabel: 'Approved', icon: 'checkCircle' },
+  { status: 'DISPATCHED', label: 'Dispatched', pendingLabel: 'Dispatched', icon: 'truck' },
+  { status: 'RECEIVED', label: 'Received', pendingLabel: 'Received', icon: 'package' },
+];
+
+function routeSummaryValue(row: DistributionRecommendation, keys: string[]) {
+  const routeSummary = row.routeSummary;
+  if (!routeSummary || typeof routeSummary !== 'object' || Array.isArray(routeSummary)) return null;
+  for (const key of keys) {
+    const value = routeSummary[key];
+    if (typeof value === 'string' && value.trim()) return value;
+    if (typeof value === 'number') return String(value);
+  }
+  return null;
+}
+
+function formatTrackDate(value?: string, variant: 'short' | 'time' | 'full' = 'short') {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  if (variant === 'time') return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ', ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  if (variant === 'full') return date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB';
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function trackEventMap(events: TrackingEvent[]) {
+  return events.reduce<Partial<Record<TrackingStatus, TrackingEvent>>>((acc, event) => {
+    acc[event.status] ??= event;
+    return acc;
+  }, {});
+}
+
+function activeShipmentIndex(row: DistributionRecommendation, events: TrackingEvent[]) {
+  const statuses = new Set<TrackingStatus>(events.map((event) => event.status));
+  if (row.status === 'RECEIVED') statuses.add('RECEIVED');
+  if (row.status === 'DISPATCHED') statuses.add('DISPATCHED');
+  if (row.status === 'APPROVED') statuses.add('APPROVED');
+  if (row.status === 'PENDING') statuses.add('REQUESTED');
+  return Math.max(0, shipmentSteps.findLastIndex((step) => statuses.has(step.status)));
+}
+
+function shipmentStatusLabel(row: DistributionRecommendation) {
+  if (row.status === 'DISPATCHED') return 'In Transit';
+  if (row.status === 'APPROVED') return 'Approved';
+  if (row.status === 'RECEIVED') return 'Received';
+  if (row.status === 'REJECTED') return 'Rejected';
+  return 'Pending';
+}
+
+function shipmentEta(row: DistributionRecommendation) {
+  const routeEta = routeSummaryValue(row, ['eta', 'estimatedArrival', 'arrivalTime']);
+  if (routeEta) return routeEta;
+  const base = new Date(row.periode);
+  if (!Number.isNaN(base.getTime())) {
+    base.setDate(base.getDate() + (row.puskesmas?.leadTimeHari ?? 1));
+    return formatTrackDate(base.toISOString(), 'full');
+  }
+  return 'Pending ETA';
+}
+
+function shipmentDistance(row: DistributionRecommendation) {
+  const distance = row.puskesmas?.jarakKeIfkKm ?? routeSummaryValue(row, ['distanceKm', 'distance']);
+  if (typeof distance === 'number') return `${distance} km`;
+  if (typeof distance === 'string' && distance.trim()) return distance.includes('km') ? distance : `${distance} km`;
+  return '24 km';
+}
+
+function shipmentHistoryText(event: TrackingEvent, row: DistributionRecommendation) {
+  const clinic = row.puskesmas?.nama ?? row.puskesmasId;
+  const labels: Record<TrackingStatus, string> = {
+    REQUESTED: 'Request Created (Clinic)',
+    APPROVED: 'Request Approved (IFK Admin)',
+    REJECTED: 'Request Rejected (IFK Admin)',
+    DISPATCHED: `Courier departed from ${routeSummaryValue(row, ['origin']) ?? 'Sleman District Pharmacy'} (${routeSummaryValue(row, ['originShort']) ?? 'IFK Kabupaten Sleman'})`,
+    RECEIVED: `Shipment received by ${clinic}`,
+    ISSUE_REPORTED: 'Issue reported on shipment route',
+  };
+  return event.note?.trim() || labels[event.status];
+}
+
 function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: () => Promise<void>; row: DistributionRecommendation }) {
   const [events, setEvents] = useState<TrackingEvent[]>([]);
   const options = trackingOptions(row);
@@ -491,7 +573,60 @@ function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: (
     }
   }
 
-  return <ModalShell onClose={onClose} size="track"><div className={styles.trackHeader}><div><h2>Track Shipment</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span><AppIcon name="truck" width={14} height={14} />{row.status}</span></div><div className={styles.trackBody}><section><h3><AppIcon name="clock" width={15} height={15} />Travel History</h3><div className={styles.historyTimeline}>{events.length === 0 ? <article><b>No tracking events</b><small>-</small><span>Tambahkan status pengiriman pertama.</span></article> : null}{events.map((event) => <article key={event.id}><b>{event.status}</b><small>{new Date(event.createdAt).toLocaleString('id-ID')}</small><span>{event.note ?? '-'}</span></article>)}</div></section><section><h3>Update Status</h3>{options.length ? <><select value={status} onChange={(event) => setStatus(event.target.value as TrackingStatus)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><textarea value={note} placeholder="Catatan tracking" onChange={(event) => setNote(event.target.value)} /></> : <p>Status pengiriman tidak bisa diperbarui dari tahap ini.</p>}{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.trackFooter}><span><button type="button" onClick={onClose}>Close</button><button className={styles.modalPrimaryAction} type="button" disabled={!options.length} onClick={() => void saveEvent()}>Save Status</button></span></div></ModalShell>;
+  const eventMap = trackEventMap(events);
+  const activeIndex = activeShipmentIndex(row, events);
+  const history = [...events].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const clinicName = row.puskesmas?.nama ?? row.puskesmasId;
+  const origin = routeSummaryValue(row, ['origin', 'from']) ?? 'IFK Kab. Sleman';
+  const actionLabel = status === 'ISSUE_REPORTED' ? 'Report Issue' : status === 'DISPATCHED' ? 'Mark Dispatched' : 'Save Status';
+
+  return (
+    <ModalShell onClose={onClose} size="track">
+      <div className={styles.trackHeader}>
+        <div><h2>Track Shipment</h2><p>{clinicName} - ID: {row.id}</p></div>
+        <span><AppIcon name="truck" width={14} height={14} />{shipmentStatusLabel(row)}</span>
+      </div>
+      <div className={styles.trackStepper} style={{ '--track-progress': `${activeIndex / (shipmentSteps.length - 1) * 100}%` } as CSSProperties}>
+        {shipmentSteps.map((step, index) => {
+          const done = index < activeIndex;
+          const active = index === activeIndex;
+          const event = eventMap[step.status];
+          return (
+            <div className={[styles.trackStep, done ? styles.done : '', active ? styles.active : ''].filter(Boolean).join(' ')} key={step.status}>
+              <span><AppIcon name={done ? 'checkCircle' : step.icon} width={active ? 16 : 20} height={active ? 16 : 20} /></span>
+              <strong>{step.label}</strong>
+              <small>{event ? formatTrackDate(event.createdAt, 'time') : index > activeIndex ? `Est. ${formatTrackDate(row.periode)}` : '-'}</small>
+            </div>
+          );
+        })}
+      </div>
+      <div className={styles.trackBody}>
+        <section className={styles.shippingInfoPanel}>
+          <h3><AppIcon name="clock" width={16} height={16} />Shipping Info</h3>
+          <dl className={styles.trackInfoList}>
+            <div><dt>Courier</dt><dd>{routeCourier(row)}</dd></div>
+            <div><dt>Phone</dt><dd className={styles.trackLink}>+62 812-4455-xxxx</dd></div>
+          </dl>
+          <h4>Origin & Destination</h4>
+          <div className={styles.routePair}><i /><div><strong>{origin}</strong><strong>{clinicName}</strong></div></div>
+          <dl className={styles.trackInfoList}>
+            <div><dt>Distance</dt><dd>{shipmentDistance(row)}</dd></div>
+          </dl>
+          <div className={styles.etaBox}><span>Est. Arrival</span><strong>{shipmentEta(row)}</strong></div>
+          <h4>Shipment Contents</h4>
+          <ul className={styles.shipmentContentList}>{row.items.slice(0, 4).map((item) => <li key={item.id}>{item.obat?.nama ?? item.obatId} ({item.finalQuantity} {item.obat?.satuan ?? 'unit'})</li>)}</ul>
+        </section>
+        <section className={styles.travelHistoryPanel}>
+          <h3><AppIcon name="clock" width={16} height={16} />Travel History</h3>
+          <div className={styles.historyTimeline}>{history.length === 0 ? <article><b>No tracking events</b><small>-</small><span>Tambahkan status pengiriman pertama.</span></article> : null}{history.map((event, index) => <article className={index === 0 ? styles.current : undefined} key={event.id}><b>{shipmentHistoryText(event, row)}</b><small>{formatTrackDate(event.createdAt, 'full')}</small></article>)}</div>
+          <div className={styles.routeMapPreview}><span>Travel Route Map</span><AppIcon name="truck" width={24} height={24} /></div>
+          {options.length ? <div className={styles.statusUpdateControls}><select aria-label="Next shipment status" value={status} onChange={(event) => setStatus(event.target.value as TrackingStatus)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><textarea value={note} placeholder="Catatan tracking" onChange={(event) => setNote(event.target.value)} /></div> : null}
+          {error ? <small className={styles.errorText}>{error}</small> : null}
+        </section>
+      </div>
+      <div className={styles.trackFooter}><button type="button"><AppIcon name="fileText" width={16} height={16} />View Full History</button><span><button type="button" onClick={onClose}>Close</button><button className={status === 'ISSUE_REPORTED' ? styles.modalDangerAction : styles.modalPrimaryAction} type="button" disabled={!options.length} onClick={() => void saveEvent()}>{status === 'ISSUE_REPORTED' ? <AppIcon name="alert" width={16} height={16} /> : null}{actionLabel}</button></span></div>
+    </ModalShell>
+  );
 }
 
 const urgencyFilterOptions: FilterOption[] = [

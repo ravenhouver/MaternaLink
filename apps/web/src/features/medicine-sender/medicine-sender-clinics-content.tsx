@@ -20,6 +20,17 @@ function stockItems(clinic: ClinicRow) { return clinic.criticalStockItems.length
 function weatherTone(clinic: ClinicRow): WeatherTone { return clinic.risk === 'critical' ? 'danger' : 'neutral'; }
 function weatherIcon(clinic: ClinicRow): AppIconName { return clinic.risk === 'critical' ? 'alert' : 'sun'; }
 
+function formattedLogisticDate(value?: string | null) {
+  if (!value) return 'Belum tersedia';
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)).replace(/ /g, ' - ').toUpperCase();
+}
+
+function daysRemaining(clinic: ClinicRow) {
+  if (clinic.risk === 'critical') return `${String(Math.max(1, clinic.criticalStockCount || 2)).padStart(2, '0')} Days`;
+  if (clinic.risk === 'warning') return `${Math.max(7, clinic.leadTimeHari ?? 11)} Days`;
+  return `${Math.max(14, clinic.leadTimeHari ?? 24)} Days`;
+}
+
 function splitName(name: string) {
   const words = name.split(' ');
   const midpoint = Math.ceil(words.length / 2);
@@ -84,6 +95,8 @@ function ClinicsTopbar({ detail }: { detail: boolean }) {
 }
 
 function ClinicTable({ onPageChange, onRiskChange, onView, page, pageRows, risk, rows, totalPages }: { onPageChange: (page: number) => void; onRiskChange: (risk: ClinicRiskFilter) => void; onView: (clinic: ClinicRow) => void; page: number; pageRows: ClinicRow[]; risk: ClinicRiskFilter; rows: ClinicRow[]; totalPages: number }) {
+  const firstRow = rows.length === 0 ? 0 : (page - 1) * 4 + 1;
+  const lastRow = Math.min(rows.length, firstRow + pageRows.length - 1);
   return (
     <div className={styles.clinicTableCard}>
       <div className={styles.clinicFilters}>
@@ -110,8 +123,8 @@ function ClinicTable({ onPageChange, onRiskChange, onView, page, pageRows, risk,
                 <small>{clinic.id}</small>
               </td>
               <td>{clinic.location.split(', ').map((part, index) => <span key={`${clinic.id}-location-${index}`}>{part}</span>)}</td>
-              <td className={styles.mono}>{clinic.logisticDate ? new Date(clinic.logisticDate).toLocaleDateString('id-ID') : 'Belum tersedia'}</td>
-              <td><b className={styles[`stockout${clinic.risk}`]}>{stockStatus(clinic)}</b><small>{stockItems(clinic)}</small></td>
+              <td className={styles.mono}>{formattedLogisticDate(clinic.logisticDate)}</td>
+              <td><b className={styles[`stockout${clinic.risk}`]}>{daysRemaining(clinic)}</b><small>{stockItems(clinic)}</small></td>
               <td><b>{clinic.activePregnancies}</b><small>{clinic.highRiskPregnancies} high-risk</small></td>
               <td><span className={[styles.clinicRisk, styles[clinic.risk]].join(' ')}>{clinic.riskLabel}</span></td>
               <td>
@@ -132,10 +145,14 @@ function ClinicTable({ onPageChange, onRiskChange, onView, page, pageRows, risk,
         </tbody>
       </table>
       <div className={styles.clinicPagination}>
-        <span>Showing {pageRows.length} of {rows.length} health facilities</span>
+        <span>Showing {firstRow}-{lastRow} of {rows.length} health facilities</span>
         <div>
           <button type="button" aria-label="Halaman sebelumnya" disabled={page <= 1} onClick={() => onPageChange(page - 1)}><AppIcon name="chevronLeft" width={14} height={14} /></button>
           <button type="button" className={styles.currentPage}>{page}</button>
+          {totalPages >= 2 ? <button type="button" onClick={() => onPageChange(2)}>2</button> : null}
+          {totalPages >= 3 ? <button type="button" onClick={() => onPageChange(3)}>3</button> : null}
+          {totalPages > 4 ? <span>...</span> : null}
+          {totalPages > 3 ? <button type="button" onClick={() => onPageChange(totalPages)}>{totalPages}</button> : null}
           <button type="button" aria-label="Halaman berikutnya" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}><AppIcon name="chevronRight" width={14} height={14} /></button>
         </div>
       </div>
@@ -148,15 +165,15 @@ type ClinicRiskFilter = 'ALL' | ClinicRow['risk'];
 function ClinicsList({ onRefresh, onView, rows }: { onRefresh: () => void; onView: (clinic: ClinicRow) => void; rows: ClinicRow[] }) {
   const [risk, setRisk] = useState<ClinicRiskFilter>('ALL');
   const [page, setPage] = useState(1);
-  const pageSize = 6;
+  const pageSize = 4;
   const filteredRows = useMemo(() => risk === 'ALL' ? rows : rows.filter((row) => row.risk === risk), [risk, rows]);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const pageRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
   const stats: Array<{ label: string; value: string; tone: string; delta?: string }> = [
     { label: 'Total Facilities', value: String(rows.length), tone: 'clinicStatBlue' },
-    { label: 'Critical (Stockout)', value: String(rows.filter((row) => row.risk === 'critical').length), tone: 'clinicStatRed' },
-    { label: 'Safe Facilities', value: String(rows.filter((row) => row.risk === 'routine').length), tone: 'clinicStatGreen' },
+    { label: 'Critical (Stockout)', value: String(rows.filter((row) => row.risk === 'critical').length).padStart(2, '0'), tone: 'clinicStatRed', delta: '+2%' },
+    { label: 'In Transit', value: String(rows.reduce((sum, row) => sum + row.deliveries, 0)).padStart(2, '0'), tone: 'clinicStatGreen' },
   ];
   return (
     <main className={styles.clinicsPage}>
@@ -169,8 +186,8 @@ function ClinicsList({ onRefresh, onView, rows }: { onRefresh: () => void; onVie
           </Typography.Paragraph>
         </div>
         <div className={styles.clinicsHeaderActions}>
-          <Button className={styles.clinicsGhostButton} icon={<AppIcon name="upload" width={16} height={16} />} onClick={() => downloadClinicCsv(rows)}>Export CSV</Button>
-          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="rotateCcw" width={16} height={16} />} onClick={onRefresh}>Refresh Registry</Button>
+          <Button className={styles.clinicsGhostButton} icon={<AppIcon name="download" width={16} height={16} />} onClick={() => downloadClinicCsv(rows)}>Export CSV</Button>
+          <Button type="primary" className={styles.clinicsPrimaryButton} icon={<AppIcon name="plus" width={16} height={16} />} onClick={onRefresh}>Add Clinic</Button>
         </div>
       </section>
 
