@@ -59,7 +59,16 @@ export class SpeechService {
   }
 
   private baseUrl() {
-    return (process.env.SPEECH_STT_SERVICE_URL ?? 'http://localhost:8002').replace(/\/$/, '');
+    const configuredUrl = process.env.SPEECH_STT_SERVICE_URL?.trim();
+    if (!configuredUrl) return 'http://localhost:8002';
+
+    const shellFallback = /^\$\{SPEECH_STT_SERVICE_URL:-([^}]+)\}$/.exec(configuredUrl)?.[1];
+    const normalizedUrl = shellFallback ?? configuredUrl;
+    try {
+      return new URL(normalizedUrl).toString().replace(/\/$/, '');
+    } catch {
+      return 'http://speech-stt:8002';
+    }
   }
 
   private async toDraft(transcript: string): Promise<SpeechExaminationDraft['draft']> {

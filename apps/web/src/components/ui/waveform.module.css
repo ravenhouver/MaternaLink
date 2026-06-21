@@ -1,0 +1,86 @@
+.waveform {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.waveform::before,
+.waveform::after {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  width: 52px;
+  pointer-events: none;
+  content: '';
+}
+
+.waveform::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--waveform-bg), transparent);
+}
+
+.waveform::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--waveform-bg), transparent);
+}
+
+.noFade::before,
+.noFade::after {
+  display: none;
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  align-items: center;
+  animation: waveformScroll var(--waveform-speed) linear infinite;
+  animation-play-state: paused;
+}
+
+.active .track {
+  animation-play-state: running;
+}
+
+.bar {
+  display: block;
+  flex: 0 0 auto;
+  width: var(--bar-width);
+  height: var(--bar-height);
+  margin-right: var(--bar-gap);
+  border-radius: 999px;
+  background: var(--bar-color);
+  opacity: 0.34;
+  transform: scaleY(0.72);
+  transform-origin: center;
+  animation: waveformPulse 0.92s ease-in-out infinite;
+  animation-delay: var(--bar-delay);
+  animation-play-state: paused;
+}
+
+.active .bar {
+  opacity: 0.92;
+  animation-play-state: running;
+}
+
+@keyframes waveformScroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes waveformPulse {
+  0%, 100% {
+    transform: scaleY(0.48);
+  }
+
+  50% {
+    transform: scaleY(1);
+  }
+}

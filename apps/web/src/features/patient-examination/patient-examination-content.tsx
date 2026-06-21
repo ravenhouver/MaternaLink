@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
+import { ScrollingWaveform } from '@/components/ui/waveform';
 import { createAiExaminationDraft, createExamination, getExaminations, getGejala, getKondisi, getObat, getTodayQueue, transcribeSpeech, type AiExaminationDraft, type ExaminationRecord, type ExaminationSource, type GejalaRecord, type KondisiRecord, type ObatRecord, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
@@ -66,11 +66,6 @@ const manualFields: ExaminationField[] = transcriptFields.map((field) => ({
   ...field,
   status: 'empty',
   value: field.value,
-}));
-
-const waveformBars = Array.from({ length: 24 }, (_, index) => ({
-  height: 18 + (index % 6) * 9,
-  delay: index * 0.045,
 }));
 
 const defaultForm: ExaminationFormState = {
@@ -454,55 +449,50 @@ function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: (a
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const shouldSubmitRef = useRef(false);
-  const [status, setStatus] = useState<'starting' | 'recording' | 'processing'>('starting');
+  const [status, setStatus] = useState<'idle' | 'starting' | 'recording' | 'processing'>('idle');
   const [recordingError, setRecordingError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function startRecording() {
-      try {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error(t('micError'));
-        }
-        if (typeof MediaRecorder === 'undefined') {
-          throw new Error(t('micError'));
-        }
-
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        const recorder = new MediaRecorder(stream, recorderOptions());
-        streamRef.current = stream;
-        recorderRef.current = recorder;
-        chunksRef.current = [];
-        recorder.addEventListener('dataavailable', (event) => {
-          if (event.data.size > 0) chunksRef.current.push(event.data);
-        });
-        recorder.addEventListener('stop', () => {
-          if (cancelled) return;
-          const audio = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-          stream.getTracks().forEach((track) => track.stop());
-          if (shouldSubmitRef.current) onFinish(audio);
-        });
-        recorder.start();
-        setStatus('recording');
-      } catch (error) {
-        setRecordingError(error instanceof Error ? error.message : t('micError'));
-      }
-    }
-
-    void startRecording();
     return () => {
-      cancelled = true;
       shouldSubmitRef.current = false;
       if (recorderRef.current?.state === 'recording') recorderRef.current.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [onFinish]);
+  }, []);
+
+  async function startRecording() {
+    setRecordingError(null);
+    setStatus('starting');
+    shouldSubmitRef.current = false;
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error(t('micError'));
+      if (typeof MediaRecorder === 'undefined') throw new Error(t('micError'));
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, recorderOptions());
+      streamRef.current = stream;
+      recorderRef.current = recorder;
+      chunksRef.current = [];
+      recorder.addEventListener('dataavailable', (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      });
+      recorder.addEventListener('stop', () => {
+        const audio = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
+        if (shouldSubmitRef.current) onFinish(audio);
+      });
+      recorder.start();
+      setStatus('recording');
+    } catch (error) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      recorderRef.current = null;
+      setStatus('idle');
+      setRecordingError(error instanceof Error ? error.message : t('micError'));
+    }
+  }
 
   function stopRecording() {
     if (recorderRef.current?.state !== 'recording') return;
@@ -520,33 +510,27 @@ function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: (a
     <section className={styles.recordingCard} aria-live="polite">
       <span className={styles.recordingPulse}><AppIcon name="mic" width={42} height={42} /></span>
       <div>
-        <h2>{status === 'processing' ? t('processingRecording') : status === 'starting' ? t('startingMicrophone') : t('recordingProgress')}</h2>
+        <h2>{status === 'processing' ? t('processingRecording') : status === 'starting' ? t('startingMicrophone') : status === 'recording' ? t('recordingProgress') : t('voiceRecording')}</h2>
         <p>{recordingError ?? t('recordingBody')}</p>
       </div>
-      <AudioWaveform isActive={status === 'recording'} isProcessing={status === 'processing'} onClick={stopRecording} />
+      <div className={styles.waveformPanel}>
+        <ScrollingWaveform height={80} barWidth={3} barGap={2} speed={30} fadeEdges={true} barColor="gray" active={status === 'recording' || status === 'processing'} />
+      </div>
       <div className={styles.recordingActions}>
-        <button type="button" className={styles.outlineAction} onClick={cancelRecording}>{t('cancel')}</button>
-        <button type="button" className={styles.primaryAction} disabled={status !== 'recording'} onClick={stopRecording}>
-          <AppIcon name="circleStop" width={18} height={18} />
-          {status === 'processing' ? t('transcribing') : t('finishRecording')}
-        </button>
+        {status === 'idle' ? (
+          <button type="button" className={styles.primaryAction} onClick={() => void startRecording()}>
+            <AppIcon name="mic" width={18} height={18} />
+            {t('startRecording')}
+          </button>
+        ) : (
+          <button type="button" className={styles.primaryAction} disabled={status !== 'recording'} onClick={stopRecording}>
+            <AppIcon name="circleStop" width={18} height={18} />
+            {status === 'processing' ? t('transcribing') : t('stopRecording')}
+          </button>
+        )}
+        <button type="button" className={styles.outlineAction} disabled={status === 'processing'} onClick={cancelRecording}>{t('cancel')}</button>
       </div>
     </section>
-  );
-}
-
-function AudioWaveform({ isActive, isProcessing, onClick }: { isActive: boolean; isProcessing: boolean; onClick: () => void }) {
-  const className = [styles.waveform, isActive ? styles.waveformActive : '', isProcessing ? styles.waveformProcessing : ''].filter(Boolean).join(' ');
-
-  return (
-    <button type="button" className={className} aria-label="Stop recording" disabled={!isActive} onClick={onClick}>
-      {waveformBars.map((bar, index) => (
-        <span
-          key={index}
-          style={{ '--bar-height': `${bar.height}px`, '--bar-delay': `${bar.delay}s` } as CSSProperties}
-        />
-      ))}
-    </button>
   );
 }
 

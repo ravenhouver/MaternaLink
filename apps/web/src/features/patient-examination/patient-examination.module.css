@@ -417,6 +417,14 @@
   line-height: 24px;
 }
 
+.waveformPanel {
+  width: min(100%, 420px);
+  padding: 14px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
 .waveform {
   display: flex;
   width: min(100%, 360px);
