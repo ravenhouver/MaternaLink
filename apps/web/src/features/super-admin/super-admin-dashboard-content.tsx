@@ -1,11 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getCurrentUser, getDashboardSummary, type CurrentUser, type DashboardSummary } from '@/lib/api';
-import { routes } from '@/lib/routes';
 import { AdminShell } from './admin-shell';
 import styles from './super-admin-dashboard.module.css';
 
@@ -64,7 +62,6 @@ export function SuperAdminDashboardContent() {
   ], [masterData, t]);
 
   const recentActivity = summary?.recentActivity ?? [];
-  const healthyPercent = masterData?.users ? Math.round(((masterData.users - masterData.inactiveAccounts) / masterData.users) * 100) : 0;
 
   return (
     <AdminShell active="dashboard" breadcrumb="Dashboard" user={user}>
@@ -108,13 +105,6 @@ export function SuperAdminDashboardContent() {
               <button type="button" disabled={activityLimit >= recentActivity.length} onClick={() => setActivityLimit((value) => value + 10)}>{t('loadMoreActivities')}</button>
             </footer>
           </article>
-
-          <aside className={styles.sidePanel} style={{ '--panel-progress': `${healthyPercent}%` } as CSSProperties}>
-            <h2>{t('accountHealth')}</h2>
-            <p>{t('accountHealthBody', { inactive: masterData?.inactiveAccounts ?? 0, total: masterData?.users ?? 0 })}</p>
-            <div className={styles.progressTrack}><span /></div>
-            <Link href={routes.adminUsers}><AppIcon name="userPlus" width={18} height={18} /> {t('reviewUsers')}</Link>
-          </aside>
         </section>
       </div>
     </AdminShell>

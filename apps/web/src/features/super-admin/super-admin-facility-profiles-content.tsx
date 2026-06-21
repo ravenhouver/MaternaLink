@@ -8,6 +8,7 @@ import { AdminShell } from './admin-shell';
 import styles from './super-admin-dashboard.module.css';
 
 type ProfileForm = { id: string; nama: string; leadTimeHari: number; jarakKeIfkKm: number; kapasitasSimpanObat: number; skorAksesibilitas: number; coldChainReady: boolean; statusEndemisMalaria: boolean; ketersediaanLab: boolean; rainyAccess: 'AMAN' | 'TERBATAS' | 'TERGANGGU' };
+const pageSize = 8;
 
 function mapAccess(score: number) {
   if (score >= 3) return { accessKey: 'easyAccess', accessTone: 'easy' as const, score: String(score) };
@@ -25,6 +26,7 @@ export function SuperAdminFacilityProfilesContent() {
   const [rows, setRows] = useState<PuskesmasRecord[]>([]);
   const [form, setForm] = useState<ProfileForm | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   async function reload() {
     const [nextUser, puskesmasRows] = await Promise.all([getCurrentUser(), getPuskesmas()]);
@@ -33,6 +35,11 @@ export function SuperAdminFacilityProfilesContent() {
 
   useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : t('unableLoadFacilityProfiles'))); }, [t]);
   const incompleteCount = useMemo(() => rows.filter(isIncomplete).length, [rows]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   async function submitForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,7 +63,7 @@ export function SuperAdminFacilityProfilesContent() {
             <table className={[styles.registryTable, styles.profileTable].join(' ')}>
               <thead><tr><th>{t('healthCenter')}</th><th>{t('leadTime')}</th><th>{t('accessibility')}</th><th>{t('coldChain')}</th><th>{t('distanceIfk')}</th><th>{t('mmrArea')}</th><th>{t('capacity')}</th><th>{tCommon('actions')}</th></tr></thead>
               <tbody>
-                {rows.map((row) => {
+                {pageRows.map((row) => {
                   const incomplete = isIncomplete(row);
                   const access = mapAccess(row.skorAksesibilitas);
                   return (
@@ -76,14 +83,14 @@ export function SuperAdminFacilityProfilesContent() {
               </tbody>
             </table>
           </div>
-          <footer className={styles.registryPagination}><p>{t('showingHealthCentersSimple', { count: rows.length })}</p></footer>
+          <footer className={styles.registryPagination}><p>{t('showingHealthCenters', { shown: pageRows.length, total: rows.length })}</p><div className={styles.pages}><button type="button" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label={t('previousPage')}><AppIcon name="chevronLeft" width={14} height={14} /></button><span>{t('pageOf', { page: safePage, total: totalPages })}</span><button type="button" disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} aria-label={t('nextPage')}><AppIcon name="chevronRight" width={14} height={14} /></button></div></footer>
         </section>
       </div>
 
       {form ? (
         <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setForm(null)}>
           <form className={styles.modalCard} onSubmit={(event) => void submitForm(event)} onMouseDown={(event) => event.stopPropagation()}>
-            <header className={styles.drawerHeader}><h2>{form.nama}</h2><button type="button" onClick={() => setForm(null)}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+            <header className={styles.drawerHeader}><h2>{form.nama}</h2><button type="button" aria-label={tCommon('closeMenu')} onClick={() => setForm(null)}><AppIcon name="x" width={18} height={18} /></button></header>
             <label>{t('leadTime')}<input type="number" min="0" value={form.leadTimeHari} onChange={(event) => setForm({ ...form, leadTimeHari: Number(event.target.value) })} /></label>
             <label>{t('distanceIfk')}<input type="number" min="0" step="0.1" value={form.jarakKeIfkKm} onChange={(event) => setForm({ ...form, jarakKeIfkKm: Number(event.target.value) })} /></label>
             <label>{t('capacity')}<input type="number" min="0" value={form.kapasitasSimpanObat} onChange={(event) => setForm({ ...form, kapasitasSimpanObat: Number(event.target.value) })} /></label>

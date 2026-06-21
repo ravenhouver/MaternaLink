@@ -80,5 +80,5 @@ const columns: ColumnsType<Patient> = [
 ];
 
 export function PatientsTable({ patients }: PatientsTableProps) {
-  return <Table<Patient> className={styles.table} columns={columns} dataSource={patients} pagination={false} rowKey="key" scroll={{ x: 900 }} />;
+  return <Table<Patient> className={styles.table} columns={columns} dataSource={patients} pagination={{ pageSize: 8, showSizeChanger: false }} rowKey="key" scroll={{ x: 900 }} />;
 }

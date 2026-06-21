@@ -10,6 +10,7 @@ import styles from './super-admin-dashboard.module.css';
 type FormState = UpsertPuskesmasPayload;
 
 const emptyForm: FormState = { id: '', nama: '', kecamatan: '', kabupatenKota: '', provinsi: 'DI Yogyakarta', tipe: 'NON_RAWAT_INAP', rainyAccess: 'AMAN', coldChainReady: false, statusEndemisMalaria: false, ketersediaanLab: false, kapasitasSimpanObat: 0, jarakKeIfkKm: 0, leadTimeHari: 0, latitude: null, longitude: null, skorAksesibilitas: 2 };
+const pageSize = 8;
 
 function toForm(row: PuskesmasRecord): FormState {
   return { id: row.id, nama: row.nama, kecamatan: row.kecamatan, kabupatenKota: row.kabupatenKota ?? '', provinsi: row.provinsi ?? '', tipe: row.tipe as FormState['tipe'], rainyAccess: row.rainyAccess as FormState['rainyAccess'], coldChainReady: row.coldChainReady, statusEndemisMalaria: row.statusEndemisMalaria, ketersediaanLab: row.ketersediaanLab, kapasitasSimpanObat: row.kapasitasSimpanObat ?? 0, jarakKeIfkKm: row.jarakKeIfkKm ?? 0, leadTimeHari: row.leadTimeHari ?? 0, latitude: row.latitude ?? null, longitude: row.longitude ?? null, skorAksesibilitas: row.skorAksesibilitas };
@@ -34,6 +35,7 @@ export function SuperAdminHealthCentersContent() {
   const [detail, setDetail] = useState<PuskesmasRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<AiMasterSyncStatus | null>(null);
+  const [page, setPage] = useState(1);
 
   async function reload() {
     const [puskesmasRows, nextUser, users, nextSyncStatus] = await Promise.all([getPuskesmas(), getCurrentUser(), getUsers(), getAiMasterSyncStatus().catch(() => null)]);
@@ -53,6 +55,11 @@ export function SuperAdminHealthCentersContent() {
     if (!normalizedQuery) return rows;
     return rows.filter((row) => [row.id, row.nama, row.kecamatan].some((value) => value.toLowerCase().includes(normalizedQuery)));
   }, [query, rows]);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   async function submitForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,7 +83,7 @@ export function SuperAdminHealthCentersContent() {
         <section className={[styles.pageHeader, styles.registryHeader].join(' ')}>
           <div><h1>{t('healthCentersTitle')}</h1><p>{t('healthCentersSubtitle')}</p></div>
           <div className={styles.registryActions}>
-            <label className={styles.searchBox}><AppIcon name="search" width={18} height={18} /><input aria-label={t('searchHealthCenter')} placeholder={t('searchHealthCenter')} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+            <label className={styles.searchBox}><AppIcon name="search" width={18} height={18} /><input aria-label={t('searchHealthCenter')} placeholder={t('searchHealthCenter')} value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label>
             <span className={styles.syncStatus} data-state={syncStatus?.status ?? 'never'}>{syncLabel(syncStatus)}</span>
             <button type="button" className={styles.primaryButton} onClick={() => setForm({ ...emptyForm })}><AppIcon name="plus" width={16} height={16} /> {t('addHealthCenter')}</button>
           </div>
@@ -89,7 +96,7 @@ export function SuperAdminHealthCentersContent() {
             <table className={styles.registryTable}>
               <thead><tr><th>ID</th><th>{tCommon('name')}</th><th>{t('district')}</th><th>{tCommon('status')}</th><th>{t('usersColumn')}</th><th>{tCommon('actions')}</th></tr></thead>
               <tbody>
-                {filteredRows.map((row) => (
+                {pageRows.map((row) => (
                   <tr key={row.id}>
                     <td><strong className={styles.registryId}>{row.id}</strong></td><td><strong>{row.nama}</strong></td><td>{row.kecamatan}</td>
                     <td><span className={styles.activeBadge}>{tCommon('active')}</span></td><td>{t('userCount', { count: userCounts[row.id] ?? 0 })}</td>
@@ -100,7 +107,7 @@ export function SuperAdminHealthCentersContent() {
               </tbody>
             </table>
           </div>
-          <footer className={styles.registryPagination}><p>{t('showingHealthCenters', { shown: filteredRows.length, total: rows.length })}</p></footer>
+          <footer className={styles.registryPagination}><p>{t('showingHealthCenters', { shown: pageRows.length, total: filteredRows.length })}</p><div className={styles.pages}><button type="button" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label={t('previousPage')}><AppIcon name="chevronLeft" width={14} height={14} /></button><span>{t('pageOf', { page: safePage, total: totalPages })}</span><button type="button" disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} aria-label={t('nextPage')}><AppIcon name="chevronRight" width={14} height={14} /></button></div></footer>
         </section>
       </div>
 
@@ -112,10 +119,11 @@ export function SuperAdminHealthCentersContent() {
 
 function PuskesmasDetailModal({ close, row, users }: { close: () => void; row: PuskesmasRecord; users: number }) {
   const t = useTranslations('admin');
+  const tCommon = useTranslations('common');
   return (
     <div className={styles.modalBackdrop} role="presentation" onMouseDown={close}>
       <section className={styles.modalCard} role="dialog" aria-modal="true" aria-labelledby="puskesmas-detail-title" onMouseDown={(event) => event.stopPropagation()}>
-        <header className={styles.drawerHeader}><h2 id="puskesmas-detail-title">{row.nama}</h2><button type="button" onClick={close}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+        <header className={styles.drawerHeader}><h2 id="puskesmas-detail-title">{row.nama}</h2><button type="button" aria-label={tCommon('closeMenu')} onClick={close}><AppIcon name="x" width={18} height={18} /></button></header>
         <label>ID<input readOnly value={row.id} /></label>
         <label>{t('district')}<input readOnly value={row.kecamatan} /></label>
         <label>{t('city')}<input readOnly value={row.kabupatenKota ?? '-'} /></label>
@@ -143,7 +151,7 @@ function PuskesmasModal({ form, setForm, submitForm, close }: { form: FormState;
   return (
     <div className={styles.modalBackdrop} role="presentation" onMouseDown={close}>
       <form className={styles.modalCard} onSubmit={submitForm} onMouseDown={(event) => event.stopPropagation()}>
-        <header className={styles.drawerHeader}><h2>{form.id ? t('healthCenter') : t('addHealthCenter')}</h2><button type="button" onClick={close}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+        <header className={styles.drawerHeader}><h2>{form.id ? t('healthCenter') : t('addHealthCenter')}</h2><button type="button" aria-label={tCommon('closeMenu')} onClick={close}><AppIcon name="x" width={18} height={18} /></button></header>
         <label>ID<input required value={form.id} onChange={(event) => setForm({ ...form, id: event.target.value })} /></label>
         <label>{tCommon('name')}<input required value={form.nama} onChange={(event) => setForm({ ...form, nama: event.target.value })} /></label>
         <label>{t('district')}<input required value={form.kecamatan} onChange={(event) => setForm({ ...form, kecamatan: event.target.value })} /></label>

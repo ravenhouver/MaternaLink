@@ -26,7 +26,7 @@ export const navItems = [
   { key: routes.ifkRecommendations, href: routes.ifkRecommendations, icon: 'package', label: 'Recommendations', labelKey: 'recommendations', roles: ['IFK_ADMIN'] },
   { key: routes.ifkClinics, href: routes.ifkClinics, icon: 'users', label: 'Clinics', labelKey: 'clinics', roles: ['IFK_ADMIN'] },
   { key: routes.ifkEnvironment, href: routes.ifkEnvironment, icon: 'calendar', label: 'Environment', labelKey: 'environment', roles: ['IFK_ADMIN'] },
-  { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'settings', label: 'Decision History', labelKey: 'decisionHistory', roles: ['IFK_ADMIN'] },
+  { key: routes.ifkDecisionHistory, href: routes.ifkDecisionHistory, icon: 'fileText', label: 'Decision History', labelKey: 'decisionHistory', roles: ['IFK_ADMIN'] },
   { key: routes.deliveries, href: routes.deliveries, icon: 'package', label: 'Delivering', labelKey: 'deliveries', roles: ['BIDAN_PUSKESMAS'] },
 ] satisfies NavItem[];
 

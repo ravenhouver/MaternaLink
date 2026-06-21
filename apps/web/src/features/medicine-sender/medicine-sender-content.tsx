@@ -26,6 +26,7 @@ export function MedicineSenderContent() {
   const [mapMode, setMapMode] = useState<'map' | 'satellite'>('map');
   const [dashboard, setDashboard] = useState<IfkDashboardResponse | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [logPage, setLogPage] = useState(1);
 
   useEffect(() => {
     Promise.all([getIfkDashboard(), getCurrentUser()])
@@ -40,6 +41,12 @@ export function MedicineSenderContent() {
   const actions = useMemo(() => dashboard?.actions ?? [], [dashboard]);
   const mapPoints = useMemo(() => dashboard?.mapPoints ?? [], [dashboard]);
   const approvalLogs = useMemo(() => dashboard?.approvalLogs ?? [], [dashboard]);
+  const logPageSize = 8;
+  const logTotalPages = Math.max(1, Math.ceil(approvalLogs.length / logPageSize));
+  const safeLogPage = Math.min(logPage, logTotalPages);
+  const pageApprovalLogs = approvalLogs.slice((safeLogPage - 1) * logPageSize, safeLogPage * logPageSize);
+
+  useEffect(() => { if (logPage > logTotalPages) setLogPage(logTotalPages); }, [logPage, logTotalPages]);
 
   return (
     <div className={styles.senderShell}>
@@ -92,7 +99,6 @@ export function MedicineSenderContent() {
           </nav>
           <div className={styles.topbarActions}>
             {user ? <NotificationCenter user={user} /> : null}
-            <button type="button" aria-label="Pengaturan" onClick={() => window.location.assign(routes.ifkEnvironment)}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.topbarProfile}>
               <div>
                 <strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong>
@@ -182,7 +188,7 @@ export function MedicineSenderContent() {
                 </thead>
                 <tbody>
                   {approvalLogs.length === 0 ? <tr><td colSpan={5}>Belum ada aktivitas approval.</td></tr> : null}
-                  {approvalLogs.map((log) => (
+                  {pageApprovalLogs.map((log) => (
                     <tr key={`${log.timestamp}-${log.entity}`}>
                       <td>{new Date(log.timestamp).toLocaleString('id-ID')}</td><td>{log.entity}</td><td>{log.action}</td><td>{log.operator}</td>
                       <td><span className={[styles.logStatus, styles[log.status]].join(' ')}>{statusLabels[log.status]}</span></td>
@@ -191,6 +197,7 @@ export function MedicineSenderContent() {
                 </tbody>
               </table>
             </div>
+            <div className={styles.recoPagination}><span>Showing {pageApprovalLogs.length} of {approvalLogs.length} entries</span><div><button type="button" disabled={safeLogPage <= 1} onClick={() => setLogPage((value) => Math.max(1, value - 1))}><AppIcon name="chevronLeft" width={14} height={14} /></button><button type="button" className={styles.currentPage}>{safeLogPage}</button><button type="button" disabled={safeLogPage >= logTotalPages} onClick={() => setLogPage((value) => Math.min(logTotalPages, value + 1))}><AppIcon name="chevronRight" width={14} height={14} /></button></div></div>
           </section>
         </main>
       </div>

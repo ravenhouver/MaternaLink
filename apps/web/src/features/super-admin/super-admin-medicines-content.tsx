@@ -43,7 +43,6 @@ export function SuperAdminMedicinesContent() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-  const [coldOnly, setColdOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [form, setForm] = useState<FormState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +61,8 @@ export function SuperAdminMedicinesContent() {
   const categories = useMemo(() => ['All', ...Array.from(new Set(rows.map((row) => row.category)))], [rows]);
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return rows.filter((row) => (category === 'All' || row.category === category) && (!coldOnly || row.coldChain) && (!normalizedQuery || [row.id, row.name, row.unit, row.category].some((value) => value.toLowerCase().includes(normalizedQuery))));
-  }, [category, coldOnly, query, rows]);
+    return rows.filter((row) => (category === 'All' || row.category === category) && (!normalizedQuery || [row.id, row.name, row.unit, row.category].some((value) => value.toLowerCase().includes(normalizedQuery))));
+  }, [category, query, rows]);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / 8));
   const visibleRows = filteredRows.slice((page - 1) * 8, page * 8);
 
@@ -94,7 +93,6 @@ export function SuperAdminMedicinesContent() {
           <div className={styles.medicineFilterGroup}>
             <label className={styles.searchBox}><AppIcon name="search" width={18} height={18} /><input aria-label={t('searchMedicineName')} placeholder={t('searchMedicineName')} value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} /></label>
             <label className={styles.categoryFilter}><span>{t('filterCategory')}</span><select aria-label={t('filterMedicineCategory')} value={category} onChange={(event) => { setPage(1); setCategory(event.target.value); }}>{categories.map((item) => <option key={item} value={item}>{item === 'All' ? t('all') : item}</option>)}</select><AppIcon name="chevronDown" width={18} height={18} /></label>
-            <label className={styles.checkboxRow}><input type="checkbox" checked={coldOnly} onChange={(event) => { setPage(1); setColdOnly(event.target.checked); }} /> {t('coldChainOnly')}</label>
           </div>
           <div className={styles.toolbarIconActions}><button type="button" aria-label={t('downloadMedicineList')} onClick={() => downloadCsv('maternalink-medicines.csv', filteredRows)}><AppIcon name="download" width={18} height={18} /></button></div>
         </section>
@@ -125,7 +123,7 @@ function MedicineModal({ form, setForm, submitForm, close }: { form: FormState; 
   return (
     <div className={styles.modalBackdrop} role="presentation" onMouseDown={close}>
       <form className={styles.modalCard} onSubmit={submitForm} onMouseDown={(event) => event.stopPropagation()}>
-        <header className={styles.drawerHeader}><h2>{form.id ? t('medicine') : t('addMedicine')}</h2><button type="button" onClick={close}><AppIcon name="circleStop" width={18} height={18} /></button></header>
+        <header className={styles.drawerHeader}><h2>{form.id ? t('medicine') : t('addMedicine')}</h2><button type="button" aria-label={tCommon('closeMenu')} onClick={close}><AppIcon name="x" width={18} height={18} /></button></header>
         <label>ID<input required value={form.id} onChange={(event) => setForm({ ...form, id: event.target.value })} /></label>
         <label>{tCommon('name')}<input required value={form.nama} onChange={(event) => setForm({ ...form, nama: event.target.value })} /></label>
         <label>{t('category')}<select value={form.kategori} onChange={(event) => setForm({ ...form, kategori: event.target.value as FormState['kategori'] })}><option value="OBAT">{t('medicineCategoryMedicine')}</option><option value="VAKSIN">{t('medicineCategoryVaccine')}</option><option value="ALAT_KESEHATAN">{t('medicineCategoryDevice')}</option></select></label>

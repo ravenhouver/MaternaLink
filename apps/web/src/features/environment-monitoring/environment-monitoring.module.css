@@ -620,6 +620,56 @@
   text-transform: uppercase;
 }
 
+.routePagination,
+.routePagination div {
+  display: flex;
+  align-items: center;
+}
+
+.routePagination {
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid rgb(196 199 207 / 0.25);
+  background: #f8fafc;
+  padding: 14px 18px;
+}
+
+.routePagination span {
+  color: #74777f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.routePagination div {
+  gap: 8px;
+}
+
+.routePagination button {
+  display: inline-grid;
+  min-width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgb(196 199 207 / 0.6);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #44474e;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.routePagination button[aria-current='page'] {
+  border-color: #1a73e8;
+  background: #1a73e8;
+  color: #ffffff;
+}
+
+.routePagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .alertFeed {
   position: fixed;
   right: 32px;

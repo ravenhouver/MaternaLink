@@ -47,7 +47,7 @@ function Topbar() {
   return (
     <header className={styles.dhTopbar}>
       <div className={styles.dhCrumbs}><span>Home</span><AppIcon name="chevronRight" width={14} height={14} /><span>IFK</span><AppIcon name="chevronRight" width={14} height={14} /><strong>Riwayat Keputusan</strong></div>
-      <div className={styles.dhTopActions}><button type="button" aria-label="Notifikasi IFK" onClick={() => setMessage('Riwayat keputusan diperbarui dari event rekomendasi IFK.')}><AppIcon name="bell" width={18} height={18} /></button><button type="button" aria-label="Pengaturan IFK" onClick={() => setMessage('Pengaturan operasional tersedia lewat data master dan profil fasilitas.')}><AppIcon name="settings" width={18} height={18} /></button><span /><div><strong>IFK Operations</strong><small>Audit Ledger</small></div><b>IF</b></div>
+      <div className={styles.dhTopActions}><button type="button" aria-label="Notifikasi IFK" onClick={() => setMessage('Riwayat keputusan diperbarui dari event rekomendasi IFK.')}><AppIcon name="bell" width={18} height={18} /></button><span /><div><strong>IFK Operations</strong><small>Audit Ledger</small></div><b>IF</b></div>
       {message ? <p role="status">{message}</p> : null}
     </header>
   );

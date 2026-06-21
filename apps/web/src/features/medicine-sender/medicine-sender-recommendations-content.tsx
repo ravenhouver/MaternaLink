@@ -25,6 +25,7 @@ import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
 type ModalKind = 'edit' | 'track' | 'filter' | 'approve' | 'reject' | null;
+const pageSize = 8;
 
 const urgencyLabel: Record<RecommendationUrgency, string> = {
   CRITICAL: 'critical',
@@ -76,7 +77,6 @@ function RecommendationsTopbar({ user }: { user: CurrentUser | null }) {
       </div>
       <div className={styles.recoTopActions}>
         {user ? <NotificationCenter user={user} /> : null}
-        <button type="button" aria-label="Pengaturan" onClick={() => window.location.assign(routes.ifkEnvironment)}><AppIcon name="settings" width={18} height={18} /></button>
         <span />
         <div><strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong><small>{user?.role ?? 'IFK_ADMIN'}</small></div>
         <b>{(user?.displayName ?? user?.username ?? 'IF').slice(0, 2).toUpperCase()}</b>
@@ -95,6 +95,7 @@ export function MedicineSenderRecommendationsContent() {
   const [isAllocating, setIsAllocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [page, setPage] = useState(1);
 
   async function refreshRows() {
     setIsLoading(true);
@@ -110,6 +111,7 @@ export function MedicineSenderRecommendationsContent() {
 
   useEffect(() => {
     void refreshRows();
+    setPage(1);
   }, [statusFilter]);
 
   useEffect(() => {
@@ -207,6 +209,8 @@ export function MedicineSenderRecommendationsContent() {
           <RecommendationTable
             isLoading={isLoading}
             rows={rows}
+            page={page}
+            onPageChange={setPage}
             onDragStart={setDraggingId}
             onDrop={dropOn}
             onMove={moveRow}
@@ -228,7 +232,13 @@ function currentPeriod() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
-function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, rows }: { isLoading: boolean; onDragStart: (id: string) => void; onDrop: (id: string) => void; onMove: (id: string, direction: -1 | 1) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; rows: DistributionRecommendation[] }) {
+function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, onPageChange, page, rows }: { isLoading: boolean; onDragStart: (id: string) => void; onDrop: (id: string) => void; onMove: (id: string, direction: -1 | 1) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; onPageChange: (page: number) => void; page: number; rows: DistributionRecommendation[] }) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => { if (page > totalPages) onPageChange(totalPages); }, [onPageChange, page, totalPages]);
+
   return (
     <section className={styles.recoTablePanel}>
       <div className={styles.recoDragHint}><AppIcon name="gripVertical" width={14} height={14} />Seret baris untuk mengubah urutan prioritas pengiriman</div>
@@ -238,10 +248,10 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, r
           <tbody>
             {isLoading ? <tr><td colSpan={8}>Loading recommendations...</td></tr> : null}
             {!isLoading && rows.length === 0 ? <tr><td colSpan={8}>No recommendations found.</td></tr> : null}
-            {rows.map((row, index) => (
+            {pageRows.map((row, index) => (
               <tr draggable className={row.urgency === 'CRITICAL' ? styles.recoHighlightedRow : undefined} key={row.id} onDragStart={() => onDragStart(row.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => onDrop(row.id)}>
                 <td><AppIcon name="gripVertical" width={16} height={16} /></td>
-                <td>{index + 1}</td>
+                <td>{(safePage - 1) * pageSize + index + 1}</td>
                 <td><strong>{row.puskesmas?.nama ?? row.puskesmasId}</strong><span className={[styles.recoSourceTag, styles.blue].join(' ')}>{row.source}</span><p>{row.justification ?? '-'}</p></td>
                 <td>{row.items.map((item) => `${item.obat?.nama ?? item.obatId} (${item.finalQuantity} ${item.obat?.satuan ?? ''})`).join(', ')}</td>
                 <td><strong>{new Date(row.periode).toLocaleDateString('id-ID')}</strong><small>Priority #{row.priorityRank}</small></td>
@@ -259,7 +269,7 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, r
           </tbody>
         </table>
       </div>
-      <div className={styles.recoPagination}><span>Showing {rows.length} entries</span></div>
+      <div className={styles.recoPagination}><span>Showing {pageRows.length} of {rows.length} entries</span><div><button type="button" disabled={safePage <= 1} onClick={() => onPageChange(Math.max(1, safePage - 1))}><AppIcon name="chevronLeft" width={14} height={14} /></button><button type="button" className={styles.currentPage}>{safePage}</button><button type="button" disabled={safePage >= totalPages} onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}><AppIcon name="chevronRight" width={14} height={14} /></button></div></div>
     </section>
   );
 }
@@ -331,5 +341,5 @@ function ConfirmModal({ kind, onClose, onConfirm, row }: { kind: 'approve' | 're
 }
 
 function ModalShell({ children, onClose, size }: { children: ReactNode; onClose: () => void; size: 'edit' | 'track' | 'filter' | 'confirm' }) {
-  return <div className={styles.recoOverlay} role="dialog" aria-modal="true"><div className={[styles.recoModal, styles[size]].join(' ')}>{children}<button className={styles.modalClose} type="button" aria-label="Close modal" onClick={onClose}><AppIcon name="x" width={22} height={22} /></button></div></div>;
+  return <div className={styles.recoOverlay} role="presentation" onMouseDown={onClose}><div className={[styles.recoModal, styles[size]].join(' ')} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>{children}<button className={styles.modalClose} type="button" aria-label="Close modal" onClick={onClose}><AppIcon name="x" width={18} height={18} /></button></div></div>;
 }

@@ -47,7 +47,7 @@ export function MedicationDetailContent() {
   const [chartMode, setChartMode] = useState<ChartMode>('recent6');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [showAllHistory, setShowAllHistory] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
 
   useEffect(() => {
     let mounted = true;
@@ -88,7 +88,10 @@ export function MedicationDetailContent() {
     height: Math.max(12, Math.round((row.konsumsiPeriode / maxUsage) * 180)),
     isHigh: row.konsumsiPeriode >= maxUsage * 0.75,
   }));
-  const historyRows = (showAllHistory ? stockRows : stockRows.slice(0, 5)).map((row) => ({
+  const historyPageSize = 8;
+  const historyTotalPages = Math.max(1, Math.ceil(stockRows.length / historyPageSize));
+  const safeHistoryPage = Math.min(historyPage, historyTotalPages);
+  const historyRows = stockRows.slice((safeHistoryPage - 1) * historyPageSize, safeHistoryPage * historyPageSize).map((row) => ({
     date: new Date(row.periode).toLocaleDateString('id-ID'),
     activity: row.konsumsiPeriode > 0 ? t('updateAndUsage') : t('updateOnly'),
     amount: t('remainingUsage', { stock: row.stokSaatIni, unit: row.obat?.satuan ?? medicine?.satuan ?? 'unit', usage: row.konsumsiPeriode }),
@@ -96,6 +99,8 @@ export function MedicationDetailContent() {
     status: row.konsumsiPeriode > 0 ? t('withUsage') : t('storedStock'),
     type: row.konsumsiPeriode > 0 ? 'out' : 'in',
   }));
+
+  useEffect(() => { if (historyPage > historyTotalPages) setHistoryPage(historyTotalPages); }, [historyPage, historyTotalPages]);
 
   const updatedLabel = latestStock ? new Date(latestStock.periode).toLocaleDateString('id-ID') : t('noStockUpdate');
 
@@ -197,7 +202,7 @@ export function MedicationDetailContent() {
       </section>
 
       <section className={styles.historyCard} id="stock-history">
-        <header><h2>{t('stockHistory')}</h2><button type="button" onClick={() => setShowAllHistory((current) => !current)}>{showAllHistory ? t('showRecentHistory') : t('viewAllHistory')}</button></header>
+        <header><h2>{t('stockHistory')}</h2></header>
         <div className={styles.historyScroll}>
           <table className={styles.historyTable}>
             <thead><tr><th>{t('date')}</th><th>{t('activity')}</th><th>{t('amountColumn')}</th><th>{t('personnel')}</th><th>{t('status')}</th></tr></thead>
@@ -215,6 +220,7 @@ export function MedicationDetailContent() {
             </tbody>
           </table>
         </div>
+        <footer className={styles.pagination}><span>{t('showingEntries', { count: historyRows.length })}</span><div className={styles.paginationControls}><button type="button" aria-label={t('previousPage')} disabled={safeHistoryPage <= 1} onClick={() => setHistoryPage((value) => Math.max(1, value - 1))}><AppIcon name="chevronLeft" width={16} height={16} /></button><button type="button" aria-current="page">{safeHistoryPage}</button><button type="button" aria-label={t('nextPage')} disabled={safeHistoryPage >= historyTotalPages} onClick={() => setHistoryPage((value) => Math.min(historyTotalPages, value + 1))}><AppIcon name="chevronRight" width={16} height={16} /></button></div></footer>
       </section>
 
       <footer className={styles.detailFooter}>

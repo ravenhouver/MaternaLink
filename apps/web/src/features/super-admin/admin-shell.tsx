@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { NotificationCenter } from '@/components/layout/notification-center';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
@@ -22,7 +22,6 @@ const navItems: Array<{ key: AdminPageKey; labelKey: string; icon: AppIconName; 
 ];
 
 export function AdminShell({ active, breadcrumb, user, children }: { active: AdminPageKey; breadcrumb: string; user: CurrentUser | null; children: ReactNode }) {
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const t = useTranslations('admin');
   const tCommon = useTranslations('common');
   const tNav = useTranslations('nav');
@@ -61,7 +60,6 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
           </nav>
           <div className={styles.topbarActions}>
             {user ? <NotificationCenter user={user} /> : null}
-            <button className={styles.iconButton} type="button" aria-label={tCommon('settings')} onClick={() => setIsSettingsOpen(true)}><AppIcon name="settings" width={20} height={20} /></button>
             <div className={styles.profile}>
               <span><strong>{displayName}</strong><small>{t('superAdmin')}</small></span>
               <span className={styles.avatar} aria-hidden="true">{initials}</span>
@@ -71,33 +69,6 @@ export function AdminShell({ active, breadcrumb, user, children }: { active: Adm
 
         {children}
       </section>
-
-      {isSettingsOpen ? (
-        <div className={styles.modalBackdrop} role="presentation" onMouseDown={() => setIsSettingsOpen(false)}>
-          <section className={styles.sideDrawer} role="dialog" aria-modal="true" aria-label={t('settingsTitle')} onMouseDown={(event) => event.stopPropagation()}>
-            <header className={styles.drawerHeader}>
-              <h2>{t('settingsTitle')}</h2>
-              <button type="button" aria-label={tCommon('closeMenu')} onClick={() => setIsSettingsOpen(false)}><AppIcon name="circleStop" width={18} height={18} /></button>
-            </header>
-            <AdminSettings user={user} />
-          </section>
-        </div>
-      ) : null}
     </main>
-  );
-}
-
-function AdminSettings({ user }: { user: CurrentUser | null }) {
-  const t = useTranslations('admin');
-  const tCommon = useTranslations('common');
-  return (
-    <div className={styles.drawerBody}>
-      <dl className={styles.settingsList}>
-        <div><dt>{tCommon('username')}</dt><dd>{user?.username ?? '-'}</dd></div>
-        <div><dt>{tCommon('role')}</dt><dd>{user?.role ?? '-'}</dd></div>
-        <div><dt>{t('session')}</dt><dd>{t('settingsSession')}</dd></div>
-      </dl>
-      <RoleLogoutButton className={styles.primaryButton} />
-    </div>
   );
 }

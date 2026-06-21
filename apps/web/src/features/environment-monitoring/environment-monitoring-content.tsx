@@ -76,7 +76,6 @@ function Topbar({ user }: { user: CurrentUser | null }) {
       </nav>
       <div className={styles.topbarActions}>
         {user ? <NotificationCenter user={user} /> : null}
-        <button type="button" aria-label="Pengaturan" onClick={() => window.location.assign(routes.ifkClinics)}><AppIcon name="settings" width={20} height={20} /></button>
         <div className={styles.topbarProfile}>
           <div>
             <strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong>
@@ -143,6 +142,14 @@ function AlertFeed({ alerts }: { alerts: AlertRecord[] }) {
 }
 
 function RiskTable({ rows }: { rows: RouteRow[] }) {
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
   return (
     <section id="clinic-routes" className={styles.routePanel} aria-label="Route vulnerability table">
       <div className={styles.tableWrap}>
@@ -159,7 +166,7 @@ function RiskTable({ rows }: { rows: RouteRow[] }) {
           </thead>
           <tbody>
             {rows.length === 0 ? <tr><td colSpan={6}>Belum ada data rute.</td></tr> : null}
-            {rows.map((item) => (
+            {pageRows.map((item) => (
               <tr key={item.id}>
                 <td><span>{item.id}<br />({item.route})</span></td>
                 <td>{item.clinics}</td>
@@ -177,6 +184,7 @@ function RiskTable({ rows }: { rows: RouteRow[] }) {
           </tbody>
         </table>
       </div>
+      <div className={styles.routePagination}><span>Showing {pageRows.length} of {rows.length} entries</span><div><button type="button" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><AppIcon name="chevronLeft" width={14} height={14} /></button><button type="button" aria-current="page">{safePage}</button><button type="button" disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><AppIcon name="chevronRight" width={14} height={14} /></button></div></div>
     </section>
   );
 }

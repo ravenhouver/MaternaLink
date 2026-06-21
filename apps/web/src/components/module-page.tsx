@@ -25,7 +25,7 @@ export function ModulePage({ title, description, rows }: ModulePageProps) {
       </div>
       <Card>
         <Table
-          pagination={false}
+          pagination={{ pageSize: 8, showSizeChanger: false }}
           dataSource={rows}
           columns={[
             { title: 'Area', dataIndex: 'item', key: 'item' },
