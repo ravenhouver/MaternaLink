@@ -462,13 +462,20 @@ function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: (a
 
     async function startRecording() {
       try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error(t('micError'));
+        }
+        if (typeof MediaRecorder === 'undefined') {
+          throw new Error(t('micError'));
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
 
-        const recorder = new MediaRecorder(stream, { mimeType: preferredMimeType() });
+        const recorder = new MediaRecorder(stream, recorderOptions());
         streamRef.current = stream;
         recorderRef.current = recorder;
         chunksRef.current = [];
@@ -543,10 +550,12 @@ function AudioWaveform({ isActive, isProcessing, onClick }: { isActive: boolean;
   );
 }
 
-function preferredMimeType() {
-  if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return 'audio/webm;codecs=opus';
-  if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) return 'audio/ogg;codecs=opus';
-  return 'audio/webm';
+function recorderOptions(): MediaRecorderOptions | undefined {
+  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return undefined;
+  if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) return { mimeType: 'audio/webm;codecs=opus' };
+  if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) return { mimeType: 'audio/ogg;codecs=opus' };
+  if (MediaRecorder.isTypeSupported('audio/webm')) return { mimeType: 'audio/webm' };
+  return undefined;
 }
 
 function ExaminationForm({ aiDraft, conditions, fields, form, isSaving, medicines, mode, symptoms, onAddMedication, onChange, onListChange, onMedicationChange, onRecordAgain, onRemoveMedication, onSave }: { aiDraft: AiDraftMeta | null; conditions: KondisiRecord[]; fields: ExaminationField[]; form: ExaminationFormState; isSaving: boolean; medicines: ObatRecord[]; mode: 'transcript' | 'manual'; symptoms: GejalaRecord[]; onAddMedication: () => void; onChange: (key: keyof ExaminationFormState, value: string) => void; onListChange: (key: 'symptomIds' | 'diagnosisIds', value: string[]) => void; onMedicationChange: (id: string, key: keyof Omit<MedicationFormRow, 'id'>, value: string) => void; onRecordAgain: () => void; onRemoveMedication: (id: string) => void; onSave: () => void }) {
