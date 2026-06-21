@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PageContainer } from '@/components/layout/page-container';
 import { AppIcon } from '@/components/ui/app-icon';
-import { ScrollingWaveform } from '@/components/ui/waveform';
+import { LiveWaveform } from '@/components/ui/live-waveform';
 import { createAiExaminationDraft, createExamination, getExaminations, getGejala, getKondisi, getObat, getTodayQueue, transcribeSpeech, type AiExaminationDraft, type ExaminationRecord, type ExaminationSource, type GejalaRecord, type KondisiRecord, type ObatRecord, type QueueRecord, type SpeechTranscriptionResult } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './patient-examination.module.css';
@@ -460,15 +460,15 @@ function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: (a
     };
   }, []);
 
-  async function startRecording() {
+  function startRecording() {
     setRecordingError(null);
     setStatus('starting');
     shouldSubmitRef.current = false;
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error(t('micError'));
-      if (typeof MediaRecorder === 'undefined') throw new Error(t('micError'));
+  }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const handleStreamReady = useCallback((stream: MediaStream) => {
+    try {
+      if (typeof MediaRecorder === 'undefined') throw new Error(t('micError'));
       const recorder = new MediaRecorder(stream, recorderOptions());
       streamRef.current = stream;
       recorderRef.current = recorder;
@@ -492,7 +492,15 @@ function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: (a
       setStatus('idle');
       setRecordingError(error instanceof Error ? error.message : t('micError'));
     }
-  }
+  }, [onFinish, t]);
+
+  const handleWaveformError = useCallback((error: Error) => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    recorderRef.current = null;
+    setStatus('idle');
+    setRecordingError(error.message || t('micError'));
+  }, [t]);
 
   function stopRecording() {
     if (recorderRef.current?.state !== 'recording') return;
@@ -514,11 +522,24 @@ function RecordingPanel({ onBack, onFinish }: { onBack: () => void; onFinish: (a
         <p>{recordingError ?? t('recordingBody')}</p>
       </div>
       <div className={styles.waveformPanel}>
-        <ScrollingWaveform height={80} barWidth={3} barGap={2} speed={30} fadeEdges={true} barColor="gray" active={status === 'recording' || status === 'processing'} />
+        <LiveWaveform
+          active={status === 'starting' || status === 'recording'}
+          processing={status === 'processing'}
+          mode="scrolling"
+          height={100}
+          barWidth={4}
+          barHeight={6}
+          barGap={2}
+          barColor="#2563eb"
+          fadeEdges={true}
+          sensitivity={1.35}
+          onError={handleWaveformError}
+          onStreamReady={handleStreamReady}
+        />
       </div>
       <div className={styles.recordingActions}>
         {status === 'idle' ? (
-          <button type="button" className={styles.primaryAction} onClick={() => void startRecording()}>
+          <button type="button" className={styles.primaryAction} onClick={startRecording}>
             <AppIcon name="mic" width={18} height={18} />
             {t('startRecording')}
           </button>

@@ -64,5 +64,5 @@ export function loadRuntimeEnv() {
   process.env.AI_SERVICE_TIMEOUT_MS ??= '30000';
   process.env.AI_LAYER2_TIMEOUT_MS ??= '600000';
   process.env.SPEECH_STT_SERVICE_URL ??= 'http://localhost:8002';
-  process.env.SPEECH_STT_TIMEOUT_MS ??= '120000';
+  process.env.SPEECH_STT_TIMEOUT_MS ??= '600000';
 }

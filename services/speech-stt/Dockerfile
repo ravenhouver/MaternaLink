@@ -15,6 +15,12 @@ ENV STT_MODEL_SIZE=small
 ENV STT_DEVICE=cpu
 ENV STT_COMPUTE_TYPE=int8
 
+RUN python - <<'PY'
+from faster_whisper import WhisperModel
+
+WhisperModel("small", device="cpu", compute_type="int8")
+PY
+
 EXPOSE 8002
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]

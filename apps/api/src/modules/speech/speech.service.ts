@@ -1,4 +1,4 @@
-import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, GatewayTimeoutException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export type SttSegment = { start: number; end: number; text: string };
@@ -52,6 +52,7 @@ export class SpeechService {
       return { ...transcription, draft: await this.toDraft(transcription.transcript), needsReview: true };
     } catch (error) {
       if (error instanceof BadGatewayException) throw error;
+      if (error instanceof Error && error.name === 'AbortError') throw new GatewayTimeoutException('Speech STT service timed out while processing the recording');
       throw new BadGatewayException(error instanceof Error ? error.message : 'Speech STT service unavailable');
     } finally {
       clearTimeout(timeout);
