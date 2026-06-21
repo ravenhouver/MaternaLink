@@ -27,7 +27,7 @@ export function AppShell({ children }: AppShellProps) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const isLogin = pathname === routes.login;
-  const isEmbeddedRoleShellPage = pathname.startsWith(routes.admin) || pathname === routes.ifk || pathname.startsWith(`${routes.ifk}/`);
+  const isEmbeddedRoleShellPage = pathname.startsWith(routes.admin);
   const hasTopbar = pathname !== routes.dashboard;
 
   useEffect(() => {
