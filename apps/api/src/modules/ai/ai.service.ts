@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 type RemoteHealth = {
   service?: string;
@@ -118,6 +118,8 @@ export type AiCondition = {
 
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
+
   async getHealth() {
     const mode = process.env.AI_MODE ?? 'remote';
     if (mode !== 'remote') {
@@ -136,8 +138,15 @@ export class AiService {
     return this.request('/api/v1/layer0/extract', { method: 'POST', body: JSON.stringify(payload) });
   }
 
-  forecastDemand(payload: AiForecastRequest): Promise<AiForecastResponse> {
-    return this.request('/api/v1/layer1/forecast', { method: 'POST', body: JSON.stringify(payload) });
+  async forecastDemand(payload: AiForecastRequest): Promise<AiForecastResponse> {
+    if (this.mode() !== 'remote') return this.fallbackForecastDemand(payload);
+
+    try {
+      return await this.request('/api/v1/layer1/forecast', { method: 'POST', body: JSON.stringify(payload) });
+    } catch (error) {
+      this.logger.warn(`AI forecast unavailable, using local fallback: ${this.errorMessage(error)}`);
+      return this.fallbackForecastDemand(payload);
+    }
   }
 
   allocate(payload: AiAllocateRequest): Promise<AiAllocateResponse> {
@@ -160,6 +169,31 @@ export class AiService {
     return (process.env.AI_SERVICE_BASE_URL ?? 'https://azrilfahmiardi-maternalink-ai.hf.space').replace(/\/$/, '');
   }
 
+  private mode() {
+    return process.env.AI_MODE ?? 'remote';
+  }
+
+  private fallbackForecastDemand(payload: AiForecastRequest): AiForecastResponse {
+    const treatmentDemand = payload.estimated_total_cases * payload.standard_daily_dose * payload.treatment_duration_days;
+    const leadTimeDemand = (treatmentDemand / 30) * Math.max(0, payload.lead_time_days);
+    const accessBuffer = Math.max(0, Math.min(1, 1 - payload.accessibility_score)) * 0.2;
+    const rainyBuffer = payload.rainy_season_access === 'cut_off' ? 0.2 : payload.rainy_season_access === 'limited' ? 0.1 : 0;
+    const buffer_pct = Number((0.15 + accessBuffer + rainyBuffer).toFixed(2));
+    const forecast_demand = Math.max(1, Math.ceil(treatmentDemand + leadTimeDemand));
+    const buffer_units = Math.ceil(forecast_demand * buffer_pct);
+
+    return {
+      facility_id: payload.facility_id,
+      drug_id: payload.drug_id,
+      period: payload.period,
+      forecast_demand,
+      buffer_pct,
+      buffer_units,
+      total_requirement: forecast_demand + buffer_units,
+      current_stock: payload.closing_stock,
+    };
+  }
+
   private timeoutMs(kind: 'default' | 'layer2' = 'default') {
     return Number(kind === 'layer2' ? process.env.AI_LAYER2_TIMEOUT_MS ?? '600000' : process.env.AI_SERVICE_TIMEOUT_MS ?? '30000');
   }
@@ -179,5 +213,9 @@ export class AiService {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  private errorMessage(error: unknown) {
+    return error instanceof Error ? error.message : 'unknown error';
   }
 }
