@@ -3,7 +3,6 @@
 import Typography from 'antd/es/typography';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
-import { LanguageSwitcher } from '@/components/language-switcher';
 import type { CurrentUser } from '@/lib/api';
 import { NotificationCenter } from './notification-center';
 import { getProfile, navItems, resolveSelectedKey } from './layout-menu';
@@ -27,7 +26,6 @@ export function Topbar({ user }: TopbarProps) {
         <Typography.Text className={styles.context}>{profile.role}</Typography.Text>
       </div>
       <div className={styles.actions}>
-        <LanguageSwitcher className={styles.languageSwitcher} />
         <NotificationCenter user={user} buttonClassName={styles.iconButton} />
         <span className={styles.profile} aria-label={profile.name}>{profile.name.slice(0, 2).toUpperCase()}</span>
       </div>

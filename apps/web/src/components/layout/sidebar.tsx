@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { LanguageSwitcher } from '@/components/language-switcher';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { logout, type CurrentUser, type UserRole } from '@/lib/api';
 import { routes } from '@/lib/routes';
@@ -97,6 +98,7 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
       </div>
 
       <div className={styles.profileArea}>
+        {!collapsed ? <LanguageSwitcher className={styles.languageSwitcher} /> : null}
         <button type="button" className={[styles.navItem, styles.navButton].join(' ')} onClick={handleLogout} disabled={isLoggingOut}>
           <AppIcon name="logOut" className={styles.navIcon} width={22} height={22} />
           <span>{isLoggingOut ? tCommon('loggingOut') : tCommon('logout')}</span>
