@@ -277,9 +277,16 @@ function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: ()
   return <ModalShell onClose={onClose} size="edit"><div className={styles.editModalHeader}><div><h2>Edit Distribution</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span>{row.urgency}</span></div><div className={styles.editModalBody}><section><h3>Amount of Medicine Sent</h3><label>Override Qty<span><input value={quantity} inputMode="numeric" onChange={(event) => setQuantity(event.target.value)} /></span></label></section><section><h3>Reason for Change <b>Required</b></h3><textarea value={reason} placeholder="Reserve stock retained at IFK" onChange={(event) => setReason(event.target.value)} />{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.editModalFooter}><button type="button" onClick={onClose}>Cancel</button><span><button type="button" onClick={() => void save()}>Save Changes</button></span></div></ModalShell>;
 }
 
+function trackingOptions(row: DistributionRecommendation): TrackingStatus[] {
+  if (row.status === 'APPROVED') return ['DISPATCHED'];
+  if (row.status === 'DISPATCHED') return ['RECEIVED', 'ISSUE_REPORTED'];
+  return [];
+}
+
 function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: () => Promise<void>; row: DistributionRecommendation }) {
   const [events, setEvents] = useState<TrackingEvent[]>([]);
-  const [status, setStatus] = useState<TrackingStatus>(row.status === 'RECEIVED' ? 'RECEIVED' : row.status === 'DISPATCHED' ? 'RECEIVED' : row.status === 'APPROVED' ? 'DISPATCHED' : 'ISSUE_REPORTED');
+  const options = trackingOptions(row);
+  const [status, setStatus] = useState<TrackingStatus>(options[0] ?? 'DISPATCHED');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -301,7 +308,7 @@ function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: (
     }
   }
 
-  return <ModalShell onClose={onClose} size="track"><div className={styles.trackHeader}><div><h2>Track Shipment</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span><AppIcon name="truck" width={14} height={14} />{row.status}</span></div><div className={styles.trackBody}><section><h3><AppIcon name="clock" width={15} height={15} />Travel History</h3><div className={styles.historyTimeline}>{events.length === 0 ? <article><b>No tracking events</b><small>-</small><span>Tambahkan status pengiriman pertama.</span></article> : null}{events.map((event) => <article key={event.id}><b>{event.status}</b><small>{new Date(event.createdAt).toLocaleString('id-ID')}</small><span>{event.note ?? '-'}</span></article>)}</div></section><section><h3>Update Status</h3><select value={status} onChange={(event) => setStatus(event.target.value as TrackingStatus)}><option value="DISPATCHED">DISPATCHED</option><option value="RECEIVED">RECEIVED</option><option value="ISSUE_REPORTED">ISSUE_REPORTED</option></select><textarea value={note} placeholder="Catatan tracking" onChange={(event) => setNote(event.target.value)} />{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.trackFooter}><a href={routes.ifkDecisionHistory}><AppIcon name="fileText" width={14} height={14} />View Full History</a><span><button type="button" onClick={onClose}>Close</button><button type="button" onClick={() => void saveEvent()}>Save Status</button></span></div></ModalShell>;
+  return <ModalShell onClose={onClose} size="track"><div className={styles.trackHeader}><div><h2>Track Shipment</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span><AppIcon name="truck" width={14} height={14} />{row.status}</span></div><div className={styles.trackBody}><section><h3><AppIcon name="clock" width={15} height={15} />Travel History</h3><div className={styles.historyTimeline}>{events.length === 0 ? <article><b>No tracking events</b><small>-</small><span>Tambahkan status pengiriman pertama.</span></article> : null}{events.map((event) => <article key={event.id}><b>{event.status}</b><small>{new Date(event.createdAt).toLocaleString('id-ID')}</small><span>{event.note ?? '-'}</span></article>)}</div></section><section><h3>Update Status</h3>{options.length ? <><select value={status} onChange={(event) => setStatus(event.target.value as TrackingStatus)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><textarea value={note} placeholder="Catatan tracking" onChange={(event) => setNote(event.target.value)} /></> : <p>Status pengiriman tidak bisa diperbarui dari tahap ini.</p>}{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.trackFooter}><a href={routes.ifkDecisionHistory}><AppIcon name="fileText" width={14} height={14} />View Full History</a><span><button type="button" onClick={onClose}>Close</button><button type="button" disabled={!options.length} onClick={() => void saveEvent()}>Save Status</button></span></div></ModalShell>;
 }
 
 function FilterModal({ onApply, onClose, statusFilter }: { onApply: (status: RecommendationStatus | 'ALL') => void; onClose: () => void; statusFilter: RecommendationStatus | 'ALL' }) {

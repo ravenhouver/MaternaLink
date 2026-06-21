@@ -10,6 +10,7 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DATABASE_URL: postgresql://maternalink:maternalink@postgres:5432/maternalink?schema=public
+      JWT_SECRET: maternalink-docker-dev-secret
       AI_SERVICE_BASE_URL: https://azrilfahmiardi-maternalink-ai.hf.space
       AI_MODE: remote
       AI_SERVICE_TIMEOUT_MS: 30000
@@ -52,6 +53,7 @@ services:
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api
+      JWT_SECRET: maternalink-docker-dev-secret
     ports:
       - "3000:3000"
     volumes:

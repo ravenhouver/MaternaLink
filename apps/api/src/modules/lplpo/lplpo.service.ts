@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { CurrentUser } from '../../common/auth/current-user';
+import { requiredScopedPuskesmasId, scopedPuskesmasId } from '../../common/auth/scope-utils';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GenerateLplpoDto } from './lplpo.dto';
 
@@ -8,10 +10,11 @@ const toDate = (value: string) => new Date(value);
 export class LplpoService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async generate(data: GenerateLplpoDto) {
+  async generate(data: GenerateLplpoDto, user: CurrentUser) {
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
     const periode = toDate(data.periode);
     const run = await this.prisma.forecastRun.findFirst({
-      where: { puskesmasId: data.puskesmasId, periode },
+      where: { puskesmasId, periode },
       include: { prediksi: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -29,7 +32,7 @@ export class LplpoService {
           },
           create: {
             prediksiStokId: prediction.id,
-            puskesmasId: data.puskesmasId,
+            puskesmasId,
             obatId: prediction.obatId,
             periode,
             jumlahDiminta: Math.max(0, prediction.totalRekomendasi - prediction.stokSaatIni),
@@ -41,9 +44,9 @@ export class LplpoService {
     return rows;
   }
 
-  list(puskesmasId?: string, periode?: string) {
+  list(user: CurrentUser, puskesmasId?: string, periode?: string) {
     return this.prisma.lplpoPrediktif.findMany({
-      where: { puskesmasId, periode: periode ? toDate(periode) : undefined },
+      where: { puskesmasId: scopedPuskesmasId(user, puskesmasId), periode: periode ? toDate(periode) : undefined },
       include: { obat: true, puskesmas: true },
       orderBy: { id: 'asc' },
     });

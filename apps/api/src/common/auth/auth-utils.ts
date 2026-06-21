@@ -4,12 +4,17 @@ import type { CurrentUser } from './current-user';
 const SESSION_COOKIE = 'maternalink_session';
 const DEFAULT_SECRET = 'maternalink-local-dev-secret';
 
+function jwtSecret() {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') throw new Error('JWT_SECRET is required in production');
+  return process.env.JWT_SECRET ?? DEFAULT_SECRET;
+}
+
 function base64Url(input: Buffer | string) {
   return Buffer.from(input).toString('base64url');
 }
 
 function sign(value: string) {
-  return createHmac('sha256', process.env.JWT_SECRET ?? DEFAULT_SECRET).update(value).digest('base64url');
+  return createHmac('sha256', jwtSecret()).update(value).digest('base64url');
 }
 
 export function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {

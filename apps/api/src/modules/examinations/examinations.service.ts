@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
+import { assertOwnPuskesmas } from '../../common/auth/scope-utils';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { AiExaminationDraftDto, CreateExaminationDto, UpdateExaminationDto } from './examinations.dto';
@@ -54,7 +55,14 @@ export class ExaminationsService {
   create(data: CreateExaminationDto, user: CurrentUser) {
     return this.prisma.$transaction(async (tx) => {
       const pregnancy = await tx.pregnancy.findUniqueOrThrow({ where: { id: data.pregnancyId } });
+      if (pregnancy.patientId !== data.patientId) throw new ConflictException('Patient and pregnancy do not match');
+      assertOwnPuskesmas(user, pregnancy.puskesmasId);
       const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId ?? pregnancy.puskesmasId : pregnancy.puskesmasId;
+      if (data.queueId) {
+        await tx.patientQueue.findFirstOrThrow({
+          where: { id: data.queueId, patientId: data.patientId, pregnancyId: data.pregnancyId, puskesmasId },
+        });
+      }
       const diagnosis = data.diagnosis ?? [];
       const symptoms = data.symptoms ?? [];
       const medication = normalizeMedication(data.medication);

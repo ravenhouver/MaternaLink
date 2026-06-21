@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { CurrentUser } from '../../common/auth/current-user';
+import { requiredScopedPuskesmasId, scopedPuskesmasId } from '../../common/auth/scope-utils';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AnamnesisInputDto, DiagnosisInputDto, GejalaInputDto, KonteksInputDto, StokInputDto } from './inputs.dto';
 
@@ -13,59 +15,64 @@ function periodFilter(periode?: string) {
 export class InputsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listDiagnosis(puskesmasId?: string, periode?: string) {
+  listDiagnosis(user: CurrentUser, puskesmasId?: string, periode?: string) {
     return this.prisma.diagnosisPeriode.findMany({
-      where: { puskesmasId, periode: periodFilter(periode) },
+      where: { puskesmasId: scopedPuskesmasId(user, puskesmasId), periode: periodFilter(periode) },
       include: { puskesmas: true, kondisi: true },
       orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
     });
   }
 
-  createDiagnosis(data: DiagnosisInputDto) {
+  createDiagnosis(user: CurrentUser, data: DiagnosisInputDto) {
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
     return this.prisma.diagnosisPeriode.upsert({
-      where: { puskesmasId_kondisiId_periode: { puskesmasId: data.puskesmasId, kondisiId: data.kondisiId, periode: toDate(data.periode) } },
+      where: { puskesmasId_kondisiId_periode: { puskesmasId, kondisiId: data.kondisiId, periode: toDate(data.periode) } },
       update: { jumlahKasus: data.jumlahKasus, source: data.source },
-      create: { ...data, periode: toDate(data.periode) },
+      create: { ...data, puskesmasId, periode: toDate(data.periode) },
     });
   }
 
-  async removeDiagnosis(id: number) {
-    await this.prisma.diagnosisPeriode.delete({ where: { id } });
+  async removeDiagnosis(user: CurrentUser, id: number) {
+    const existing = await this.prisma.diagnosisPeriode.findFirstOrThrow({ where: { id, puskesmasId: scopedPuskesmasId(user) } });
+    await this.prisma.diagnosisPeriode.delete({ where: { id: existing.id } });
     return { id, deleted: true };
   }
 
-  listGejala(puskesmasId?: string, periode?: string) {
+  listGejala(user: CurrentUser, puskesmasId?: string, periode?: string) {
     return this.prisma.gejalaPeriode.findMany({
-      where: { puskesmasId, periode: periodFilter(periode) },
+      where: { puskesmasId: scopedPuskesmasId(user, puskesmasId), periode: periodFilter(periode) },
       include: { puskesmas: true, gejala: true },
       orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
     });
   }
 
-  createGejala(data: GejalaInputDto) {
+  createGejala(user: CurrentUser, data: GejalaInputDto) {
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
     return this.prisma.gejalaPeriode.upsert({
-      where: { puskesmasId_gejalaId_periode: { puskesmasId: data.puskesmasId, gejalaId: data.gejalaId, periode: toDate(data.periode) } },
+      where: { puskesmasId_gejalaId_periode: { puskesmasId, gejalaId: data.gejalaId, periode: toDate(data.periode) } },
       update: { jumlah: data.jumlah },
-      create: { ...data, periode: toDate(data.periode) },
+      create: { ...data, puskesmasId, periode: toDate(data.periode) },
     });
   }
 
-  async removeGejala(id: number) {
-    await this.prisma.gejalaPeriode.delete({ where: { id } });
+  async removeGejala(user: CurrentUser, id: number) {
+    const existing = await this.prisma.gejalaPeriode.findFirstOrThrow({ where: { id, puskesmasId: scopedPuskesmasId(user) } });
+    await this.prisma.gejalaPeriode.delete({ where: { id: existing.id } });
     return { id, deleted: true };
   }
 
-  listKonteks(puskesmasId?: string, periode?: string) {
+  listKonteks(user: CurrentUser, puskesmasId?: string, periode?: string) {
     return this.prisma.konteksPeriode.findMany({
-      where: { puskesmasId, periode: periodFilter(periode) },
+      where: { puskesmasId: scopedPuskesmasId(user, puskesmasId), periode: periodFilter(periode) },
       include: { puskesmas: true },
       orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
     });
   }
 
-  createKonteks(data: KonteksInputDto) {
+  createKonteks(user: CurrentUser, data: KonteksInputDto) {
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
     return this.prisma.konteksPeriode.upsert({
-      where: { puskesmasId_periode: { puskesmasId: data.puskesmasId, periode: toDate(data.periode) } },
+      where: { puskesmasId_periode: { puskesmasId, periode: toDate(data.periode) } },
       update: {
         season: data.season,
         accessScore: data.accessScore,
@@ -77,48 +84,52 @@ export class InputsService {
         statusKlb: data.statusKlb ?? false,
         riwayatStockout6Bln: data.riwayatStockout6Bln,
       },
-      create: { ...data, periode: toDate(data.periode), statusKlb: data.statusKlb ?? false },
+      create: { ...data, puskesmasId, periode: toDate(data.periode), statusKlb: data.statusKlb ?? false },
     });
   }
 
-  async removeKonteks(id: number) {
-    await this.prisma.konteksPeriode.delete({ where: { id } });
+  async removeKonteks(user: CurrentUser, id: number) {
+    const existing = await this.prisma.konteksPeriode.findFirstOrThrow({ where: { id, puskesmasId: scopedPuskesmasId(user) } });
+    await this.prisma.konteksPeriode.delete({ where: { id: existing.id } });
     return { id, deleted: true };
   }
 
-  listStok(puskesmasId?: string, periode?: string) {
+  listStok(user: CurrentUser, puskesmasId?: string, periode?: string) {
     return this.prisma.stokPuskesmas.findMany({
-      where: { puskesmasId, periode: periodFilter(periode) },
+      where: { puskesmasId: scopedPuskesmasId(user, puskesmasId), periode: periodFilter(periode) },
       include: { puskesmas: true, obat: true },
       orderBy: [{ periode: 'desc' }, { puskesmasId: 'asc' }],
     });
   }
 
-  createStok(data: StokInputDto) {
+  createStok(user: CurrentUser, data: StokInputDto) {
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
     return this.prisma.stokPuskesmas.upsert({
-      where: { puskesmasId_obatId_periode: { puskesmasId: data.puskesmasId, obatId: data.obatId, periode: toDate(data.periode) } },
+      where: { puskesmasId_obatId_periode: { puskesmasId, obatId: data.obatId, periode: toDate(data.periode) } },
       update: { stokAwal: data.stokAwal, konsumsiPeriode: data.konsumsiPeriode, stokSaatIni: data.stokSaatIni },
-      create: { ...data, periode: toDate(data.periode) },
+      create: { ...data, puskesmasId, periode: toDate(data.periode) },
     });
   }
 
-  async removeStok(id: number) {
-    await this.prisma.stokPuskesmas.delete({ where: { id } });
+  async removeStok(user: CurrentUser, id: number) {
+    const existing = await this.prisma.stokPuskesmas.findFirstOrThrow({ where: { id, puskesmasId: scopedPuskesmasId(user) } });
+    await this.prisma.stokPuskesmas.delete({ where: { id: existing.id } });
     return { id, deleted: true };
   }
 
-  listAnamnesis(puskesmasId?: string, periode?: string) {
+  listAnamnesis(user: CurrentUser, puskesmasId?: string, periode?: string) {
     return this.prisma.anamnesisRaw.findMany({
-      where: { puskesmasId, periode: periodFilter(periode) },
+      where: { puskesmasId: scopedPuskesmasId(user, puskesmasId), periode: periodFilter(periode) },
       include: { puskesmas: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  createAnamnesis(data: AnamnesisInputDto) {
+  createAnamnesis(user: CurrentUser, data: AnamnesisInputDto) {
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
     return this.prisma.anamnesisRaw.create({
       data: {
-        puskesmasId: data.puskesmasId,
+        puskesmasId,
         periode: toDate(data.periode),
         audioPath: data.audioPath,
         transkrip: data.transkrip,
@@ -130,8 +141,9 @@ export class InputsService {
     });
   }
 
-  async removeAnamnesis(id: number) {
-    await this.prisma.anamnesisRaw.delete({ where: { id } });
+  async removeAnamnesis(user: CurrentUser, id: number) {
+    const existing = await this.prisma.anamnesisRaw.findFirstOrThrow({ where: { id, puskesmasId: scopedPuskesmasId(user) } });
+    await this.prisma.anamnesisRaw.delete({ where: { id: existing.id } });
     return { id, deleted: true };
   }
 }

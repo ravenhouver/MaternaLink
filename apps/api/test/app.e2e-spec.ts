@@ -117,6 +117,48 @@ describe('MaternaLink API', () => {
     await request(app.getHttpServer()).get('/api/distribution/plans').set('Cookie', adminCookie).expect(200);
   });
 
+  it('scopes bidan operational data to the assigned puskesmas', async () => {
+    const bidanLogin = await request(app.getHttpServer()).post('/api/auth/login').send({ username: 'bidan', password: 'password123' }).expect(201);
+    const bidanCookie = bidanLogin.headers['set-cookie'];
+
+    await request(app.getHttpServer())
+      .post('/api/inputs/stok')
+      .set('Cookie', bidanCookie)
+      .send({ puskesmasId: 'PKM-REMOTE-001', obatId: 'OBT-001', periode: '2026-06-01', stokAwal: 1, konsumsiPeriode: 0, stokSaatIni: 1 })
+      .expect(403);
+
+    await request(app.getHttpServer()).get('/api/inputs/stok?puskesmasId=PKM-REMOTE-001').set('Cookie', bidanCookie).expect(403);
+    await request(app.getHttpServer()).post('/api/forecast/run').set('Cookie', bidanCookie).send({ puskesmasId: 'PKM-REMOTE-001', periode: '2026-06-01' }).expect(403);
+    await request(app.getHttpServer()).post('/api/lplpo/generate').set('Cookie', bidanCookie).send({ puskesmasId: 'PKM-REMOTE-001', periode: '2026-06-01' }).expect(403);
+
+    const remotePatient = await prisma.patient.upsert({
+      where: { nik: '9999000011112222' },
+      update: { puskesmasId: 'PKM-REMOTE-001' },
+      create: { nik: '9999000011112222', fullName: 'Remote Patient', puskesmasId: 'PKM-REMOTE-001' },
+    });
+    const remotePregnancy = await prisma.pregnancy.create({ data: { patientId: remotePatient.id, puskesmasId: 'PKM-REMOTE-001', riskLevel: 'LOW' } });
+    await request(app.getHttpServer())
+      .post('/api/queue')
+      .set('Cookie', bidanCookie)
+      .send({ patientId: remotePatient.id, pregnancyId: remotePregnancy.id })
+      .expect(403);
+
+    const remoteRecommendationId = `REC-REMOTE-${Date.now()}`;
+    await prisma.distributionRecommendation.create({
+      data: { id: remoteRecommendationId, puskesmasId: 'PKM-REMOTE-001', periode: new Date('2026-06-01'), urgency: 'WARNING', status: 'PENDING', source: 'RULE_BASED_FALLBACK' },
+    });
+
+    const ownRecommendations = await request(app.getHttpServer()).get('/api/distribution/recommendations').set('Cookie', bidanCookie).expect(200);
+    expect(ownRecommendations.body).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: remoteRecommendationId })]));
+    await request(app.getHttpServer()).get('/api/distribution/recommendations?puskesmasId=PKM-REMOTE-001').set('Cookie', bidanCookie).expect(403);
+    await request(app.getHttpServer()).get(`/api/distribution/recommendations/${remoteRecommendationId}`).set('Cookie', bidanCookie).expect(404);
+    await request(app.getHttpServer())
+      .post('/api/distribution/requests')
+      .set('Cookie', bidanCookie)
+      .send({ puskesmasId: 'PKM-REMOTE-001', periode: '2026-06-01', items: [{ obatId: 'OBT-001', jumlah: 1 }] })
+      .expect(403);
+  });
+
   it('returns fallback AI gateway health', async () => {
     process.env.AI_MODE = 'fallback';
     const response = await request(app.getHttpServer()).get('/api/ai/health').expect(200);

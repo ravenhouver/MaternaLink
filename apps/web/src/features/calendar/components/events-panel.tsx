@@ -13,13 +13,13 @@ export function EventsPanel({ dateLabel, events, note }: { dateLabel: string; ev
   const secondary = events.slice(1, 3);
 
   return (
-    <aside className={styles.eventsPanel} aria-label="Acara hari ini">
+    <aside className={styles.eventsPanel} aria-label="Prediksi kalender hari ini">
       <div className={styles.eventsHeading}>
-        <Typography.Title level={3}>Acara Hari Ini</Typography.Title>
+        <Typography.Title level={3}>Prediksi Hari Ini</Typography.Title>
         <span>{dateLabel}</span>
       </div>
 
-      {events.length === 0 ? <article className={styles.eventCard}><Typography.Title level={4}>Belum ada acara</Typography.Title><Typography.Text>Data kalender akan muncul dari jadwal pasien aktif.</Typography.Text></article> : null}
+      {events.length === 0 ? <article className={styles.eventCard}><Typography.Title level={4}>Belum ada prediksi</Typography.Title><Typography.Text>Data muncul dari HPL, ANC, dan risiko pasien aktif.</Typography.Text></article> : null}
       {primary ? <article className={eventCardClass(primary.type)}>
         <div className={styles.eventTopline}>
           <span>
@@ -33,20 +33,20 @@ export function EventsPanel({ dateLabel, events, note }: { dateLabel: string; ev
             <AppIcon name="clipboard" width={24} height={24} />
             <span>
               <Typography.Text className={styles.prepLabel}>BUTUH PERSIAPAN:</Typography.Text>
-              <Typography.Text className={styles.prepCopy}>{primary.prepItems?.join(', ') || 'Oksitosin, Spuit, Benang Jahit'}</Typography.Text>
+              <Typography.Text className={styles.prepCopy}>{primary.prepItems?.join(', ') || 'Belum ada forecast stok'}</Typography.Text>
             </span>
           </div>
           <Button type="primary" className={styles.prepareButton}>Siapkan Tindakan</Button>
-        </> : <div className={styles.eventTime}><AppIcon name="clock" width={18} height={18} /><Typography.Text>{primary.time ?? 'Jadwal aktif'}</Typography.Text></div>}
+        </> : primary.time ? <div className={styles.eventTime}><AppIcon name="clock" width={18} height={18} /><Typography.Text>{primary.time}</Typography.Text></div> : null}
       </article> : null}
 
       {secondary.map((event) => <article className={eventCardClass(event.type)} key={event.id}>
         <Typography.Title level={4}>{event.title}</Typography.Title>
         <Typography.Text className={styles.riskLabel}>{event.label}</Typography.Text>
-        <div className={styles.eventTime}>
+        {event.time ? <div className={styles.eventTime}>
           <AppIcon name="clock" width={18} height={18} />
           <Typography.Text>{event.time}</Typography.Text>
-        </div>
+        </div> : null}
       </article>)}
 
       <article className={styles.noteCard}>

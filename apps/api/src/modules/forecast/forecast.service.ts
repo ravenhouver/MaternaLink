@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
+import { requiredScopedPuskesmasId } from '../../common/auth/scope-utils';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AiService, type AiForecastResponse } from '../ai/ai.service';
 import { ForecastCalendarQueryDto, RunForecastDto } from './forecast.dto';
@@ -34,23 +35,24 @@ type CalendarEvent = {
 export class ForecastService {
   constructor(private readonly prisma: PrismaService, private readonly ai: AiService) {}
 
-  async run(data: RunForecastDto) {
+  async run(data: RunForecastDto, user: CurrentUser) {
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
     const periode = toDate(data.periode);
     const stocks = await this.prisma.stokPuskesmas.findMany({
-      where: { puskesmasId: data.puskesmasId, periode },
+      where: { puskesmasId, periode },
       include: { obat: { include: { kondisiObat: true } } },
       orderBy: { obatId: 'asc' },
     });
     if (stocks.length === 0) throw new NotFoundException('No stock input found for puskesmas and periode');
 
     const context = await this.prisma.konteksPeriode.findUnique({
-      where: { puskesmasId_periode: { puskesmasId: data.puskesmasId, periode } },
+      where: { puskesmasId_periode: { puskesmasId, periode } },
     });
     const bufferPersen = context?.accessScore === 1 ? 0.3 : 0.2;
 
     const run = await this.prisma.forecastRun.create({
       data: {
-        puskesmasId: data.puskesmasId,
+        puskesmasId,
         periode,
         status: 'COMPLETED',
         confidence: 'MEDIUM',
@@ -150,7 +152,7 @@ export class ForecastService {
       include: { prediksi: { include: { obat: true }, orderBy: { totalRekomendasi: 'desc' }, take: 3 } },
       orderBy: { createdAt: 'desc' },
     });
-    const prepItems = forecastRun?.prediksi.map((row) => row.obat.nama).filter(Boolean) ?? ['Oksitosin', 'Spuit', 'Benang Jahit'];
+    const prepItems = forecastRun?.prediksi.map((row) => row.obat.nama).filter(Boolean) ?? [];
 
     const events: CalendarEvent[] = [];
     for (const pregnancy of pregnancies) {
@@ -173,7 +175,7 @@ export class ForecastService {
           type: 'anc',
           title: pregnancy.patient.fullName,
           label: pregnancy.ancVisit ? `ANC - ${pregnancy.ancVisit}` : 'ANC FOLLOW UP',
-          time: 'Pukul 09:00 WIB',
+          time: undefined,
         });
 
         if (pregnancy.riskLevel === 'HIGH') {
@@ -184,7 +186,7 @@ export class ForecastService {
             type: 'risk',
             title: pregnancy.patient.fullName,
             label: 'KONTROL RISIKO TINGGI',
-            time: 'Pukul 14:00 WIB',
+            time: undefined,
             priority: true,
           });
         }
@@ -195,7 +197,7 @@ export class ForecastService {
           type: 'risk',
           title: pregnancy.patient.fullName,
           label: 'KONTROL RISIKO TINGGI',
-          time: 'Pukul 14:00 WIB',
+          time: undefined,
           priority: true,
         });
       }
@@ -227,16 +229,20 @@ export class ForecastService {
       },
       days,
       events: selectedEvents,
-      note: prepItems.length > 0 ? `Pastikan stok ${prepItems[0]} tersedia untuk pekan depan.` : 'Pastikan stok klinis tersedia untuk pekan depan.',
+      note: prepItems.length > 0 ? `Pastikan stok ${prepItems[0]} tersedia untuk pekan depan.` : 'Belum ada forecast stok untuk periode ini.',
     };
   }
 
-  listRuns() {
-    return this.prisma.forecastRun.findMany({ include: { prediksi: true }, orderBy: { createdAt: 'desc' } });
+  listRuns(user: CurrentUser) {
+    const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId ?? undefined : undefined;
+    return this.prisma.forecastRun.findMany({ where: { puskesmasId }, include: { prediksi: true }, orderBy: { createdAt: 'desc' } });
   }
 
-  getResults(id: number) {
-    return this.prisma.forecastRun.findUniqueOrThrow({ where: { id }, include: { prediksi: { orderBy: { obatId: 'asc' } } } });
+  getResults(id: number, user: CurrentUser) {
+    return this.prisma.forecastRun.findFirstOrThrow({
+      where: { id, ...(user.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
+      include: { prediksi: { orderBy: { obatId: 'asc' } } },
+    });
   }
 
   private rainyAccessForAi(value?: string | null) {

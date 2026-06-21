@@ -52,8 +52,7 @@ function activePregnancy(patient: PatientRecord) {
 }
 
 function formatPatientId(patient: PatientRecord, index: number) {
-  if (patient.id?.startsWith('ML-')) return patient.id;
-  return `ML-2024-${String(index + 1).padStart(3, '0')}`;
+  return patient.id || `PATIENT-${String(index + 1).padStart(3, '0')}`;
 }
 
 function formatDueDate(value?: string | null) {
@@ -113,15 +112,15 @@ function toQueueDraft(patient: PatientRecord): QueueDraft {
     complaint: pregnancy?.chiefComplaint || '',
     systolic: vitalValue(vitals, 'systolic'),
     diastolic: vitalValue(vitals, 'diastolic'),
-    weight: vitalValue(vitals, 'weight') || '68.5',
-    height: vitalValue(vitals, 'height') || '158',
-    muac: vitalValue(vitals, 'muac') || '24.5',
-    fetalHeartRate: vitalValue(vitals, 'fetalHeartRate') || '142',
-    temperature: vitalValue(vitals, 'temperature') || '36.5',
-    pulse: vitalValue(vitals, 'pulse') || '88',
+    weight: vitalValue(vitals, 'weight'),
+    height: vitalValue(vitals, 'height'),
+    muac: vitalValue(vitals, 'muac'),
+    fetalHeartRate: vitalValue(vitals, 'fetalHeartRate'),
+    temperature: vitalValue(vitals, 'temperature'),
+    pulse: vitalValue(vitals, 'pulse'),
     riskFactors: activeArray(pregnancy?.riskFactors),
     routineMedication: activeArray(pregnancy?.routineMedication),
-    responsibleDoctor: pregnancy?.responsibleDoctor || 'dr. Ratna Wulandari, Sp.OG',
+    responsibleDoctor: pregnancy?.responsibleDoctor || '',
   };
 }
 
@@ -415,9 +414,9 @@ function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { 
           <section className={styles.modalSection}>
             <h3><span />{t('vitalSigns')}</h3>
             <div className={styles.vitalGrid}>
-              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('bloodPressure')}</span><span className={styles.bpFields}><input placeholder={t('sys')} value={draft.systolic} onChange={(event) => onChange({ ...draft, systolic: event.target.value })} /><span>/</span><input placeholder={t('dia')} value={draft.diastolic} onChange={(event) => onChange({ ...draft, diastolic: event.target.value })} /></span><small>{t('previousVisit', { value: '130/85' })}</small></label>
-              <EditField label={t('weight')} value={draft.weight} onChange={(value) => onChange({ ...draft, weight: value })} helper={t('previousVisit', { value: '66.2 kg' })} />
-              <EditField label={t('height')} value={draft.height} onChange={(value) => onChange({ ...draft, height: value })} helper="BMI: 27.4 (Overweight)" strong />
+              <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('bloodPressure')}</span><span className={styles.bpFields}><input placeholder={t('sys')} value={draft.systolic} onChange={(event) => onChange({ ...draft, systolic: event.target.value })} /><span>/</span><input placeholder={t('dia')} value={draft.diastolic} onChange={(event) => onChange({ ...draft, diastolic: event.target.value })} /></span></label>
+              <EditField label={t('weight')} value={draft.weight} onChange={(value) => onChange({ ...draft, weight: value })} />
+              <EditField label={t('height')} value={draft.height} onChange={(value) => onChange({ ...draft, height: value })} />
               <EditField label={t('muac')} value={draft.muac} onChange={(value) => onChange({ ...draft, muac: value })} helper="Normal (>23.5cm)" good />
               <EditField label={t('fetalHeartRate')} value={draft.fetalHeartRate} onChange={(value) => onChange({ ...draft, fetalHeartRate: value })} helper="Normal: 120-160 bpm" />
               <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('temperaturePulse')}</span><span className={styles.tempFields}><input value={draft.temperature} onChange={(event) => onChange({ ...draft, temperature: event.target.value })} /><input value={draft.pulse} onChange={(event) => onChange({ ...draft, pulse: event.target.value })} /></span></label>
@@ -434,7 +433,7 @@ function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { 
             <h3><span />{t('assessmentPlacement')}</h3>
             <div className={styles.assessmentBox}>
               <div className={styles.assessmentMain}>
-                <label className={styles.fieldGroup}><span className={styles.fieldLabel}>{t('attendingPhysician')}</span><select value={draft.responsibleDoctor} onChange={(event) => onChange({ ...draft, responsibleDoctor: event.target.value })}><option>dr. Ratna Wulandari, Sp.OG</option><option>dr. Siti Rahma, Sp.OG</option><option>dr. Ahmad Pratama, Sp.OG</option></select></label>
+                <EditField label={t('attendingPhysician')} value={draft.responsibleDoctor} onChange={(value) => onChange({ ...draft, responsibleDoctor: value })} />
                 <p className={styles.riskNote}>{priority.message}</p>
               </div>
               <div className={styles.priorityCard}><span>{t('queuePriority')}</span><strong>{priority.level}</strong><small><AppIcon name="zap" width={12} height={12} />{t('estimatedMinutes', { count: priority.minutes })}</small></div>

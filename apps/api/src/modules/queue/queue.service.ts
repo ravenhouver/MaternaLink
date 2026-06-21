@@ -1,6 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, QueueStatus, UserRole } from '@prisma/client';
 import type { CurrentUser } from '../../common/auth/current-user';
+import { assertOwnPuskesmas } from '../../common/auth/scope-utils';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateQueueDto, UpdateQueueStatusDto } from './queue.dto';
 
@@ -25,9 +26,15 @@ export class QueueService {
 
   async create(data: CreateQueueDto, user: CurrentUser) {
     const pregnancy = await this.prisma.pregnancy.findUniqueOrThrow({ where: { id: data.pregnancyId } });
+    if (pregnancy.patientId !== data.patientId) throw new ConflictException('Patient and pregnancy do not match');
+    assertOwnPuskesmas(user, pregnancy.puskesmasId);
     const puskesmasId = user.role === UserRole.BIDAN_PUSKESMAS ? user.puskesmasId : pregnancy.puskesmasId;
     if (!puskesmasId) throw new ConflictException('Puskesmas context is required');
     const { start, end } = todayRange();
+    const activeQueue = await this.prisma.patientQueue.findFirst({
+      where: { patientId: data.patientId, pregnancyId: data.pregnancyId, puskesmasId, status: { in: [QueueStatus.WAITING, QueueStatus.EXAMINING] }, queuedAt: { gte: start, lt: end } },
+    });
+    if (activeQueue) throw new ConflictException('Patient already has an active queue today');
     const count = await this.prisma.patientQueue.count({ where: { puskesmasId, queuedAt: { gte: start, lt: end } } });
     const queueNo = `A-${String(count + 1).padStart(3, '0')}`;
 
@@ -107,8 +114,10 @@ export class QueueService {
     });
   }
 
-  async updateStatus(id: string, data: UpdateQueueStatusDto) {
-    const existing = await this.prisma.patientQueue.findUniqueOrThrow({ where: { id } });
+  async updateStatus(id: string, data: UpdateQueueStatusDto, user: CurrentUser) {
+    const existing = await this.prisma.patientQueue.findFirstOrThrow({
+      where: { id, ...(user.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
+    });
     if (!transitionMap[existing.status].includes(data.status)) {
       throw new ConflictException('Invalid queue transition');
     }

@@ -6,6 +6,11 @@ type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN' | 'SUPER_ADMIN';
 const SESSION_COOKIE = 'maternalink_session';
 const DEFAULT_SECRET = 'maternalink-local-dev-secret';
 
+function jwtSecret() {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') throw new Error('JWT_SECRET is required in production');
+  return process.env.JWT_SECRET ?? DEFAULT_SECRET;
+}
+
 const protectedRoutes: Array<{ href: string; roles: UserRole[] }> = [
   { href: '/admin/facility-profiles', roles: ['SUPER_ADMIN'] },
   { href: '/admin/health-centers', roles: ['SUPER_ADMIN'] },
@@ -41,7 +46,7 @@ function base64UrlEncode(buffer: ArrayBuffer) {
 async function sign(value: string) {
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(process.env.JWT_SECRET ?? DEFAULT_SECRET),
+    new TextEncoder().encode(jwtSecret()),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign'],

@@ -1,28 +1,30 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { routes } from '@/lib/routes';
 import styles from './patient-registration.module.css';
 
-const methods = [
-  {
-    key: 'manual',
-    title: 'Manual Entry',
-    subtitle: 'Fill out the form step-by-step',
-    description: 'Best for detailed data entry with full control over each input field.',
-    icon: 'edit' as const,
-    action: 'Start Typing',
-  },
-];
-
 export function AddPatientMethodContent() {
+  const t = useTranslations('registration');
+  const methods = [
+    {
+      key: 'manual',
+      title: t('manualTitle'),
+      subtitle: t('manualSubtitle'),
+      description: t('manualDescription'),
+      icon: 'edit' as const,
+      action: t('manualButton'),
+    },
+  ];
+
   return (
     <PageContainer size="wide" className={styles.page}>
       <header className={styles.methodHeader}>
-        <h1>New Patient Registration</h1>
-        <p>Choose the fastest way to enter patient data into the system.</p>
+        <h1>{t('newPatientTitle')}</h1>
+        <p>{t('methodSubtitle')}</p>
       </header>
 
       <section className={styles.methodGrid} aria-label="Patient registration methods">
@@ -49,8 +51,8 @@ export function AddPatientMethodContent() {
       <aside className={styles.securityTips}>
         <AppIcon name="info" width={20} height={20} />
         <div>
-          <h2>Data Security Tips</h2>
-          <p>Ensure all data entered matches official patient identity documents (KTP/KK) for accurate medical records in the future.</p>
+          <h2>{t('methodNotice')}</h2>
+          <p>{t('methodNoticeText')}</p>
         </div>
       </aside>
     </PageContainer>

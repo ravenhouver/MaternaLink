@@ -52,22 +52,22 @@ export class DistributionController {
   @ApiOperation({ summary: 'List distribution recommendations' })
   @ApiResponse({ status: 200, description: 'Recommendations returned' })
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Get('recommendations')
-  listRecommendations(@Query() query: ListRecommendationsQueryDto) { return this.service.listRecommendations(query); }
+  listRecommendations(@Req() request: { user: CurrentUser }, @Query() query: ListRecommendationsQueryDto) { return this.service.listRecommendations(query, request.user); }
 
   @ApiOperation({ summary: 'Get distribution recommendation by ID' })
   @ApiResponse({ status: 200, description: 'Recommendation returned' })
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Get('recommendations/:id')
-  getRecommendation(@Param('id') id: string) { return this.service.getRecommendation(id); }
+  getRecommendation(@Param('id') id: string, @Req() request: { user: CurrentUser }) { return this.service.getRecommendation(id, request.user); }
 
   @ApiOperation({ summary: 'Create shipment request from puskesmas forecast' })
   @ApiResponse({ status: 201, description: 'Shipment request created' })
   @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('requests')
-  createShipmentRequest(@Body() body: CreateShipmentRequestDto, @Req() request: { user: CurrentUser }) { return this.service.createShipmentRequest(body, request.user.id); }
+  createShipmentRequest(@Body() body: CreateShipmentRequestDto, @Req() request: { user: CurrentUser }) { return this.service.createShipmentRequest(body, request.user); }
 
   @ApiOperation({ summary: 'Run hosted AI allocation for IFK recommendations' })
   @ApiResponse({ status: 201, description: 'Hosted AI allocation recommendations generated' })
@@ -115,15 +115,15 @@ export class DistributionController {
   @Roles(UserRole.BIDAN_PUSKESMAS)
   @Post('recommendations/:id/rerequest')
   rerequestRecommendation(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
-    return this.service.rerequestRecommendation(id, request.user.id);
+    return this.service.rerequestRecommendation(id, request.user);
   }
 
   @ApiOperation({ summary: 'List shipment tracking events' })
   @ApiResponse({ status: 200, description: 'Tracking events returned' })
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN)
+  @Roles(UserRole.BIDAN_PUSKESMAS, UserRole.IFK_ADMIN, UserRole.SUPER_ADMIN)
   @Get('recommendations/:id/tracking')
-  getTracking(@Param('id') id: string) { return this.service.getTracking(id); }
+  getTracking(@Param('id') id: string, @Req() request: { user: CurrentUser }) { return this.service.getTracking(id, request.user); }
 
   @ApiOperation({ summary: 'Add shipment tracking event' })
   @ApiResponse({ status: 201, description: 'Tracking event added' })

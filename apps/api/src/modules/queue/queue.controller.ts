@@ -29,8 +29,8 @@ export class QueueController {
   }
 
   @Patch(':id/status')
-  updateStatus(@Param('id') id: string, @Body() body: UpdateQueueStatusDto) {
-    return this.service.updateStatus(id, body);
+  updateStatus(@Param('id') id: string, @Body() body: UpdateQueueStatusDto, @Req() request: { user: CurrentUser }) {
+    return this.service.updateStatus(id, body, request.user);
   }
 
   @Delete(':id')

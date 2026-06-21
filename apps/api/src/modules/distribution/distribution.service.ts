@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, RecommendationStatus, TrackingStatus } from '@prisma/client';
+import { Prisma, RecommendationSource, RecommendationStatus, TrackingStatus, UserRole } from '@prisma/client';
+import type { CurrentUser } from '../../common/auth/current-user';
+import { assertOwnPuskesmas, requiredScopedPuskesmasId, scopedPuskesmasId } from '../../common/auth/scope-utils';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AiService, type AiAllocateRequest } from '../ai/ai.service';
 import {
@@ -49,11 +51,12 @@ type OpenMeteoResponse = {
 export class DistributionService {
   constructor(private readonly prisma: PrismaService, private readonly ai: AiService) {}
 
-  listRecommendations(filters: ListRecommendationsQueryDto = {}) {
+  listRecommendations(filters: ListRecommendationsQueryDto = {}, user?: CurrentUser) {
+    const puskesmasId = user ? scopedPuskesmasId(user, filters.puskesmasId) : filters.puskesmasId;
     return this.prisma.distributionRecommendation.findMany({
       where: {
         status: filters.status,
-        puskesmasId: filters.puskesmasId,
+        puskesmasId,
       },
       include: {
         puskesmas: true,
@@ -64,9 +67,9 @@ export class DistributionService {
     });
   }
 
-  getRecommendation(id: string) {
-    return this.prisma.distributionRecommendation.findUniqueOrThrow({
-      where: { id },
+  getRecommendation(id: string, user?: CurrentUser) {
+    return this.prisma.distributionRecommendation.findFirstOrThrow({
+      where: { id, ...(user?.role === UserRole.BIDAN_PUSKESMAS ? { puskesmasId: user.puskesmasId ?? undefined } : {}) },
       include: {
         puskesmas: true,
         items: { include: { obat: true }, orderBy: { obatId: 'asc' } },
@@ -154,25 +157,26 @@ export class DistributionService {
     });
   }
 
-  async createShipmentRequest(data: CreateShipmentRequestDto, actorUserId: string) {
+  async createShipmentRequest(data: CreateShipmentRequestDto, user: CurrentUser) {
     if (!data.items.length) throw new BadRequestException('Shipment request must contain at least one item');
-    const id = `REQ-${data.puskesmasId}-${data.periode.slice(0, 10)}-${Date.now()}`;
+    const puskesmasId = requiredScopedPuskesmasId(user, data.puskesmasId);
+    const id = `REQ-${puskesmasId}-${data.periode.slice(0, 10)}-${Date.now()}`;
     return this.prisma.$transaction(async (tx) => {
       const recommendation = await tx.distributionRecommendation.create({
         data: {
           id,
-          puskesmasId: data.puskesmasId,
+          puskesmasId,
           periode: toDate(data.periode),
           status: RecommendationStatus.PENDING,
           urgency: data.items.some((item) => item.jumlah > 0) ? 'WARNING' : 'ROUTINE',
-          source: 'FASTAPI_AI',
+          source: RecommendationSource.RULE_BASED_FALLBACK,
           priorityRank: 100,
           justification: data.justification ?? 'Requested from AI demand forecast.',
           items: { create: data.items.map((item) => ({ obatId: item.obatId, aiQuantity: item.jumlah, finalQuantity: item.jumlah })) },
         },
         include: { puskesmas: true, items: { include: { obat: true } } },
       });
-      await tx.shipmentTrackingEvent.create({ data: { recommendationId: recommendation.id, status: TrackingStatus.REQUESTED, actorUserId, note: 'Requested by puskesmas from AI demand forecast.' } });
+      await tx.shipmentTrackingEvent.create({ data: { recommendationId: recommendation.id, status: TrackingStatus.REQUESTED, actorUserId: user.id, note: 'Requested by puskesmas from demand forecast.' } });
       return recommendation;
     });
   }
@@ -252,16 +256,17 @@ export class DistributionService {
     return this.listRecommendations({ status: RecommendationStatus.PENDING });
   }
 
-  async rerequestRecommendation(id: string, actorUserId: string) {
+  async rerequestRecommendation(id: string, user: CurrentUser) {
     const recommendation = await this.prisma.distributionRecommendation.findUnique({ where: { id } });
     if (!recommendation) throw new NotFoundException('Recommendation not found');
+    assertOwnPuskesmas(user, recommendation.puskesmasId);
     if (recommendation.status !== RecommendationStatus.REJECTED && recommendation.status !== RecommendationStatus.CANCELLED) {
       throw new BadRequestException('Only rejected or cancelled recommendations can be re-requested');
     }
 
     return this.prisma.$transaction(async (tx) => {
       await tx.shipmentTrackingEvent.create({
-        data: { recommendationId: id, status: TrackingStatus.REQUESTED, actorUserId, note: 'Shipment re-requested by puskesmas.' },
+        data: { recommendationId: id, status: TrackingStatus.REQUESTED, actorUserId: user.id, note: 'Shipment re-requested by puskesmas.' },
       });
       const updated = await tx.distributionRecommendation.update({
         where: { id },
@@ -272,7 +277,8 @@ export class DistributionService {
     });
   }
 
-  getTracking(id: string) {
+  async getTracking(id: string, user?: CurrentUser) {
+    await this.getRecommendation(id, user);
     return this.prisma.shipmentTrackingEvent.findMany({
       where: { recommendationId: id },
       include: { actor: true },
@@ -281,7 +287,8 @@ export class DistributionService {
   }
 
   async addTrackingEvent(id: string, actorUserId: string, data: TrackingEventDto) {
-    await this.prisma.distributionRecommendation.findUniqueOrThrow({ where: { id } });
+    const recommendation = await this.prisma.distributionRecommendation.findUniqueOrThrow({ where: { id } });
+    this.assertTrackingTransition(recommendation.status, data.status);
     return this.prisma.$transaction(async (tx) => {
       const event = await tx.shipmentTrackingEvent.create({
         data: { recommendationId: id, status: data.status, note: data.note?.trim() || null, actorUserId },
@@ -295,6 +302,18 @@ export class DistributionService {
       }
       return event;
     });
+  }
+
+  private assertTrackingTransition(current: RecommendationStatus, next: TrackingStatus) {
+    const allowed: Record<RecommendationStatus, TrackingStatus[]> = {
+      [RecommendationStatus.PENDING]: [],
+      [RecommendationStatus.APPROVED]: [TrackingStatus.DISPATCHED],
+      [RecommendationStatus.REJECTED]: [],
+      [RecommendationStatus.DISPATCHED]: [TrackingStatus.RECEIVED, TrackingStatus.ISSUE_REPORTED],
+      [RecommendationStatus.RECEIVED]: [],
+      [RecommendationStatus.CANCELLED]: [],
+    };
+    if (!allowed[current].includes(next)) throw new BadRequestException('Invalid shipment tracking transition');
   }
 
   listAlerts() {
@@ -437,6 +456,7 @@ export class DistributionService {
     });
     const approvedStatuses: RecommendationStatus[] = [RecommendationStatus.APPROVED, RecommendationStatus.DISPATCHED, RecommendationStatus.RECEIVED];
     const approved = recommendations.filter((item) => approvedStatuses.includes(item.status)).length;
+    const dispatched = recommendations.filter((item) => item.status === RecommendationStatus.DISPATCHED || item.status === RecommendationStatus.RECEIVED).length;
     const rejected = recommendations.filter((item) => item.status === RecommendationStatus.REJECTED).length;
     const criticalHandled = recommendations.filter((item) => item.urgency === 'CRITICAL' && item.status !== RecommendationStatus.REJECTED).length;
     const matchedRate = recommendations.length ? Math.round((approved / recommendations.length) * 1000) / 10 : 0;
@@ -444,7 +464,7 @@ export class DistributionService {
       metrics: [
         { label: 'Stockouts Prevented', value: String(criticalHandled), note: 'Critical recommendations handled', icon: 'settings', tone: 'green' },
         { label: 'Approved Decisions', value: String(approved), note: 'IFK recommendations', icon: 'clock', tone: 'blue' },
-        { label: 'Total Dispatches', value: String(recommendations.length), note: 'Distribution records', icon: 'truck', tone: 'blue' },
+        { label: 'Total Dispatches', value: String(dispatched), note: 'Dispatched or received shipments', icon: 'truck', tone: 'blue' },
       ],
       rows,
       bars: this.weekdayDecisionBars(rows),
@@ -627,7 +647,7 @@ export class DistributionService {
     return days.map((day, index) => {
       const matched = rows.filter((row) => ((row.date.getDay() + 6) % 7) === index && row.tone === 'green').length;
       const deviated = rows.filter((row) => ((row.date.getDay() + 6) % 7) === index && row.tone === 'red').length;
-      return { day, green: matched * 28, red: deviated * 24 };
+      return { day, green: matched, red: deviated };
     });
   }
 

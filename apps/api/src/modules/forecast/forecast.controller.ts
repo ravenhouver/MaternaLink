@@ -18,7 +18,7 @@ export class ForecastController {
   @ApiOperation({ summary: 'Run deterministic stock forecast' })
   @ApiResponse({ status: 201, description: 'Forecast run created with prediction rows' })
   @Roles(UserRole.BIDAN_PUSKESMAS)
-  @Post('run') run(@Body() body: RunForecastDto) { return this.service.run(body); }
+  @Post('run') run(@Body() body: RunForecastDto, @Req() request: { user: CurrentUser }) { return this.service.run(body, request.user); }
   @ApiOperation({ summary: 'Run hosted AI stock forecast' })
   @ApiResponse({ status: 201, description: 'Hosted AI forecast run created with prediction rows' })
   @Roles(UserRole.BIDAN_PUSKESMAS)
@@ -28,8 +28,8 @@ export class ForecastController {
   @Get('calendar') getCalendar(@Query() query: ForecastCalendarQueryDto, @Req() request: { user: CurrentUser }) { return this.service.getCalendar(query, request.user); }
   @ApiOperation({ summary: 'List forecast runs' })
   @ApiResponse({ status: 200, description: 'Forecast runs returned' })
-  @Get('runs') listRuns() { return this.service.listRuns(); }
+  @Get('runs') listRuns(@Req() request: { user: CurrentUser }) { return this.service.listRuns(request.user); }
   @ApiOperation({ summary: 'Get forecast result rows by run ID' })
   @ApiResponse({ status: 200, description: 'Forecast result returned' })
-  @Get('runs/:id/results') getResults(@Param('id', ParseIntPipe) id: number) { return this.service.getResults(id); }
+  @Get('runs/:id/results') getResults(@Param('id', ParseIntPipe) id: number, @Req() request: { user: CurrentUser }) { return this.service.getResults(id, request.user); }
 }

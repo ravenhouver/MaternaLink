@@ -84,7 +84,7 @@ export class WorkflowService {
       const source = await this.loadSourceData(puskesmasId, periode);
       const extraction = await this.extractLayer0(source, warnings);
       const forecastRun = await this.persistLayer1Forecasts(source, extraction, warnings, puskesmasId, periode);
-      const lplpoRows = await this.lplpo.generate({ puskesmasId, periode });
+      const lplpoRows = await this.lplpo.generate({ puskesmasId, periode }, { id: userId ?? 'system', username: 'system', role: UserRole.SUPER_ADMIN, puskesmasId: null });
 
       try {
         const recommendation = await this.persistLayer2Recommendation(forecastRun.id, source, lplpoRows, puskesmasId, periode, recommendationId);
