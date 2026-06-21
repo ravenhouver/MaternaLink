@@ -3,10 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
-import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
 import { getIfkFacilities, runIfkAiAllocation, type DistributionRecommendation, type IfkFacilityRecord } from '@/lib/api';
-import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
 type WeatherTone = 'danger' | 'neutral';
@@ -47,29 +45,6 @@ function downloadClinicCsv(rows: ClinicRow[]) {
   link.download = 'maternalink-clinics.csv';
   link.click();
   URL.revokeObjectURL(url);
-}
-
-function ClinicsSidebar({ detail }: { detail: boolean }) {
-  return (
-    <aside className={styles.clinicsSidebar} aria-label="Medicine sender navigation">
-      <div className={styles.clinicsBrandBlock}>
-        <span><AppIcon name="plus" width={20} height={20} /></span>
-        <div>
-          <strong>IFK</strong>
-          <small>District Monitoring</small>
-        </div>
-      </div>
-      <nav className={styles.clinicsNav} aria-label="Navigasi medicine sender">
-        <a href={routes.ifk}><AppIcon name="home" width={20} height={20} />Dashboard</a>
-        <a className={detail ? styles.clinicsNavActive : undefined} href={routes.ifkRecommendations}><AppIcon name="userPlus" width={20} height={20} />Distribution</a>
-        <a className={!detail ? styles.clinicsNavActive : undefined} href={routes.ifkClinics}><AppIcon name="users" width={20} height={20} />Clinic List</a>
-        <a href={routes.ifkEnvironment}><AppIcon name="calendar" width={20} height={20} />Environment Monitoring</a>
-      </nav>
-      <div className={styles.clinicsSidebarBottom}>
-        <RoleLogoutButton className={styles.clinicsLogoutButton} />
-      </div>
-    </aside>
-  );
 }
 
 function currentAllocationPeriod() {
@@ -370,7 +345,6 @@ export function MedicineSenderClinicsContent() {
 
   return (
     <div className={styles.clinicsShell}>
-      <ClinicsSidebar detail={Boolean(selectedClinic)} />
       <div className={styles.clinicsWorkspace}>
         <ClinicsTopbar detail={Boolean(selectedClinic)} />
         {displayedClinic ? <ClinicDetail clinic={displayedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onRefresh={() => void refreshRows()} onView={setSelectedClinic} />}
