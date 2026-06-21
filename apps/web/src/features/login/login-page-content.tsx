@@ -10,7 +10,7 @@ import styles from './login-page.module.css';
 
 const demoCredentials = [
   { role: 'Super Admin', username: 'admin', password: 'password123' },
-  { role: 'Bidan Puskesmas', username: 'bidan', password: 'password123' },
+  { role: 'Clinics', username: 'bidan', password: 'password123' },
   { role: 'Admin IFK', username: 'ifk', password: 'password123' },
 ] as const;
 

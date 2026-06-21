@@ -127,6 +127,46 @@ const ta = {
   admin: { ...en.admin, superAdmin: 'சூப்பர் அட்மின்', settingsTitle: 'அட்மின் அமைப்புகள்', helpTitle: 'அட்மின் உதவி', settingsSession: 'செயலில் உள்ள உள்நுழைவு cookie', helpBody: 'அனைத்து அட்மின் தரவும் backend இல் நேரடியாக சேமிக்கப்படுகிறது. ஒவ்வொரு module-இலும் add, edit, delete, sync, filter, export செயல்களைப் பயன்படுத்தவும்.', dashboardTitle: 'அட்மின் டாஷ்போர்டு', dashboardSubtitle: 'செயலில் உள்ள database இலிருந்து MaternaLink master data சுருக்கம்', lastUpdated: 'கடைசியாக புதுப்பிக்கப்பட்டது', totalHealthCenters: 'மொத்த சுகாதார மையங்கள்', totalUsers: 'மொத்த பயனர்கள்', totalMedicines: 'மொத்த மருந்துகள்', inactiveAccounts: 'செயலில் இல்லாத கணக்குகள்', last30Days: '+{count} / 30 நாட்கள்', needsReview: 'மதிப்பாய்வு தேவை', safe: 'பாதுகாப்பானது', recentActivity: 'சமீபத்திய செயல்பாடு', allActivity: 'அனைத்து செயல்பாடுகள்', loadMoreActivities: 'மேலும் 10 செயல்பாடுகள் ஏற்று', noAuditLogs: 'அட்மின் audit log இன்னும் இல்லை.', accountHealth: 'கணக்கு நிலை', accountHealthBody: '{total} database பயனர்களில் {inactive} கணக்குகள் செயலற்றவை.', reviewUsers: 'பயனர்களை மதிப்பாய்வு செய்', healthCentersTitle: 'சுகாதார மைய பதிவு', healthCentersSubtitle: 'அமைப்பில் உள்ள சுகாதார வசதி தரவை நிர்வகிக்கவும்', searchHealthCenter: 'சுகாதார மைய பெயரை தேடு...', addHealthCenter: 'சுகாதார மையம் சேர்', usersTitle: 'பயனர் கணக்குகள்', usersSubtitle: 'சுகாதார பணியாளர்கள் மற்றும் IFK அதிகாரி கணக்குகளை நிர்வகிக்கவும்', addUser: 'பயனர் சேர்', editUser: 'பயனர் திருத்து', medicinesTitle: 'தாய்மை மருந்து பதிவு', medicinesSubtitle: 'அமைப்பில் பயன்படுத்தப்படும் {count} தாய்மை மருந்துகளின் பட்டியல்', addMedicine: 'மருந்து சேர்', facilityProfilesTitle: 'வசதி சுயவிவரங்கள்', facilityProfilesSubtitle: 'ஒவ்வொரு சுகாதார மையத்திற்கும் logistics மற்றும் accessibility அமைப்பு', profilesIncomplete: '{count} சுயவிவரங்கள் முழுமையில்லை' }
 } satisfies AbstractIntlMessages;
 
+function extendDashboardAndQueue(locale: AbstractIntlMessages, dashboard: Record<string, unknown>, queue: Record<string, unknown>) {
+  const target = locale as Record<string, any>;
+  target.dashboard = { ...en.dashboard, ...(target.dashboard ?? {}), ...dashboard };
+  target.dashboard.alerts = { ...en.dashboard.alerts, ...(target.dashboard.alerts ?? {}), ...((dashboard.alerts as Record<string, unknown>) ?? {}) };
+  target.dashboard.stats = { ...en.dashboard.stats, ...(target.dashboard.stats ?? {}), ...((dashboard.stats as Record<string, unknown>) ?? {}) };
+  target.dashboard.tags = { ...en.dashboard.tags, ...(target.dashboard.tags ?? {}), ...((dashboard.tags as Record<string, unknown>) ?? {}) };
+  target.queue = { ...en.queue, ...(target.queue ?? {}), ...queue };
+}
+
+extendDashboardAndQueue(id, {
+  attentionTitle: '{count} item perlu perhatian', alerts: { processQueue: 'Proses pasien yang sedang menunggu atau sedang diperiksa.' }, stats: { totalPatients: 'Total Pasien Terdaftar', waitingQueue: 'Antrean Menunggu', examining: 'Sedang Diperiksa', criticalMedicine: 'Kebutuhan Obat Restok' }, tags: { patientData: 'Data Pasien', queue: 'Antrean', active: 'Aktif', critical: 'Kritis' }
+}, { pregnancyInfo: 'Info Kehamilan', statusDoctor: 'Status & Dokter' });
+extendDashboardAndQueue(ms, {
+  attentionTitle: '{count} item perlukan perhatian', alerts: { processQueue: 'Proses pesakit yang sedang menunggu atau diperiksa.' }, stats: { totalPatients: 'Jumlah Pesakit Berdaftar', waitingQueue: 'Baris Menunggu', examining: 'Sedang Diperiksa', criticalMedicine: 'Keperluan Ubat Restok' }, tags: { patientData: 'Data Pesakit', queue: 'Baris Gilir', active: 'Aktif', critical: 'Kritikal' }
+}, { pregnancyInfo: 'Maklumat Kehamilan', statusDoctor: 'Status & Doktor' });
+extendDashboardAndQueue(fil, {
+  attentionTitle: '{count} item ang kailangan ng pansin', alerts: { processQueue: 'Iproseso ang mga pasyenteng naghihintay o kasalukuyang sinusuri.' }, stats: { totalPatients: 'Kabuuang Rehistradong Pasyente', waitingQueue: 'Pilang Naghihintay', examining: 'Kasalukuyang Sinusuri', criticalMedicine: 'Kailangang Mag-restock ng Gamot' }, tags: { patientData: 'Data ng Pasyente', queue: 'Pila', active: 'Aktibo', critical: 'Kritikal' }
+}, { pregnancyInfo: 'Impormasyon sa Pagbubuntis', statusDoctor: 'Status at Doktor' });
+extendDashboardAndQueue(th, {
+  attentionTitle: '{count} รายการต้องตรวจสอบ', alerts: { processQueue: 'จัดการผู้ป่วยที่กำลังรอหรืออยู่ระหว่างตรวจ.' }, stats: { totalPatients: 'ผู้ป่วยลงทะเบียนทั้งหมด', waitingQueue: 'คิวรอ', examining: 'อยู่ระหว่างตรวจ', criticalMedicine: 'ยาที่ต้องเติมสต็อก' }, tags: { patientData: 'ข้อมูลผู้ป่วย', queue: 'คิว', active: 'ใช้งาน', critical: 'วิกฤต' }
+}, { pregnancyInfo: 'ข้อมูลการตั้งครรภ์', statusDoctor: 'สถานะและแพทย์' });
+extendDashboardAndQueue(vi, {
+  attentionTitle: '{count} mục cần chú ý', alerts: { processQueue: 'Xử lý bệnh nhân đang chờ hoặc đang khám.' }, stats: { totalPatients: 'Tổng bệnh nhân đã đăng ký', waitingQueue: 'Hàng đợi chờ', examining: 'Đang khám', criticalMedicine: 'Nhu cầu thuốc cần bổ sung' }, tags: { patientData: 'Dữ liệu bệnh nhân', queue: 'Hàng đợi', active: 'Đang hoạt động', critical: 'Nguy cấp' }
+}, { pregnancyInfo: 'Thông tin thai kỳ', statusDoctor: 'Trạng thái & Bác sĩ' });
+extendDashboardAndQueue(km, {
+  attentionTitle: '{count} ធាតុត្រូវការយកចិត្តទុកដាក់', alerts: { processQueue: 'ដំណើរការអ្នកជំងឺដែលកំពុងរង់ចាំ ឬកំពុងពិនិត្យ.' }, stats: { totalPatients: 'អ្នកជំងឺបានចុះឈ្មោះសរុប', waitingQueue: 'ជួររង់ចាំ', examining: 'កំពុងពិនិត្យ', criticalMedicine: 'តម្រូវការបំពេញថ្នាំឡើងវិញ' }, tags: { patientData: 'ទិន្នន័យអ្នកជំងឺ', queue: 'ជួរ', active: 'សកម្ម', critical: 'វិបត្តិ' }
+}, { pregnancyInfo: 'ព័ត៌មានផ្ទៃពោះ', statusDoctor: 'ស្ថានភាព & វេជ្ជបណ្ឌិត' });
+extendDashboardAndQueue(lo, {
+  attentionTitle: '{count} ລາຍການຕ້ອງໃສ່ໃຈ', alerts: { processQueue: 'ດຳເນີນການຄົນເຈັບທີ່ກຳລັງລໍຖ້າ ຫຼື ກຳລັງກວດ.' }, stats: { totalPatients: 'ຄົນເຈັບລົງທະບຽນທັງໝົດ', waitingQueue: 'ຄິວລໍຖ້າ', examining: 'ກຳລັງກວດ', criticalMedicine: 'ຄວາມຕ້ອງການຢາຕ້ອງເຕີມ' }, tags: { patientData: 'ຂໍ້ມູນຄົນເຈັບ', queue: 'ຄິວ', active: 'ໃຊ້ງານ', critical: 'ວິກິດ' }
+}, { pregnancyInfo: 'ຂໍ້ມູນການຖືພາ', statusDoctor: 'ສະຖານະ & ແພດ' });
+extendDashboardAndQueue(my, {
+  attentionTitle: '{count} ခု သတိပြုရန်လိုသည်', alerts: { processQueue: 'စောင့်နေသော သို့မဟုတ် စစ်ဆေးနေသော လူနာများကို ဆောင်ရွက်ပါ.' }, stats: { totalPatients: 'မှတ်ပုံတင်ထားသော လူနာစုစုပေါင်း', waitingQueue: 'စောင့်ဆိုင်းတန်းစီ', examining: 'စစ်ဆေးနေသည်', criticalMedicine: 'ပြန်ဖြည့်ရန်လိုသော ဆေးလိုအပ်ချက်' }, tags: { patientData: 'လူနာဒေတာ', queue: 'တန်းစီ', active: 'အသုံးပြုနေ', critical: 'အရေးကြီး' }
+}, { pregnancyInfo: 'ကိုယ်ဝန်အချက်အလက်', statusDoctor: 'အခြေအနေ & ဆရာဝန်' });
+extendDashboardAndQueue(zh, {
+  attentionTitle: '{count} 项需要关注', alerts: { processQueue: '处理正在等待或检查中的患者。' }, stats: { totalPatients: '注册患者总数', waitingQueue: '等待队列', examining: '检查中', criticalMedicine: '需补货药品' }, tags: { patientData: '患者数据', queue: '队列', active: '启用', critical: '严重' }
+}, { pregnancyInfo: '妊娠信息', statusDoctor: '状态和医生' });
+extendDashboardAndQueue(ta, {
+  attentionTitle: '{count} உருப்படிகள் கவனம் தேவை', alerts: { processQueue: 'காத்திருக்கும் அல்லது பரிசோதனையில் உள்ள நோயாளிகளை செயல்படுத்து.' }, stats: { totalPatients: 'மொத்த பதிவு செய்யப்பட்ட நோயாளிகள்', waitingQueue: 'காத்திருப்பு வரிசை', examining: 'பரிசோதனையில்', criticalMedicine: 'மருந்து மறுநிரப்பு தேவை' }, tags: { patientData: 'நோயாளர் தரவு', queue: 'வரிசை', active: 'செயலில்', critical: 'அவசரம்' }
+}, { pregnancyInfo: 'கர்ப்ப தகவல்', statusDoctor: 'நிலை & மருத்துவர்' });
+
 const dictionaries: Partial<Record<AppLocale, AbstractIntlMessages>> = {
   en,
   id,
