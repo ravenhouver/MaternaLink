@@ -20,6 +20,15 @@ SUPPORTED_TYPES = {
     "audio/x-wav": ".wav",
 }
 
+def env_value(name: str, default: str) -> str:
+    value = os.getenv(name, default).strip()
+    fallback_prefix = f"${{{name}:-"
+    if value.startswith(fallback_prefix) and value.endswith("}"):
+        return value[len(fallback_prefix):-1] or default
+    if value.startswith("${"):
+        return default
+    return value or default
+
 
 class Segment(BaseModel):
     start: float
@@ -37,7 +46,7 @@ class TranscriptionResult(BaseModel):
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"service": "MaternaLink Speech STT", "status": "ok", "model": os.getenv("STT_MODEL_SIZE", "small")}
+    return {"service": "MaternaLink Speech STT", "status": "ok", "model": env_value("STT_MODEL_SIZE", "small")}
 
 
 @app.post("/v1/stt/transcribe", response_model=TranscriptionResult)
@@ -87,7 +96,7 @@ def get_model():
     from faster_whisper import WhisperModel
 
     return WhisperModel(
-        os.getenv("STT_MODEL_SIZE", "small"),
-        device=os.getenv("STT_DEVICE", "cpu"),
-        compute_type=os.getenv("STT_COMPUTE_TYPE", "int8"),
+        env_value("STT_MODEL_SIZE", "small"),
+        device=env_value("STT_DEVICE", "cpu"),
+        compute_type=env_value("STT_COMPUTE_TYPE", "int8"),
     )
