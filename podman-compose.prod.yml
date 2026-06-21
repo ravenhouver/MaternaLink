@@ -56,7 +56,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://172.93.186.62:41874/api}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://api:3001/api}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/api}
     ports:
       - "41873:3000"
     depends_on:

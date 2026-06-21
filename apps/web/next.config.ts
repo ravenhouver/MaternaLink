@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = resolve(currentDir, '..', '..');
+const apiInternalBaseUrl = process.env.API_INTERNAL_BASE_URL ?? 'http://localhost:3001/api';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -12,6 +13,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: '/', destination: '/dashboard', permanent: false },
+    ];
+  },
+  async rewrites() {
+    return [
+      { source: '/api/:path*', destination: `${apiInternalBaseUrl}/:path*` },
     ];
   },
 };

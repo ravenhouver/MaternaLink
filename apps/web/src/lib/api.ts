@@ -1,6 +1,6 @@
 import { getDefaultActionMessage, isMutationMethod, notifyAction } from './action-notifications';
 
-export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api';
+export const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api';
 
 export type UserRole = 'BIDAN_PUSKESMAS' | 'IFK_ADMIN' | 'SUPER_ADMIN';
 
