@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Button from 'antd/es/button';
 import Typography from 'antd/es/typography';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon, type AppIconName } from '@/components/ui/app-icon';
-import { getIfkFacilities, type DistributionRecommendation, type IfkFacilityRecord } from '@/lib/api';
+import { getIfkFacilities, runIfkAiAllocation, type DistributionRecommendation, type IfkFacilityRecord } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
@@ -70,6 +70,19 @@ function ClinicsSidebar({ detail }: { detail: boolean }) {
       </div>
     </aside>
   );
+}
+
+function currentAllocationPeriod() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function recommendationSourceLabel(recommendation?: DistributionRecommendation) {
+  if (!recommendation) return 'Unavailable';
+  if (recommendation.source === 'HF_AI_LAYER2' || recommendation.source === 'FASTAPI_AI') return 'Hosted AI';
+  if (recommendation.source === 'SEEDED_DETERMINISTIC') return 'Demo seed';
+  if (recommendation.source === 'RULE_BASED_FALLBACK') return 'Rule fallback';
+  return recommendation.source;
 }
 
 function ClinicsTopbar({ detail }: { detail: boolean }) {
@@ -276,14 +289,14 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
               <ul>
                 <li><AppIcon name="info" width={16} height={16} />Distribution items: {itemSummary}</li>
                 <li><AppIcon name="users" width={16} height={16} />Active pregnancy count: {clinic.activePregnancies}; high-risk: {clinic.highRiskPregnancies}.</li>
-                <li><AppIcon name="activity" width={16} height={16} />Recommendation source: {recommendation?.source ?? 'Belum ada rekomendasi aktif'}.</li>
+                <li><AppIcon name="activity" width={16} height={16} />Recommendation source: {recommendationSourceLabel(recommendation)}.</li>
                 <li><AppIcon name="mapPin" width={16} height={16} />Lead time: {leadTime(clinic)}; distance to IFK: {distance(clinic)}.</li>
               </ul>
               <div className={styles.urgencyBox}>
                 <DetailMetric label="Urgency Score" value={urgencyScore} tone={clinic.risk === 'routine' ? 'safe' : 'danger'} />
                 <div className={styles.urgencyTrack}><span /></div>
                 <DetailMetric label="Equity Priority" value={recommendation?.urgency ?? clinic.riskLabel} />
-                <DetailMetric label="AI Confidence" value={recommendation ? recommendation.source : 'Unavailable'} tone={recommendation ? 'safe' : undefined} />
+                <DetailMetric label="AI Source" value={recommendationSourceLabel(recommendation)} tone={recommendation?.source === 'HF_AI_LAYER2' || recommendation?.source === 'FASTAPI_AI' ? 'safe' : undefined} />
               </div>
             </div>
           </article>
@@ -323,6 +336,7 @@ function ClinicDetail({ clinic, nearbyRows, onBack, recommendation }: { clinic: 
 export function MedicineSenderClinicsContent() {
   const [selectedClinic, setSelectedClinic] = useState<ClinicRow | null>(null);
   const [rows, setRows] = useState<ClinicRow[]>([]);
+  const didStartAllocation = useRef(false);
 
   async function refreshRows() {
     getIfkFacilities()
@@ -334,15 +348,32 @@ export function MedicineSenderClinicsContent() {
     void refreshRows();
   }, []);
 
-  const selectedRecommendation = selectedClinic?.activeRecommendation ?? undefined;
-  const nearbyRows = selectedClinic ? rows.filter((row) => selectedClinic.nearbyCandidates.some((candidate) => candidate.id === row.id)) : [];
+  useEffect(() => {
+    if (didStartAllocation.current) return;
+    didStartAllocation.current = true;
+    const period = currentAllocationPeriod();
+    const storageKey = `ifk-ai-allocation:${period}`;
+    if (sessionStorage.getItem(storageKey)) return;
+    sessionStorage.setItem(storageKey, 'running');
+
+    runIfkAiAllocation({ periode: period })
+      .then(() => {
+        sessionStorage.setItem(storageKey, 'completed');
+        return refreshRows();
+      })
+      .catch(() => sessionStorage.removeItem(storageKey));
+  }, []);
+
+  const displayedClinic = selectedClinic ? rows.find((row) => row.id === selectedClinic.id) ?? selectedClinic : null;
+  const selectedRecommendation = displayedClinic?.activeRecommendation ?? undefined;
+  const nearbyRows = displayedClinic ? rows.filter((row) => displayedClinic.nearbyCandidates.some((candidate) => candidate.id === row.id)) : [];
 
   return (
     <div className={styles.clinicsShell}>
       <ClinicsSidebar detail={Boolean(selectedClinic)} />
       <div className={styles.clinicsWorkspace}>
         <ClinicsTopbar detail={Boolean(selectedClinic)} />
-        {selectedClinic ? <ClinicDetail clinic={selectedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onRefresh={() => void refreshRows()} onView={setSelectedClinic} />}
+        {displayedClinic ? <ClinicDetail clinic={displayedClinic} nearbyRows={nearbyRows} recommendation={selectedRecommendation} onBack={() => setSelectedClinic(null)} /> : <ClinicsList rows={rows} onRefresh={() => void refreshRows()} onView={setSelectedClinic} />}
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ export function AppShell({ children }: AppShellProps) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const isLogin = pathname === routes.login;
-  const isEmbeddedSuperAdminPage = pathname.startsWith(routes.admin);
+  const isEmbeddedRoleShellPage = pathname.startsWith(routes.admin) || pathname === routes.ifk || pathname.startsWith(`${routes.ifk}/`);
   const hasTopbar = pathname !== routes.dashboard;
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function AppShell({ children }: AppShellProps) {
     );
   }
 
-  if (isEmbeddedSuperAdminPage) {
+  if (isEmbeddedRoleShellPage) {
     if (isAuthLoading || !user) {
       return (
         <ConfigProvider theme={themeConfig}>

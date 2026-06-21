@@ -277,6 +277,15 @@ function itemTotal(row: DistributionRecommendation) {
   return row.items.reduce((total, item) => total + item.finalQuantity, 0);
 }
 
+function recommendationConfidence(row: DistributionRecommendation) {
+  const source = row.source.toUpperCase();
+  const sourceScore = source.includes('HF_AI') || source.includes('AI') ? 92 : source.includes('FALLBACK') ? 70 : 82;
+  const changedItems = row.items.filter((item) => item.overrideQuantity != null && item.overrideQuantity !== item.aiQuantity).length;
+  const overridePenalty = row.items.length ? Math.round((changedItems / row.items.length) * 18) : 0;
+  const statusPenalty = row.status === 'REJECTED' || row.status === 'CANCELLED' ? 28 : row.status === 'PENDING' ? 6 : 0;
+  return Math.max(0, Math.min(100, sourceScore - overridePenalty - statusPenalty));
+}
+
 function RecommendationInsights({ isApproving, onApproveAll, rows }: { isApproving: boolean; onApproveAll: () => void; rows: DistributionRecommendation[] }) {
   const activeRows = rows.filter((row) => row.status !== 'RECEIVED' && row.status !== 'CANCELLED').slice(0, 2);
   const pendingCount = rows.filter((row) => row.status === 'PENDING').length;
@@ -284,7 +293,7 @@ function RecommendationInsights({ isApproving, onApproveAll, rows }: { isApprovi
   const approved = rows.filter((row) => ['APPROVED', 'DISPATCHED', 'RECEIVED'].includes(row.status)).length;
   const criticalHandled = rows.filter((row) => row.urgency === 'CRITICAL' && row.status !== 'PENDING' && row.status !== 'REJECTED').length;
   const efficiency = rows.length ? Math.round((completed / rows.length) * 100) : 0;
-  const confidence = rows.length ? Math.round(((rows.length - rows.filter((row) => row.status === 'REJECTED').length) / rows.length) * 100) : 0;
+  const confidence = rows.length ? Math.round(rows.reduce((total, row) => total + recommendationConfidence(row), 0) / rows.length) : 0;
   const equity = rows.filter((row) => row.urgency === 'CRITICAL').length ? Math.round((criticalHandled / rows.filter((row) => row.urgency === 'CRITICAL').length) * 100) : 100;
   const metrics = [
     { label: 'Efficiency Index', value: efficiency, tone: 'green' },

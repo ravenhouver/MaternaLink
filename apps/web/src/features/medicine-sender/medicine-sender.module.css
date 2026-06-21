@@ -3849,8 +3849,10 @@
   border-radius: inherit;
 }
 
-.approvalMetricRow .green { background: #22c55e; }
-.approvalMetricRow .blue { background: #3b82f6; }
+.approvalMetricRow strong.green { color: #22c55e; }
+.approvalMetricRow strong.blue { color: #3b82f6; }
+.approvalMetricRow i.green { background: #22c55e; }
+.approvalMetricRow i.blue { background: #3b82f6; }
 
 .approveAllButton {
   justify-content: center;
