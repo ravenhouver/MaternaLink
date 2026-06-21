@@ -11,6 +11,7 @@ import {
   RunAiAllocationDto,
   TrackingEventDto,
   UpdateAllocationPlanDto,
+  UpdateRecommendationDto,
   UpdateRecommendationItemDto,
 } from './distribution.dto';
 
@@ -26,6 +27,7 @@ type LiveWeather = {
   weatherCode?: number | null;
   maxPrecipitationProbabilityPct: number;
   maxDailyPrecipitationMm: number;
+  heatIntensity: number;
   bars: Array<'low' | 'medium' | 'high' | 'critical'>;
   fetchedAt: string;
 };
@@ -76,6 +78,25 @@ export class DistributionService {
         trackingEvents: { include: { actor: true }, orderBy: { createdAt: 'desc' } },
       },
     });
+  }
+
+  async updateRecommendation(id: string, data: UpdateRecommendationDto, user?: CurrentUser) {
+    await this.getRecommendation(id, user);
+
+    const nextData: Prisma.DistributionRecommendationUpdateInput = {};
+    if (data.periode) nextData.periode = new Date(`${data.periode}T00:00:00.000Z`);
+    if (data.priorityRank !== undefined) nextData.priorityRank = data.priorityRank;
+
+    if (data.dispatchTime !== undefined) {
+      const current = await this.prisma.distributionRecommendation.findUnique({ where: { id }, select: { routeSummary: true } });
+      const routeSummary = current?.routeSummary && typeof current.routeSummary === 'object' && !Array.isArray(current.routeSummary)
+        ? { ...(current.routeSummary as Record<string, unknown>) }
+        : {};
+      nextData.routeSummary = { ...routeSummary, dispatchTime: data.dispatchTime.trim() };
+    }
+
+    await this.prisma.distributionRecommendation.update({ where: { id }, data: nextData });
+    return this.getRecommendation(id, user);
   }
 
   async updateRecommendationItem(recommendationId: string, itemId: string, data: UpdateRecommendationItemDto) {
@@ -139,6 +160,46 @@ export class DistributionService {
       });
       return updated;
     });
+  }
+
+  async approvePendingRecommendations(actorUserId: string, ids?: string[]) {
+    const recommendations = await this.prisma.distributionRecommendation.findMany({
+      where: {
+        status: RecommendationStatus.PENDING,
+        ...(ids?.length ? { id: { in: ids } } : {}),
+      },
+      select: { id: true },
+      orderBy: [{ priorityRank: 'asc' }, { createdAt: 'desc' }],
+    });
+    if (!recommendations.length) return [];
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.distributionRecommendation.updateMany({
+        where: { id: { in: recommendations.map((item) => item.id) } },
+        data: { status: RecommendationStatus.APPROVED },
+      });
+      await tx.shipmentTrackingEvent.createMany({
+        data: recommendations.map((item) => ({
+          recommendationId: item.id,
+          status: TrackingStatus.APPROVED,
+          actorUserId,
+          note: 'Recommendation approved by IFK bulk action.',
+        })),
+      });
+    });
+
+    return this.listRecommendations({});
+  }
+
+  async deleteRecommendation(id: string) {
+    const recommendation = await this.prisma.distributionRecommendation.findUnique({ where: { id }, select: { id: true } });
+    if (!recommendation) throw new NotFoundException('Recommendation not found');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.shipmentTrackingEvent.deleteMany({ where: { recommendationId: id } });
+      await tx.distributionRecommendationItem.deleteMany({ where: { recommendationId: id } });
+      await tx.distributionRecommendation.delete({ where: { id } });
+    });
+    return { id, deleted: true };
   }
 
   async rejectRecommendation(id: string, actorUserId: string, note: string) {
@@ -527,38 +588,51 @@ export class DistributionService {
 
     const points = facilities.flatMap((facility) => {
       if (facility.latitude == null || facility.longitude == null) return [];
-      const alert = alerts.find((row) => row.puskesmasId === facility.id);
       const weather = weatherByFacility.get(facility.id);
-      const risk = this.environmentPointRisk(alert?.severity, facility.rainyAccess, weather);
-      const metric = weather ? this.weatherMetric(weather) : alert?.message ?? facility.rainyAccess;
-      return [{ id: facility.id, name: facility.nama, position: [facility.latitude, facility.longitude], risk, metric }];
+      if (!weather) return [];
+      const risk = this.openMeteoRisk(weather);
+      return [{
+        id: facility.id,
+        name: facility.nama,
+        position: [facility.latitude, facility.longitude],
+        risk,
+        metric: this.weatherMetric(weather),
+        rainMm: this.round1(weather.rainMm ?? weather.precipitationMm ?? 0),
+        maxDailyPrecipitationMm: weather.maxDailyPrecipitationMm,
+        precipitationProbabilityPct: weather.maxPrecipitationProbabilityPct,
+        heatIntensity: weather.heatIntensity,
+        source: weather.source,
+        fetchedAt: weather.fetchedAt,
+      }];
     });
-    const forecasts = facilities.slice(0, 6).map((facility) => {
-      const alert = alerts.find((row) => row.puskesmasId === facility.id);
+    const forecasts = facilities.flatMap((facility) => {
       const weather = weatherByFacility.get(facility.id);
-      const risk = this.forecastRisk(alert?.severity, facility.rainyAccess, weather);
-      return {
+      if (!weather) return [];
+      const risk = this.openMeteoForecastRisk(weather);
+      return [{
         location: facility.nama,
         risk,
         status: risk === 'blocked' ? 'Blocked risk' : risk === 'warning' ? 'Elevated' : 'Stable',
-        temperature: weather?.temperatureC == null ? '-' : `${Math.round(weather.temperatureC)}°C`,
-        metric: weather ? `Rain ${this.round1(weather.rainMm ?? weather.precipitationMm ?? 0)}mm · Prob ${weather.maxPrecipitationProbabilityPct}%` : `Lead time - ${facility.rainyAccess}`,
-        bars: weather?.bars ?? this.forecastBars(risk),
-      };
-    });
-    const routes = facilities.map((facility) => {
-      const alert = alerts.find((row) => row.puskesmasId === facility.id);
+        temperature: weather.temperatureC == null ? '-' : `${Math.round(weather.temperatureC)}°C`,
+        metric: `Rain ${this.round1(weather.rainMm ?? weather.precipitationMm ?? 0)}mm · Prob ${weather.maxPrecipitationProbabilityPct}%`,
+        bars: weather.bars,
+        source: weather.source,
+        fetchedAt: weather.fetchedAt,
+      }];
+    }).slice(0, 6);
+    const routes = facilities.flatMap((facility) => {
       const weather = weatherByFacility.get(facility.id);
-      const risk = this.routeWeatherRisk(alert?.severity, facility.rainyAccess, weather);
-      return {
+      if (!weather) return [];
+      const risk = this.openMeteoRouteRisk(weather);
+      return [{
         id: facility.id,
         route: `IFK-${facility.id}`,
         clinics: facility.nama,
         risk,
         status: risk >= 80 ? 'critical' : risk >= 50 ? 'elevated' : 'operational',
-        blockedAt: alert?.createdAt ?? null,
-        confidence: weather ? 'OPEN_METEO' : alert?.severity ?? 'LOW',
-      };
+        blockedAt: null,
+        confidence: 'OPEN_METEO',
+      }];
     });
     return { points, forecasts, routes, alerts, weatherSource: weatherByFacility.size ? 'OPEN_METEO' : 'DATABASE_FALLBACK' };
   }
@@ -743,9 +817,32 @@ export class DistributionService {
       weatherCode: data.current?.weather_code ?? null,
       maxPrecipitationProbabilityPct: Math.round(maxProbability),
       maxDailyPrecipitationMm: this.round1(maxDailyPrecipitation),
+      heatIntensity: this.openMeteoHeatIntensity(maxProbability, maxDailyPrecipitation),
       bars: dailyPrecipitation.map((item) => this.weatherBar(item.probability, item.total)),
       fetchedAt: new Date().toISOString(),
     };
+  }
+
+  private openMeteoHeatIntensity(probability: number, precipitationMm: number) {
+    return Math.min(1, Math.max(0.05, Math.max(probability / 100, precipitationMm / 40)));
+  }
+
+  private openMeteoRisk(weather: LiveWeather): 'low' | 'medium' | 'high' | 'critical' {
+    if (weather.maxPrecipitationProbabilityPct >= 85 || weather.maxDailyPrecipitationMm >= 30) return 'critical';
+    if (weather.maxPrecipitationProbabilityPct >= 65 || weather.maxDailyPrecipitationMm >= 15) return 'high';
+    if (weather.maxPrecipitationProbabilityPct >= 35 || weather.maxDailyPrecipitationMm >= 5) return 'medium';
+    return 'low';
+  }
+
+  private openMeteoForecastRisk(weather: LiveWeather): 'stable' | 'warning' | 'blocked' {
+    const risk = this.openMeteoRisk(weather);
+    if (risk === 'critical') return 'blocked';
+    if (risk === 'high' || risk === 'medium') return 'warning';
+    return 'stable';
+  }
+
+  private openMeteoRouteRisk(weather: LiveWeather) {
+    return Math.round(Math.min(95, Math.max(weather.maxPrecipitationProbabilityPct, weather.maxDailyPrecipitationMm * 3)));
   }
 
   private weatherBar(probability: number, precipitationMm: number): 'low' | 'medium' | 'high' | 'critical' {

@@ -25,4 +25,10 @@ export type EnvironmentalPoint = {
   metric: string;
   risk: 'low' | 'medium' | 'high' | 'critical';
   position: [number, number];
+  rainMm?: number;
+  maxDailyPrecipitationMm?: number;
+  precipitationProbabilityPct?: number;
+  heatIntensity?: number;
+  source?: 'OPEN_METEO';
+  fetchedAt?: string;
 };

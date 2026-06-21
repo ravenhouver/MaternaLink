@@ -23,8 +23,18 @@ export class UpdateRecommendationItemDto {
   @ApiProperty({ example: 'Adjusted for active preeclampsia cases', required: false }) @IsOptional() @IsString() overrideReason?: string;
 }
 
+export class UpdateRecommendationDto {
+  @ApiProperty({ example: '2026-10-27', required: false }) @IsOptional() @IsDateString() periode?: string;
+  @ApiProperty({ example: 1, required: false }) @IsOptional() @IsInt() @Min(1) priorityRank?: number;
+  @ApiProperty({ example: '14:00 WIB', required: false }) @IsOptional() @IsString() dispatchTime?: string;
+}
+
 export class ReorderRecommendationsDto {
   @ApiProperty({ example: ['REC-DEMO-001', 'REC-DEMO-002'] }) @IsArray() @IsString({ each: true }) orderedIds!: string[];
+}
+
+export class ApprovePendingRecommendationsDto {
+  @ApiProperty({ example: ['REC-DEMO-001', 'REC-DEMO-002'], required: false }) @IsOptional() @IsArray() @IsString({ each: true }) ids?: string[];
 }
 
 export class RejectRecommendationDto {

@@ -307,11 +307,18 @@ export type IfkFacilityRecord = {
 };
 
 export type IfkEnvironmentResponse = {
-  points: Array<{ id: string; name: string; metric: string; risk: 'low' | 'medium' | 'high' | 'critical'; position: [number, number] }>;
-  forecasts: Array<{ location: string; risk: 'stable' | 'warning' | 'blocked'; status: string; temperature: string; metric: string; bars: Array<'low' | 'medium' | 'high' | 'critical'> }>;
+  points: Array<{ id: string; name: string; metric: string; risk: 'low' | 'medium' | 'high' | 'critical'; position: [number, number]; rainMm?: number; maxDailyPrecipitationMm?: number; precipitationProbabilityPct?: number; heatIntensity?: number; source?: 'OPEN_METEO'; fetchedAt?: string }>;
+  forecasts: Array<{ location: string; risk: 'stable' | 'warning' | 'blocked'; status: string; temperature: string; metric: string; bars: Array<'low' | 'medium' | 'high' | 'critical'>; source?: 'OPEN_METEO'; fetchedAt?: string }>;
   routes: Array<{ id: string; route: string; clinics: string; risk: number; status: 'critical' | 'operational' | 'elevated'; blockedAt?: string | null; confidence: string }>;
   alerts: AlertRecord[];
   weatherSource?: 'OPEN_METEO' | 'DATABASE_FALLBACK';
+};
+
+export type IfkDecisionHistoryResponse = {
+  metrics: Array<{ label: string; value: string; note: string; icon: string; tone: 'green' | 'blue' }>;
+  rows: Array<{ id: string; date: string; officer: string; clinic: string; action: string; prediction: string; decision: string; tone: 'red' | 'green' }>;
+  bars: Array<{ day: string; green: number; red: number }>;
+  compliance: { rating: number; primaryDeviationFactor: string; summary: string };
 };
 
 export type KondisiRecord = { id: string; nama: string; deskripsi?: string | null };
@@ -687,6 +694,10 @@ export async function getIfkEnvironment(): Promise<IfkEnvironmentResponse> {
   return apiFetch('/distribution/ifk/environment');
 }
 
+export async function getIfkDecisionHistory(): Promise<IfkDecisionHistoryResponse> {
+  return apiFetch('/distribution/ifk/decision-history');
+}
+
 export async function getStokRows(params?: { puskesmasId?: string; periode?: string }): Promise<StokRow[]> {
   const query = new URLSearchParams();
   if (params?.puskesmasId) query.set('puskesmasId', params.puskesmasId);
@@ -808,6 +819,10 @@ export async function updateRecommendationItem(recommendationId: string, itemId:
   return apiFetch(`/distribution/recommendations/${recommendationId}/items/${itemId}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'Item rekomendasi berhasil diperbarui', errorMessage: 'Gagal memperbarui item rekomendasi' });
 }
 
+export async function updateRecommendationMeta(id: string, payload: { periode?: string; priorityRank?: number; dispatchTime?: string }): Promise<DistributionRecommendation> {
+  return apiFetch(`/distribution/recommendations/${id}`, { method: 'PATCH', body: JSON.stringify(payload), successMessage: 'Jadwal rekomendasi berhasil diperbarui', errorMessage: 'Gagal memperbarui jadwal rekomendasi' });
+}
+
 export async function generateLplpo(payload: { puskesmasId: string; periode: string }): Promise<LplpoRow[]> {
   return apiFetch('/lplpo/generate', { method: 'POST', body: JSON.stringify(payload), successMessage: 'LPLPO prediktif berhasil dibuat', errorMessage: 'Gagal membuat LPLPO prediktif' });
 }
@@ -826,6 +841,14 @@ export async function reorderRecommendations(orderedIds: string[]): Promise<Dist
 
 export async function approveRecommendation(id: string): Promise<DistributionRecommendation> {
   return apiFetch(`/distribution/recommendations/${id}/approve`, { method: 'PATCH', successMessage: 'Rekomendasi berhasil disetujui', errorMessage: 'Gagal menyetujui rekomendasi' });
+}
+
+export async function approvePendingRecommendations(ids?: string[]): Promise<DistributionRecommendation[]> {
+  return apiFetch('/distribution/recommendations/approve-pending', { method: 'PATCH', body: JSON.stringify({ ids }), successMessage: 'Semua rekomendasi pending berhasil disetujui', errorMessage: 'Gagal menyetujui rekomendasi pending' });
+}
+
+export async function deleteRecommendation(id: string): Promise<{ id: string; deleted: boolean }> {
+  return apiFetch(`/distribution/recommendations/${id}`, { method: 'DELETE', successMessage: 'Rekomendasi berhasil dihapus', errorMessage: 'Gagal menghapus rekomendasi' });
 }
 
 export async function rejectRecommendation(id: string, note: string): Promise<DistributionRecommendation> {

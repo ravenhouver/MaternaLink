@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import 'leaflet.heat';
 import type { EnvironmentalPoint } from '../environment-monitoring-data';
 import styles from '../environment-monitoring.module.css';
 
@@ -16,18 +17,10 @@ type EnvironmentMapProps = {
   points: EnvironmentalPoint[];
 };
 
-const heatStops = [
-  { stop: 0.18, color: 'rgba(211, 228, 255, 0.28)' },
-  { stop: 0.38, color: 'rgba(26, 115, 232, 0.28)' },
-  { stop: 0.64, color: 'rgba(255, 214, 10, 0.36)' },
-  { stop: 0.82, color: 'rgba(239, 68, 68, 0.46)' },
-  { stop: 1, color: 'rgba(186, 26, 26, 0.58)' },
-];
-
-const heatWeight = {
-  low: 0.35,
-  medium: 0.55,
-  high: 0.78,
+const fallbackHeatWeight = {
+  low: 0.18,
+  medium: 0.42,
+  high: 0.72,
   critical: 1,
 } satisfies Record<EnvironmentalPoint['risk'], number>;
 
@@ -37,7 +30,6 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
   useEffect(() => {
     if (!mapRef.current) return undefined;
     let disposed = false;
-    let frameId: number | null = null;
     let initTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const desktopView: L.LatLngExpression = [-2.2, 122.5];
@@ -55,8 +47,6 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
       attribution: '&copy; Esri',
     }).addTo(map);
 
-    const canvas = L.DomUtil.create('canvas', styles.heatmapCanvas, map.getPanes().overlayPane);
-    const context = canvas.getContext('2d');
     const canUseMap = () => !disposed && Boolean(mapRef.current?.isConnected && map.getPane('mapPane'));
     const syncResponsiveView = () => {
       const container = mapRef.current;
@@ -68,42 +58,27 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
       }
     };
 
-    const drawHeatmap = () => {
-      if (!canUseMap()) return;
-      const size = map.getSize();
-      const ratio = window.devicePixelRatio || 1;
-      canvas.width = size.x * ratio;
-      canvas.height = size.y * ratio;
-      canvas.style.width = `${size.x}px`;
-      canvas.style.height = `${size.y}px`;
-      context?.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context?.clearRect(0, 0, size.x, size.y);
+    const heatPoints = points.map((point) => [point.position[0], point.position[1], point.heatIntensity ?? fallbackHeatWeight[point.risk]] as [number, number, number]);
+    const heatLayer = L.heatLayer(heatPoints, {
+      radius: 34,
+      blur: 28,
+      maxZoom: 9,
+      minOpacity: 0.28,
+      gradient: {
+        0.12: '#d3e4ff',
+        0.42: '#1a73e8',
+        0.68: '#ffd60a',
+        0.84: '#ef4444',
+        1: '#ba1a1a',
+      },
+    }).addTo(map);
 
-      points.forEach((point) => {
-        if (!context) return;
-        const pixel = map.latLngToContainerPoint(point.position);
-        const radius = point.risk === 'critical' ? 118 : point.risk === 'high' ? 100 : 82;
-        const gradient = context.createRadialGradient(pixel.x, pixel.y, 0, pixel.x, pixel.y, radius);
-        heatStops.forEach((item) => gradient.addColorStop(item.stop, item.color));
-        gradient.addColorStop(1, 'rgba(186, 26, 26, 0)');
-        context.globalAlpha = heatWeight[point.risk];
-        context.fillStyle = gradient;
-        context.beginPath();
-        context.arc(pixel.x, pixel.y, radius, 0, Math.PI * 2);
-        context.fill();
-      });
-      if (context) context.globalAlpha = 1;
-    };
-
-    map.on('move zoom resize', drawHeatmap);
     const scheduleMapSync = () => {
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-      frameId = window.requestAnimationFrame(() => {
-        frameId = null;
+      window.requestAnimationFrame(() => {
         if (!canUseMap()) return;
         map.invalidateSize();
         syncResponsiveView();
-        drawHeatmap();
+        heatLayer.redraw();
       });
     };
 
@@ -125,7 +100,7 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
           direction: 'top',
           className: styles.mapTooltip,
         })
-        .bindPopup(`<strong>${point.name}</strong><br />${point.metric}<br />${point.risk.toUpperCase()}`)
+        .bindPopup(`<strong>${point.name}</strong><br />${point.metric}<br />Max daily ${point.maxDailyPrecipitationMm ?? '-'}mm<br />Source ${point.source ?? 'OPEN_METEO'}`)
         .addTo(map);
     });
 
@@ -136,10 +111,8 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
     return () => {
       disposed = true;
       if (initTimeoutId) clearTimeout(initTimeoutId);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
-      map.off('move zoom resize', drawHeatmap);
-      canvas.remove();
+      heatLayer.remove();
       map.remove();
     };
   }, [points]);

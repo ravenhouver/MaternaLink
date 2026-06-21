@@ -6,6 +6,7 @@ import type { CurrentUser } from '../../common/auth/current-user';
 import { Roles } from '../../common/auth/roles.decorator';
 import { RolesGuard } from '../../common/auth/roles.guard';
 import {
+  ApprovePendingRecommendationsDto,
   CreateAllocationPlanDto,
   CreateShipmentRequestDto,
   ListRecommendationsQueryDto,
@@ -13,6 +14,7 @@ import {
   ReorderRecommendationsDto,
   RunAiAllocationDto,
   TrackingEventDto,
+  UpdateRecommendationDto,
   UpdateAllocationPlanDto,
   UpdateRecommendationItemDto,
 } from './distribution.dto';
@@ -82,6 +84,24 @@ export class DistributionController {
   @Patch('recommendations/reorder')
   reorderRecommendations(@Body() body: ReorderRecommendationsDto) { return this.service.reorderRecommendations(body.orderedIds); }
 
+  @ApiOperation({ summary: 'Approve pending distribution recommendations' })
+  @ApiResponse({ status: 200, description: 'Pending recommendations approved' })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.IFK_ADMIN)
+  @Patch('recommendations/approve-pending')
+  approvePendingRecommendations(@Body() body: ApprovePendingRecommendationsDto, @Req() request: { user: CurrentUser }) {
+    return this.service.approvePendingRecommendations(request.user.id, body.ids);
+  }
+
+  @ApiOperation({ summary: 'Update recommendation schedule and priority' })
+  @ApiResponse({ status: 200, description: 'Recommendation updated' })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.IFK_ADMIN)
+  @Patch('recommendations/:id')
+  updateRecommendation(@Param('id') id: string, @Body() body: UpdateRecommendationDto, @Req() request: { user: CurrentUser }) {
+    return this.service.updateRecommendation(id, body, request.user);
+  }
+
   @ApiOperation({ summary: 'Override recommendation item quantity' })
   @ApiResponse({ status: 200, description: 'Recommendation item updated' })
   @UseGuards(AuthGuard, RolesGuard)
@@ -99,6 +119,13 @@ export class DistributionController {
   approveRecommendation(@Param('id') id: string, @Req() request: { user: CurrentUser }) {
     return this.service.approveRecommendation(id, request.user.id);
   }
+
+  @ApiOperation({ summary: 'Delete distribution recommendation' })
+  @ApiResponse({ status: 200, description: 'Recommendation deleted' })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.IFK_ADMIN)
+  @Delete('recommendations/:id')
+  deleteRecommendation(@Param('id') id: string) { return this.service.deleteRecommendation(id); }
 
   @ApiOperation({ summary: 'Reject distribution recommendation' })
   @ApiResponse({ status: 200, description: 'Recommendation rejected' })

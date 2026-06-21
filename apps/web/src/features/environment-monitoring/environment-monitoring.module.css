@@ -381,6 +381,14 @@
   border-radius: 999px;
 }
 
+.sourceChip {
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8 !important;
+  padding: 4px 10px;
+}
+
 .low,
 .stable {
   background: #d3e4ff;

@@ -228,6 +228,7 @@ export function EnvironmentMonitoringContent() {
             <div className={styles.panelHeading}>
               <Typography.Title id="rainfall-title" level={2}><span />Rainfall Intensity &amp; Geospatial Risk</Typography.Title>
               <div className={styles.legend} aria-label="Risk legend">
+                <span className={styles.sourceChip}>Open-Meteo live</span>
                 <span><i className={styles.low} />Low</span>
                 <span><i className={styles.medium} />Med</span>
                 <span><i className={styles.high} />High</span>
@@ -236,7 +237,7 @@ export function EnvironmentMonitoringContent() {
             </div>
             <div className={styles.mapCanvas}>
               <EnvironmentMap points={environmentalPoints} />
-              {environmentalPoints.length === 0 ? <p role="status" className={styles.environmentNotice}>Koordinat fasilitas belum tersedia di database; risiko rute ditampilkan lewat tabel dan feed alert.</p> : null}
+              {environmentalPoints.length === 0 ? <p role="status" className={styles.environmentNotice}>Data Open-Meteo belum tersedia untuk koordinat fasilitas; heatmap tidak memakai fallback database.</p> : null}
             </div>
           </section>
 

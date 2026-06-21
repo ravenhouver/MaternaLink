@@ -5,14 +5,17 @@ import { NotificationCenter } from '@/components/layout/notification-center';
 import { RoleLogoutButton } from '@/components/layout/role-logout-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import {
+  approvePendingRecommendations,
   approveRecommendation,
   addTrackingEvent,
+  deleteRecommendation,
   getCurrentUser,
   getRecommendationTracking,
   getRecommendations,
   rejectRecommendation,
   reorderRecommendations,
   runIfkAiAllocation,
+  updateRecommendationMeta,
   updateRecommendationItem,
   type CurrentUser,
   type DistributionRecommendation,
@@ -24,7 +27,7 @@ import {
 import { routes } from '@/lib/routes';
 import styles from './medicine-sender.module.css';
 
-type ModalKind = 'edit' | 'track' | 'filter' | 'approve' | 'reject' | null;
+type ModalKind = 'edit' | 'track' | 'filter' | 'approve' | 'reject' | 'delete' | null;
 const pageSize = 8;
 
 const urgencyLabel: Record<RecommendationUrgency, string> = {
@@ -93,6 +96,7 @@ export function MedicineSenderRecommendationsContent() {
   const [statusFilter, setStatusFilter] = useState<RecommendationStatus | 'ALL'>('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [isAllocating, setIsAllocating] = useState(false);
+  const [isBulkApproving, setIsBulkApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [page, setPage] = useState(1);
@@ -176,6 +180,32 @@ export function MedicineSenderRecommendationsContent() {
     }
   }
 
+  async function removeSelected() {
+    if (!selected) return;
+    setError(null);
+    try {
+      await deleteRecommendation(selected.id);
+      setModal(null);
+      await refreshRows();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Gagal menghapus rekomendasi');
+    }
+  }
+
+  async function approveAllPending() {
+    const pendingIds = rows.filter((row) => row.status === 'PENDING').map((row) => row.id);
+    if (!pendingIds.length) return;
+    setIsBulkApproving(true);
+    setError(null);
+    try {
+      setRows(await approvePendingRecommendations(pendingIds));
+    } catch (bulkError) {
+      setError(bulkError instanceof Error ? bulkError.message : 'Gagal menyetujui semua rekomendasi pending');
+    } finally {
+      setIsBulkApproving(false);
+    }
+  }
+
   async function runAllocation() {
     setIsAllocating(true);
     setError(null);
@@ -197,6 +227,7 @@ export function MedicineSenderRecommendationsContent() {
         <main className={styles.recoPage}>
           <section className={styles.recoTitleRow}>
             <div><p>Logistics Intelligence</p><h1>Distribution Recommendations</h1></div>
+            <a href={routes.ifkDecisionHistory}><AppIcon name="fileText" width={16} height={16} />Decision History</a>
           </section>
           <section className={styles.recoStats}>{stats.map((stat) => <article className={styles[stat.tone]} key={stat.label}><span>{stat.label}</span><strong>{stat.value}</strong></article>)}</section>
           <section className={styles.recoToolbar}>
@@ -220,6 +251,8 @@ export function MedicineSenderRecommendationsContent() {
           {modal === 'filter' ? <FilterModal statusFilter={statusFilter} onApply={(next) => { setStatusFilter(next); setModal(null); }} onClose={() => setModal(null)} /> : null}
           {modal === 'approve' && selected ? <ConfirmModal kind="approve" row={selected} onClose={() => setModal(null)} onConfirm={() => void decide('approve')} /> : null}
           {modal === 'reject' && selected ? <ConfirmModal kind="reject" row={selected} onClose={() => setModal(null)} onConfirm={(note) => void decide('reject', note)} /> : null}
+          {modal === 'delete' && selected ? <DeleteModal row={selected} onClose={() => setModal(null)} onConfirm={() => void removeSelected()} /> : null}
+          <RecommendationInsights rows={rows} isApproving={isBulkApproving} onApproveAll={() => void approveAllPending()} />
         </main>
       </div>
     </div>
@@ -229,6 +262,90 @@ export function MedicineSenderRecommendationsContent() {
 function currentPeriod() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function dateInputValue(value: string) {
+  return value.slice(0, 10);
+}
+
+function recommendationDispatchTime(row: DistributionRecommendation) {
+  const routeSummary = row.routeSummary;
+  if (routeSummary && typeof routeSummary === 'object' && !Array.isArray(routeSummary)) {
+    const value = (routeSummary as Record<string, unknown>).dispatchTime;
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return '09:00 WIB';
+}
+
+function medicineUnit(unit?: string) {
+  return unit ? `(${unit})` : '(unit)';
+}
+
+function routeEstimate(row: DistributionRecommendation) {
+  const routeSummary = row.routeSummary;
+  if (routeSummary && typeof routeSummary === 'object' && !Array.isArray(routeSummary)) {
+    const minutes = (routeSummary as Record<string, unknown>).estimateMinutes;
+    if (typeof minutes === 'number') return `${minutes} Min`;
+    if (typeof minutes === 'string' && minutes.trim()) return minutes;
+  }
+  const leadDays = row.puskesmas?.leadTimeHari;
+  if (leadDays) return `${leadDays} day${leadDays > 1 ? 's' : ''}`;
+  return 'Pending ETA';
+}
+
+function routeCourier(row: DistributionRecommendation) {
+  const routeSummary = row.routeSummary;
+  if (routeSummary && typeof routeSummary === 'object' && !Array.isArray(routeSummary)) {
+    const courier = (routeSummary as Record<string, unknown>).courier;
+    if (typeof courier === 'string' && courier.trim()) return courier;
+  }
+  return 'IFK Courier';
+}
+
+function itemTotal(row: DistributionRecommendation) {
+  return row.items.reduce((total, item) => total + item.finalQuantity, 0);
+}
+
+function RecommendationInsights({ isApproving, onApproveAll, rows }: { isApproving: boolean; onApproveAll: () => void; rows: DistributionRecommendation[] }) {
+  const activeRows = rows.filter((row) => row.status !== 'RECEIVED' && row.status !== 'CANCELLED').slice(0, 2);
+  const pendingCount = rows.filter((row) => row.status === 'PENDING').length;
+  const completed = rows.filter((row) => row.status !== 'PENDING' && row.status !== 'CANCELLED').length;
+  const approved = rows.filter((row) => ['APPROVED', 'DISPATCHED', 'RECEIVED'].includes(row.status)).length;
+  const criticalHandled = rows.filter((row) => row.urgency === 'CRITICAL' && row.status !== 'PENDING' && row.status !== 'REJECTED').length;
+  const efficiency = rows.length ? Math.round((completed / rows.length) * 100) : 0;
+  const confidence = rows.length ? Math.round(((rows.length - rows.filter((row) => row.status === 'REJECTED').length) / rows.length) * 100) : 0;
+  const equity = rows.filter((row) => row.urgency === 'CRITICAL').length ? Math.round((criticalHandled / rows.filter((row) => row.urgency === 'CRITICAL').length) * 100) : 100;
+  const metrics = [
+    { label: 'Efficiency Index', value: efficiency, tone: 'green' },
+    { label: 'AI Confidence', value: confidence, tone: 'blue' },
+    { label: 'Equity Score', value: equity, tone: 'green' },
+  ];
+
+  return (
+    <section className={styles.recoFooterGrid}>
+      <article className={styles.routeSummaryCard}>
+        <h2><span><AppIcon name="route" width={20} height={20} /></span>Shipping Route Summary</h2>
+        <div className={styles.routeList}>
+          {activeRows.length ? activeRows.map((row) => (
+            <div key={row.id}>
+              <span><AppIcon name="truck" width={24} height={24} /></span>
+              <div><strong>{row.puskesmas?.nama ?? row.puskesmasId}</strong><small>Total: {itemTotal(row)} Medical Items - Courier: {routeCourier(row)}</small></div>
+              <em>Est. {routeEstimate(row)}</em>
+            </div>
+          )) : <div><span><AppIcon name="truck" width={24} height={24} /></span><div><strong>No active routes</strong><small>Approve pending recommendations to generate shipment routes.</small></div><em>-</em></div>}
+        </div>
+        <p><AppIcon name="info" width={16} height={16} />Route updated automatically based on clinic priority order.</p>
+      </article>
+      <div className={styles.approvalMetricColumn}>
+        <article className={styles.approvalMetricCard}>
+          <h2>Approval Metrics</h2>
+          {metrics.map((metric) => <div className={styles.approvalMetricRow} key={metric.label}><div><span>{metric.label}</span><strong className={styles[metric.tone]}>{metric.value}%</strong></div><p><i className={styles[metric.tone]} style={{ width: `${metric.value}%` }} /></p></div>)}
+          <small>{approved} approved decisions - {pendingCount} pending review</small>
+        </article>
+        <button className={styles.approveAllButton} type="button" disabled={!pendingCount || isApproving} onClick={onApproveAll}><span><AppIcon name="checkCircle" width={24} height={24} /></span>{isApproving ? 'Approving...' : 'Approve All Pending'}</button>
+      </div>
+    </section>
+  );
 }
 
 function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, onPageChange, page, rows }: { isLoading: boolean; onDragStart: (id: string) => void; onDrop: (id: string) => void; onMove: (id: string, direction: -1 | 1) => void; onOpen: (modal: Exclude<ModalKind, 'filter' | null>, row: DistributionRecommendation) => void; onPageChange: (page: number) => void; page: number; rows: DistributionRecommendation[] }) {
@@ -262,6 +379,7 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, o
                   <button type="button" aria-label={`Edit ${row.id}`} onClick={() => onOpen('edit', row)}><AppIcon name="edit" width={16} height={16} /></button>
                   <button type="button" aria-label="Move up" onClick={() => onMove(row.id, -1)}><AppIcon name="chevronLeft" width={16} height={16} /></button>
                   <button type="button" aria-label="Move down" onClick={() => onMove(row.id, 1)}><AppIcon name="chevronRight" width={16} height={16} /></button>
+                  <button type="button" aria-label={`Delete ${row.id}`} onClick={() => onOpen('delete', row)}><AppIcon name="trash" width={16} height={16} /></button>
                 </div></td>
               </tr>
             ))}
@@ -274,24 +392,102 @@ function RecommendationTable({ isLoading, onDragStart, onDrop, onMove, onOpen, o
 }
 
 function EditModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: () => Promise<void>; row: DistributionRecommendation }) {
-  const item = row.items[0];
-  const [quantity, setQuantity] = useState(String(item?.overrideQuantity ?? item?.finalQuantity ?? 0));
-  const [reason, setReason] = useState(item?.overrideReason ?? '');
+  const [date, setDate] = useState(dateInputValue(row.periode));
+  const [priority, setPriority] = useState(String(row.priorityRank));
+  const [dispatchTime, setDispatchTime] = useState(recommendationDispatchTime(row));
+  const [quantities, setQuantities] = useState<Record<string, string>>(() => Object.fromEntries(row.items.map((item) => [item.id, String(item.finalQuantity)])));
+  const [reason, setReason] = useState(row.items.find((item) => item.overrideReason)?.overrideReason ?? '');
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const parsedPriority = Number(priority);
+  const parsedItems = row.items.map((item) => ({ item, quantity: Number(quantities[item.id] ?? item.finalQuantity) }));
+  const requiresReason = parsedItems.some(({ item, quantity }) => quantity !== item.aiQuantity);
+  const metaChanged = date !== dateInputValue(row.periode) || parsedPriority !== row.priorityRank || dispatchTime !== recommendationDispatchTime(row);
+  const firstChanged = parsedItems.find(({ item, quantity }) => quantity !== item.aiQuantity);
+  const firstChangedDiff = firstChanged ? firstChanged.quantity - firstChanged.item.aiQuantity : 0;
+
+  function updateQuantity(itemId: string, value: string) {
+    setQuantities((current) => ({ ...current, [itemId]: value }));
+  }
+
+  function resetItem(itemId: string, aiQuantity: number) {
+    setQuantities((current) => ({ ...current, [itemId]: String(aiQuantity) }));
+  }
 
   async function save() {
-    if (!item) return;
     setError(null);
+    if (!date || !Number.isInteger(parsedPriority) || parsedPriority < 1) {
+      setError('Dispatch date and priority must be valid.');
+      return;
+    }
+    if (parsedItems.some(({ quantity }) => !Number.isInteger(quantity) || quantity < 0)) {
+      setError('Override quantity must be a non-negative whole number.');
+      return;
+    }
+    if (requiresReason && !reason.trim()) {
+      setError('Reason must be filled before saving');
+      return;
+    }
+
+    setIsSaving(true);
     try {
-      await updateRecommendationItem(row.id, item.id, { overrideQuantity: Number(quantity), overrideReason: reason });
+      if (metaChanged) await updateRecommendationMeta(row.id, { periode: date, priorityRank: parsedPriority, dispatchTime });
+      await Promise.all(parsedItems.map(({ item, quantity }) => {
+        const reasonChanged = item.overrideReason !== reason.trim() && quantity !== item.aiQuantity;
+        if (quantity === item.finalQuantity && !reasonChanged) return Promise.resolve();
+        if (quantity === item.aiQuantity) return updateRecommendationItem(row.id, item.id, {});
+        return updateRecommendationItem(row.id, item.id, { overrideQuantity: quantity, overrideReason: reason.trim() });
+      }));
       await onSaved();
       onClose();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Gagal menyimpan override');
+    } finally {
+      setIsSaving(false);
     }
   }
 
-  return <ModalShell onClose={onClose} size="edit"><div className={styles.editModalHeader}><div><h2>Edit Distribution</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span>{row.urgency}</span></div><div className={styles.editModalBody}><section><h3>Amount of Medicine Sent</h3><label>Override Qty<span><input value={quantity} inputMode="numeric" onChange={(event) => setQuantity(event.target.value)} /></span></label></section><section><h3>Reason for Change <b>Required</b></h3><textarea value={reason} placeholder="Reserve stock retained at IFK" onChange={(event) => setReason(event.target.value)} />{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.editModalFooter}><button type="button" onClick={onClose}>Cancel</button><span><button type="button" onClick={() => void save()}>Save Changes</button></span></div></ModalShell>;
+  return (
+    <ModalShell onClose={onClose} size="edit">
+      <div className={styles.editModalHeader}>
+        <div><h2>Edit Distribution</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} - ID: {row.id}</p></div>
+        <span>{row.urgency}</span>
+      </div>
+      <div className={styles.editModalBody}>
+        <section>
+          <h3>Schedule & Priority</h3>
+          <div className={styles.editScheduleGrid}>
+            <label>Dispatch Date<span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></span></label>
+            <label>Delivery Priority<span><input min="1" inputMode="numeric" value={priority} onChange={(event) => setPriority(event.target.value)} /></span><small>Rank #{priority || '-'} = first delivery</small></label>
+            <label>Dispatch Time<span><input value={dispatchTime} onChange={(event) => setDispatchTime(event.target.value)} /></span><small className={styles.dangerText}>Time is very tight</small></label>
+          </div>
+          <div className={styles.infoBox}><AppIcon name="info" width={16} height={16} />Changing priorities will automatically update the route and courier schedule for this distribution cluster.</div>
+        </section>
+        <section>
+          <div className={styles.sectionTitleRow}><h3>Amount of Medicine Sent</h3></div>
+          <div className={styles.editMedicineScroll}>
+            <table className={styles.editMedicineTable}>
+              <thead><tr><th>Medication Name</th><th>AI Qty</th><th>Override Qty</th><th>Difference</th><th>Action</th></tr></thead>
+              <tbody>{row.items.map((item) => {
+                const quantity = Number(quantities[item.id] ?? item.finalQuantity);
+                const diff = quantity - item.aiQuantity;
+                const changed = diff !== 0;
+                return <tr key={item.id}><td><strong>{item.obat?.nama ?? item.obatId}</strong><small>{medicineUnit(item.obat?.satuan)}</small></td><td>{item.aiQuantity}</td><td><input className={changed ? styles.changedQty : undefined} inputMode="numeric" value={quantities[item.id] ?? ''} onChange={(event) => updateQuantity(item.id, event.target.value)} /></td><td className={changed ? styles.differenceDanger : styles.differenceNeutral}>{changed ? diff : '-'}</td><td><button aria-label={`Reset ${item.obat?.nama ?? item.obatId}`} type="button" onClick={() => resetItem(item.id, item.aiQuantity)}><AppIcon name="trash" width={16} height={16} /></button></td></tr>;
+              })}</tbody>
+            </table>
+          </div>
+        </section>
+        {firstChanged ? <section className={styles.aiBox}><h3><AppIcon name="archive" width={16} height={16} />AI Analysis</h3><p>{firstChangedDiff < 0 ? 'Reducing' : 'Increasing'} {firstChanged.item.obat?.nama ?? firstChanged.item.obatId}: {firstChanged.item.aiQuantity} to {firstChanged.quantity} {firstChanged.item.obat?.satuan ?? 'unit'}</p><div><strong>Coverage <b>{Math.max(1, Math.round(firstChanged.item.aiQuantity / 5))} days to {Math.max(1, Math.round(firstChanged.quantity / 5))} days</b></strong><span>{firstChangedDiff < 0 ? 'Stockout risk increased sharply' : 'Coverage buffer increased'}</span></div></section> : null}
+        <section>
+          <h3>Reason for Change <b>Required</b></h3>
+          <textarea value={reason} placeholder="e.g., reserve stock already sent directly to the clinic" onChange={(event) => setReason(event.target.value)} />
+          {(error || (requiresReason && !reason.trim())) ? <small className={styles.errorText}>{error ?? 'Reason must be filled before saving'}</small> : null}
+        </section>
+      </div>
+      <div className={styles.editModalFooter}><button type="button" onClick={onClose}><AppIcon name="arrowLeft" width={16} height={16} />Back to AI Recommendations</button><span><button type="button" onClick={onClose}>Cancel</button><button type="button" disabled={isSaving} onClick={() => void save()}><AppIcon name="save" width={16} height={16} />{isSaving ? 'Saving...' : 'Save Changes'}</button></span></div>
+    </ModalShell>
+  );
 }
 
 function trackingOptions(row: DistributionRecommendation): TrackingStatus[] {
@@ -325,7 +521,7 @@ function TrackModal({ onClose, onSaved, row }: { onClose: () => void; onSaved: (
     }
   }
 
-  return <ModalShell onClose={onClose} size="track"><div className={styles.trackHeader}><div><h2>Track Shipment</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span><AppIcon name="truck" width={14} height={14} />{row.status}</span></div><div className={styles.trackBody}><section><h3><AppIcon name="clock" width={15} height={15} />Travel History</h3><div className={styles.historyTimeline}>{events.length === 0 ? <article><b>No tracking events</b><small>-</small><span>Tambahkan status pengiriman pertama.</span></article> : null}{events.map((event) => <article key={event.id}><b>{event.status}</b><small>{new Date(event.createdAt).toLocaleString('id-ID')}</small><span>{event.note ?? '-'}</span></article>)}</div></section><section><h3>Update Status</h3>{options.length ? <><select value={status} onChange={(event) => setStatus(event.target.value as TrackingStatus)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><textarea value={note} placeholder="Catatan tracking" onChange={(event) => setNote(event.target.value)} /></> : <p>Status pengiriman tidak bisa diperbarui dari tahap ini.</p>}{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.trackFooter}><span><button type="button" onClick={onClose}>Close</button><button type="button" disabled={!options.length} onClick={() => void saveEvent()}>Save Status</button></span></div></ModalShell>;
+  return <ModalShell onClose={onClose} size="track"><div className={styles.trackHeader}><div><h2>Track Shipment</h2><p>{row.puskesmas?.nama ?? row.puskesmasId} • {row.id}</p></div><span><AppIcon name="truck" width={14} height={14} />{row.status}</span></div><div className={styles.trackBody}><section><h3><AppIcon name="clock" width={15} height={15} />Travel History</h3><div className={styles.historyTimeline}>{events.length === 0 ? <article><b>No tracking events</b><small>-</small><span>Tambahkan status pengiriman pertama.</span></article> : null}{events.map((event) => <article key={event.id}><b>{event.status}</b><small>{new Date(event.createdAt).toLocaleString('id-ID')}</small><span>{event.note ?? '-'}</span></article>)}</div></section><section><h3>Update Status</h3>{options.length ? <><select value={status} onChange={(event) => setStatus(event.target.value as TrackingStatus)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select><textarea value={note} placeholder="Catatan tracking" onChange={(event) => setNote(event.target.value)} /></> : <p>Status pengiriman tidak bisa diperbarui dari tahap ini.</p>}{error ? <small className={styles.errorText}>{error}</small> : null}</section></div><div className={styles.trackFooter}><span><button type="button" onClick={onClose}>Close</button><button className={styles.modalPrimaryAction} type="button" disabled={!options.length} onClick={() => void saveEvent()}>Save Status</button></span></div></ModalShell>;
 }
 
 function FilterModal({ onApply, onClose, statusFilter }: { onApply: (status: RecommendationStatus | 'ALL') => void; onClose: () => void; statusFilter: RecommendationStatus | 'ALL' }) {
@@ -336,7 +532,11 @@ function FilterModal({ onApply, onClose, statusFilter }: { onApply: (status: Rec
 function ConfirmModal({ kind, onClose, onConfirm, row }: { kind: 'approve' | 'reject'; onClose: () => void; onConfirm: (note?: string) => void; row: DistributionRecommendation }) {
   const [note, setNote] = useState('Rejected by IFK review.');
   const approve = kind === 'approve';
-  return <ModalShell onClose={onClose} size="confirm"><div className={styles.confirmBox}><span className={approve ? styles.confirmIcon : styles.rejectIcon}>{approve ? <AppIcon name="checkCircle" width={24} height={24} /> : <AppIcon name="x" width={24} height={24} />}</span><h2>{approve ? 'Approve Recommendation' : 'Reject Shipment'}</h2><p>You are about to {approve ? 'approve' : 'reject'} recommendation <b>{row.id} for {row.puskesmas?.nama ?? row.puskesmasId}.</b></p>{approve ? null : <textarea value={note} onChange={(event) => setNote(event.target.value)} />}<footer><button type="button" onClick={onClose}>Cancel</button><button type="button" onClick={() => onConfirm(approve ? undefined : note)}>{approve ? 'Approve' : 'Reject'}</button></footer></div></ModalShell>;
+  return <ModalShell onClose={onClose} size="confirm"><div className={styles.confirmBox}><span className={approve ? styles.confirmIcon : styles.rejectIcon}>{approve ? <AppIcon name="checkCircle" width={24} height={24} /> : <AppIcon name="x" width={24} height={24} />}</span><h2>{approve ? 'Approve Recommendation' : 'Reject Shipment'}</h2><p>You are about to {approve ? 'approve' : 'reject'} recommendation <b>{row.id} for {row.puskesmas?.nama ?? row.puskesmasId}.</b></p>{approve ? null : <textarea value={note} onChange={(event) => setNote(event.target.value)} />}<footer><button type="button" onClick={onClose}>Cancel</button><button className={approve ? styles.modalPrimaryAction : styles.modalDangerAction} type="button" onClick={() => onConfirm(approve ? undefined : note)}>{approve ? 'Approve' : 'Reject'}</button></footer></div></ModalShell>;
+}
+
+function DeleteModal({ onClose, onConfirm, row }: { onClose: () => void; onConfirm: () => void; row: DistributionRecommendation }) {
+  return <ModalShell onClose={onClose} size="confirm"><div className={styles.confirmBox}><span className={styles.rejectIcon}><AppIcon name="trash" width={24} height={24} /></span><h2>Delete Recommendation</h2><p>This will permanently delete recommendation <b>{row.id} for {row.puskesmas?.nama ?? row.puskesmasId}.</b></p><footer><button type="button" onClick={onClose}>Cancel</button><button className={styles.modalDangerAction} type="button" onClick={onConfirm}>Delete</button></footer></div></ModalShell>;
 }
 
 function ModalShell({ children, onClose, size }: { children: ReactNode; onClose: () => void; size: 'edit' | 'track' | 'filter' | 'confirm' }) {

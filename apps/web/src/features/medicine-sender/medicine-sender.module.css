@@ -3390,6 +3390,9 @@
 }
 
 .recoTitleRow a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid #005bbf;
   border-radius: 8px;
   color: #005bbf;
@@ -3666,6 +3669,7 @@
 .approveButton { background: #ecfdf5 !important; color: #16a34a !important; }
 .rejectButton { background: #fef2f2 !important; color: #dc2626 !important; }
 .trackButton { color: #2563eb !important; }
+.recoActions button:last-child { color: #dc2626; }
 
 .recoPagination {
   justify-content: space-between;
@@ -3863,6 +3867,12 @@
   place-items: center;
   border-radius: 8px;
   background: rgb(255 255 255 / 0.2);
+}
+
+.approveAllButton:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .recoOverlay {
@@ -4801,5 +4811,521 @@
 
   .senderNotice {
     margin: 16px 20px 0;
+  }
+}
+
+/* IFK modal polish: keep every recommendation modal compact, scroll-safe, and consistent. */
+.recoOverlay {
+  align-items: start;
+  justify-items: center;
+  padding: 28px;
+  background: rgb(15 23 42 / 0.54);
+  backdrop-filter: blur(6px);
+}
+
+.recoModal {
+  width: min(100%, 620px);
+  max-height: calc(100dvh - 56px);
+  margin-block: auto;
+  overflow: hidden;
+  border: 1px solid rgb(226 232 240 / 0.88);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 0.28);
+}
+
+.recoModal.track { width: min(100%, 840px); }
+.recoModal.edit { width: min(100%, 640px); }
+.recoModal.filter { width: min(100%, 560px); }
+.recoModal.confirm { width: min(100%, 460px); }
+
+.modalClose {
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #64748b;
+}
+
+.modalClose:hover {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.editModalHeader,
+.trackHeader,
+.filterHeader {
+  display: flex;
+  align-items: flex-start;
+  min-height: 76px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  padding: 20px 68px 18px 24px;
+}
+
+.editModalHeader h2,
+.trackHeader h2,
+.filterHeader h2,
+.confirmBox h2 {
+  color: #0f172a;
+  font-size: 19px;
+  line-height: 25px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.editModalHeader p,
+.trackHeader p {
+  max-width: 560px;
+  overflow-wrap: anywhere;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.editModalHeader > span,
+.trackHeader span {
+  flex: 0 0 auto;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editModalBody,
+.filterBody {
+  gap: 18px;
+  padding: 22px 24px;
+}
+
+.editModalBody section,
+.trackBody section,
+.filterBody section {
+  min-width: 0;
+}
+
+.editModalBody h3,
+.trackBody h3,
+.trackBody h4,
+.filterBody h3 {
+  margin: 0 0 12px;
+  color: #334155;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+}
+
+.editModalBody label {
+  display: grid;
+  gap: 8px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.editModalBody label > span {
+  display: block;
+}
+
+.editModalBody input,
+.editModalBody textarea,
+.trackBody select,
+.trackBody textarea,
+.confirmBox textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 11px 12px;
+  font: inherit;
+  line-height: 20px;
+  outline: none;
+}
+
+.editModalBody input:focus,
+.editModalBody textarea:focus,
+.trackBody select:focus,
+.trackBody textarea:focus,
+.confirmBox textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.13);
+}
+
+.editModalBody textarea,
+.trackBody textarea,
+.confirmBox textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.trackBody {
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+  max-height: min(68dvh, 640px);
+  overflow: auto;
+}
+
+.trackBody section {
+  padding: 24px;
+}
+
+.trackBody section + section {
+  background: #fbfdff;
+}
+
+.trackBody select {
+  min-height: 44px;
+  margin-bottom: 12px;
+}
+
+.trackBody p {
+  margin: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #475569;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.historyTimeline {
+  gap: 18px;
+  padding-left: 22px;
+}
+
+.historyTimeline article {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px 14px;
+}
+
+.historyTimeline article::before {
+  left: -22px;
+}
+
+.historyTimeline b,
+.historyTimeline span {
+  overflow-wrap: anywhere;
+  color: #334155;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.historyTimeline small {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.editModalFooter,
+.trackFooter,
+.filterFooter {
+  align-items: center;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 16px 24px;
+}
+
+.editModalFooter span,
+.trackFooter span {
+  margin-left: auto;
+}
+
+.editModalFooter button,
+.trackFooter button,
+.filterFooter button,
+.confirmBox footer button {
+  min-height: 42px;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.modalPrimaryAction,
+.editModalFooter span button:last-child,
+.filterFooter button:last-child,
+.confirmBox footer .modalPrimaryAction {
+  border: 1px solid #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.modalDangerAction,
+.confirmBox footer .modalDangerAction {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.trackFooter span button:first-child,
+.editModalFooter > button,
+.filterFooter button:first-child,
+.confirmBox footer button:first-child {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.trackFooter button:disabled,
+.trackFooter button:disabled:hover {
+  border-color: #e2e8f0;
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.filterBody section > div {
+  gap: 10px;
+}
+
+.filterBody button {
+  border-radius: 10px;
+  padding-inline: 14px;
+}
+
+.filterBody .selected,
+.filterBody section:first-child .selected,
+.filterBody section:nth-child(2) .selected {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.confirmBox {
+  padding: 28px;
+}
+
+.confirmBox p {
+  margin: 10px 0 16px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.confirmBox p b {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.confirmBox footer {
+  grid-template-columns: 1fr 1fr;
+}
+
+.editScheduleGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.editScheduleGrid label:nth-child(3) {
+  grid-column: 1;
+}
+
+.editScheduleGrid small {
+  color: #64748b;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 15px;
+}
+
+.editMedicineScroll {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.editMedicineScroll .editMedicineTable {
+  border: 0;
+  min-width: 560px;
+}
+
+.editMedicineTable strong {
+  display: block;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.editMedicineTable td input {
+  width: 80px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.editMedicineTable td input.changedQty {
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+.editMedicineTable td .changedQty:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgb(239 68 68 / 0.12);
+}
+
+.editMedicineTable td .differenceDanger,
+.differenceDanger {
+  color: #dc2626 !important;
+  font-weight: 800;
+}
+
+.differenceNeutral {
+  color: #9ca3af !important;
+  font-weight: 700;
+}
+
+.editMedicineTable td button {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+}
+
+.editMedicineTable td button:hover {
+  background: #fef2f2;
+}
+
+.aiBox h3 {
+  display: flex;
+  align-items: center;
+}
+
+.aiBox strong b {
+  display: block;
+  margin-top: 4px;
+  color: #dc2626;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.editModalFooter > button {
+  border-color: #2563eb;
+  border-radius: 999px;
+  color: #2563eb;
+}
+
+.editModalFooter span button:last-child {
+  border-radius: 999px;
+  box-shadow: 0 10px 15px -3px #bfdbfe, 0 4px 6px -4px #bfdbfe;
+}
+
+.editModalFooter span button:last-child:disabled {
+  border-color: #93c5fd;
+  background: #93c5fd;
+  cursor: wait;
+}
+
+@media (max-width: 820px) {
+  .recoOverlay {
+    align-items: stretch;
+    padding: 14px;
+  }
+
+  .recoModal,
+  .recoModal.track,
+  .recoModal.edit,
+  .recoModal.filter,
+  .recoModal.confirm {
+    width: 100%;
+    max-height: calc(100dvh - 28px);
+    margin: 0;
+  }
+
+  .editModalHeader,
+  .trackHeader,
+  .filterHeader {
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 58px 14px 16px;
+  }
+
+  .editModalHeader > span,
+  .trackHeader span {
+    max-width: 100%;
+  }
+
+  .editModalBody,
+  .filterBody,
+  .trackBody section {
+    padding: 16px;
+  }
+
+  .trackBody {
+    display: block;
+    max-height: none;
+  }
+
+  .trackBody section:first-child {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .editModalFooter,
+  .trackFooter,
+  .filterFooter {
+    padding: 14px 16px;
+  }
+
+  .editModalFooter span,
+  .trackFooter span,
+  .filterFooter {
+    width: 100%;
+  }
+
+  .editModalFooter button,
+  .trackFooter button,
+  .filterFooter button,
+  .confirmBox footer button {
+    width: 100%;
+  }
+
+  .editScheduleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .editScheduleGrid label:nth-child(3) {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .editModalFooter span,
+  .trackFooter span,
+  .confirmBox footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .editMedicineScroll {
+    overflow: visible;
+  }
+
+  .editMedicineScroll .editMedicineTable {
+    min-width: 0;
+  }
+
+  .editMedicineTable td input {
+    width: min(100%, 120px);
+  }
+
+  .confirmBox {
+    padding: 22px;
   }
 }

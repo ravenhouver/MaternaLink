@@ -17,6 +17,7 @@ export const routes = {
   deliveries: '/deliveries',
   ifk: '/ifk',
   ifkRecommendations: '/ifk/recommendations',
+  ifkDecisionHistory: '/ifk/decision-history',
   ifkClinics: '/ifk/clinics',
   ifkEnvironment: '/ifk/environment',
 } as const;
