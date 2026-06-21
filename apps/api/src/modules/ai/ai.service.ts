@@ -135,7 +135,12 @@ export class AiService {
   }
 
   extractSymptoms(payload: AiExtractRequest): Promise<AiExtractResponse> {
-    return this.request('/api/v1/layer0/extract', { method: 'POST', body: JSON.stringify(payload) });
+    if (this.mode() !== 'remote') return Promise.resolve(this.fallbackExtractSymptoms(payload));
+
+    return this.request<AiExtractResponse>('/api/v1/layer0/extract', { method: 'POST', body: JSON.stringify(payload) }).catch((error) => {
+      this.logger.warn(`AI extraction unavailable, using local fallback: ${this.errorMessage(error)}`);
+      return this.fallbackExtractSymptoms(payload);
+    });
   }
 
   async forecastDemand(payload: AiForecastRequest): Promise<AiForecastResponse> {
@@ -191,6 +196,22 @@ export class AiService {
       buffer_units,
       total_requirement: forecast_demand + buffer_units,
       current_stock: payload.closing_stock,
+    };
+  }
+
+  private fallbackExtractSymptoms(payload: AiExtractRequest): AiExtractResponse {
+    return {
+      extraction_results: payload.records.map((record) => ({
+        record_id: record.record_id,
+        facility_id: record.facility_id,
+        period: payload.period,
+        extracted_symptoms: '[]',
+        min_confidence: 0,
+        hitl_flag: true,
+        validated_symptoms: '[]',
+        extraction_model: 'local-fallback',
+      })),
+      condition_estimates: [],
     };
   }
 
