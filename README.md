@@ -2,7 +2,7 @@
 
 # MaternaLink
 
-Full-stack maternal health supply-chain planning app for puskesmas medicine needs, forecast runs, LPLPO planning, and distribution risk simulation.
+Full-stack maternal health operations app for patient intake, ANC examination, medicine needs forecasting, LPLPO planning, IFK allocation, and distribution risk simulation.
 
 ![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
@@ -14,12 +14,13 @@ Full-stack maternal health supply-chain planning app for puskesmas medicine need
 
 ## Overview
 
-MaternaLink models a puskesmas medicine planning workflow from master data to prediction and delivery decisions. The repository contains:
+MaternaLink models an end-to-end puskesmas and IFK workflow from patient registration to AI-assisted medicine allocation. The repository contains:
 
 - NestJS REST API with Prisma and PostgreSQL.
-- Next.js dashboard for bidan and IFK workflows.
+- Next.js dashboard for bidan, IFK, and super admin workflows.
 - Docker Compose stack for local API, web, speech-to-text service, and database.
-- Demo seed data and e2e tests for presentation-ready flows.
+- Hosted AI integration with deterministic fallbacks for presentation-ready flows.
+- Demo seed data and e2e tests.
 
 Default local URLs:
 
@@ -32,25 +33,39 @@ Default local URLs:
 | Speech STT service | `http://localhost:8002` |
 | PostgreSQL | `localhost:55432` |
 
+Production ports used by `podman-compose.prod.yml`:
+
+| Service | Host port |
+|---|---:|
+| Web | `41873` |
+| API | `41874` |
+| Speech STT | `41875` |
+
 ## Demo Login
 
 Seeded users all use password `password123`.
 
 | Username | Role | Landing route |
 |---|---|---|
+| `admin` | `SUPER_ADMIN` | `/admin` |
 | `bidan` | `BIDAN_PUSKESMAS` | `/dashboard` |
 | `ifk` | `IFK_ADMIN` | `/ifk` |
 
 ## Features
 
 - Puskesmas, medicine, clinical condition, and symptom master data.
+- Session-cookie authentication with role-based dashboard routing.
+- Super admin screens for users, health centers, medicine list, and facility profiles.
+- Patient registration with dynamic fields, pregnancy profile, patient queue, and examination records.
 - Monthly diagnosis, symptom, context, stock, and anamnesis inputs.
 - Deterministic demand forecast per puskesmas and period.
 - Hosted AI demand forecast with local fallback when the remote service is unavailable.
+- Async hosted AI workflow jobs for forecast, LPLPO, and IFK recommendation generation.
 - Voice examination recording through browser microphone and local speech-to-text service.
 - Predictive LPLPO generation from forecast output.
-- Allocation plan simulation with route disruption and cold-chain alerts.
-- Responsive dashboard pages for overview, patients/master data, forecast calendar, medicine needs, and IFK flows.
+- IFK recommendation review with reorder, quantity edit, approve/reject, revision request, and shipment tracking.
+- Allocation plan simulation with weather, route disruption, and cold-chain alerts.
+- Responsive dashboard pages for overview, queue, patients, forecast calendar, medicine needs, delivery, IFK, and admin flows.
 
 ## Tech Stack
 
@@ -60,6 +75,7 @@ Seeded users all use password `password123`.
 | API | NestJS 10, TypeScript, Swagger |
 | Database | PostgreSQL 16, Prisma 5 |
 | Web | Next.js 15, React 18, Ant Design 5, Leaflet |
+| Auth | HMAC signed `maternalink_session` cookie, role guard middleware |
 | Test | Jest, Supertest |
 | Local runtime | Docker Compose, Python speech STT container |
 | Production runtime | GitHub Actions, GHCR images, Podman Compose |
@@ -71,8 +87,11 @@ Seeded users all use password `password123`.
 +-- apps
 |   +-- api          # NestJS API, Prisma schema, migrations, seed, e2e test
 |   +-- web          # Next.js dashboard and UI assets
++-- services
+|   +-- speech-stt   # Python/FastAPI speech-to-text service
 +-- docker-compose.yml
 +-- Dockerfile       # API Docker build
++-- podman-compose.prod.yml
 +-- package.json     # Root pnpm scripts
 +-- pnpm-workspace.yaml
 ```
@@ -133,6 +152,8 @@ copy apps\api\.env.example apps\api\.env
 copy apps\web\.env.example apps\web\.env
 ```
 
+The API also reads a root `.env` for shared deployment values such as `JWT_SECRET`, `WEB_ORIGIN`, and AI/STT URLs. Values in the process environment take precedence over file values.
+
 Start PostgreSQL only:
 
 ```bash
@@ -169,6 +190,7 @@ File: `apps/api/.env`
 | Variable | Required | Default/example | Description |
 |---|:---:|---|---|
 | `DATABASE_URL` | Yes | `postgresql://maternalink:maternalink@localhost:55432/maternalink?schema=public` | Prisma PostgreSQL connection string. |
+| `JWT_SECRET` | Recommended | development fallback | Secret used to sign the `maternalink_session` cookie. Set this in production. |
 | `PORT` | No | `3001` | NestJS HTTP port. |
 | `RUN_SEED` | No | `true` | Docker entrypoint runs seed data when set to `true`. |
 | `WEB_ORIGIN` | No | `http://localhost:3000` | CORS origin allowed to send credentialed auth requests. |
@@ -178,6 +200,8 @@ File: `apps/api/.env`
 | `AI_LAYER2_TIMEOUT_MS` | No | `600000` | Timeout for long Layer 2 allocation calls. |
 | `AI_MASTER_AUTO_SYNC` | No | `true` | Enables automatic hosted AI master-data sync on API startup and schedule. Set to `false` to disable. |
 | `AI_MASTER_SYNC_INTERVAL_MS` | No | `86400000` | Interval for automatic hosted AI master-data sync. |
+| `OPEN_METEO_FORECAST_URL` | No | `https://api.open-meteo.com/v1/forecast` | Weather forecast endpoint for distribution route risk simulation. |
+| `OPEN_METEO_TIMEOUT_MS` | No | `7000` | Timeout for Open-Meteo calls. |
 | `SPEECH_STT_SERVICE_URL` | No | `http://localhost:8002` | Python speech-to-text service used for voice examination recording. |
 | `SPEECH_STT_TIMEOUT_MS` | No | `120000` | Timeout for speech-to-text transcription calls. |
 | `SESSION_COOKIE_SECURE` | No | `false` | Set to `true` only when serving the app through HTTPS. |
@@ -188,7 +212,11 @@ File: `apps/web/.env`
 
 | Variable | Required | Default/example | Description |
 |---|:---:|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | No | `http://localhost:3001/api` | API base URL used by the dashboard. |
+| `NEXT_PUBLIC_API_BASE_URL` | No | `http://localhost:3001/api` locally, `/api` in production | Browser-facing API base URL used by the dashboard. |
+| `API_INTERNAL_BASE_URL` | No | `http://localhost:3001/api` locally, `http://api:3001/api` in containers | Server-side Next.js rewrite target for `/api/:path*`. |
+| `JWT_SECRET` | Recommended | development fallback | Must match API `JWT_SECRET` so middleware can verify the session cookie. |
+
+In production, `NEXT_PUBLIC_API_BASE_URL=/api` lets the web container proxy API calls through the Next.js rewrite to `API_INTERNAL_BASE_URL`. This avoids exposing the internal API hostname to the browser.
 
 Do not commit real production credentials or secrets.
 
@@ -214,6 +242,11 @@ Do not commit real production credentials or secrets.
 | Route | Purpose |
 |---|---|
 | `/login` | Username/password login. |
+| `/admin` | Super admin dashboard. |
+| `/admin/users` | User account management. |
+| `/admin/health-centers` | Puskesmas/health-center master data. |
+| `/admin/medicines` | Medicine master data. |
+| `/admin/facility-profiles` | Facility profile and readiness data. |
 | `/dashboard` | Main dashboard overview. |
 | `/patients` | Patient list. |
 | `/patients/new` | Add patient method selection. |
@@ -229,7 +262,7 @@ Do not commit real production credentials or secrets.
 | `/ifk/environment` | Environment/risk context view. |
 | `/ifk/decision-history` | Decision history view. |
 
-Role entry routes are `/dashboard` for bidan and `/ifk` for IFK.
+Role entry routes are `/admin` for super admin, `/dashboard` for bidan, and `/ifk` for IFK.
 
 ## Hosted AI Integration
 
@@ -248,7 +281,7 @@ Voice examination recording is handled by a separate local Python service at `se
 
 Browser microphone access only works on secure origins: `https://...` or `localhost`. If the deployed app is opened through plain `http://IP:port`, browsers will block `getUserMedia`; use HTTPS/domain for production voice recording.
 
-Layer 2 may take several minutes, so `/api/workflow/demo/run` starts an async backend job and `/api/workflow/demo/state` is used for polling.
+Layer 2 may take several minutes, so `/api/workflow/demo/run` and `/api/workflow/ai/run` start async backend jobs. Poll `/api/workflow/demo/state` or `/api/workflow/ai/state` for progress and final recommendation output.
 
 ## Production Deploy
 
@@ -262,6 +295,16 @@ The workflow:
 4. Pulls the exact commit-tagged images.
 5. Starts `podman-compose.prod.yml` with API on `41874`, web on `41873`, and speech STT on `41875`.
 
+Current production setup expects a reverse proxy, such as Caddy, to terminate HTTP/HTTPS and forward:
+
+| Public path | Upstream |
+|---|---|
+| `/` | web `127.0.0.1:41873` |
+| `/api/*` | API `127.0.0.1:41874` |
+| `/docs` or `/api/docs` | API Swagger docs |
+
+Production requires `POSTGRES_PASSWORD`, `DATABASE_URL`, and `JWT_SECRET`. Keep `WEB_ORIGIN` aligned with the public web origin and set `SESSION_COOKIE_SECURE=true` only when users access the app through HTTPS.
+
 The web Docker image must include `apps/web/public`; static UI assets under `/figma-*` are served from there in production.
 
 ## API Modules
@@ -273,11 +316,46 @@ All endpoints use the `/api` global prefix.
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/master/puskesmas` | List puskesmas master data. |
+| `POST` | `/api/master/ai/sync` | Sync master data from hosted AI service. |
+| `GET` | `/api/master/ai/sync/status` | Get latest hosted AI master-data sync state. |
 | `POST` | `/api/master/puskesmas` | Create puskesmas master data. |
+| `PATCH` | `/api/master/puskesmas/:id` | Update puskesmas master data. |
+| `DELETE` | `/api/master/puskesmas/:id` | Delete puskesmas master data. |
 | `GET` | `/api/master/obat` | List medicine master data. |
 | `POST` | `/api/master/obat` | Create medicine master data. |
+| `PATCH` | `/api/master/obat/:id` | Update medicine master data. |
+| `DELETE` | `/api/master/obat/:id` | Delete medicine master data. |
 | `GET` | `/api/master/kondisi` | List clinical conditions. |
 | `GET` | `/api/master/gejala` | List maternal symptoms. |
+
+### Auth, Patients, Queue, Examinations
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Login and set `maternalink_session` cookie. |
+| `POST` | `/api/auth/logout` | Clear session cookie. |
+| `GET` | `/api/auth/me` | Return current authenticated user. |
+| `GET` | `/api/auth/users` | List user accounts. |
+| `POST` | `/api/auth/users` | Create user account. |
+| `PATCH` | `/api/auth/users/:id` | Update user account. |
+| `DELETE` | `/api/auth/users/:id` | Delete or deactivate user account. |
+| `POST` | `/api/patients` | Create patient and pregnancy profile. |
+| `GET` | `/api/patients` | List patients. |
+| `GET` | `/api/patients/:id` | Get patient detail. |
+| `PATCH` | `/api/patients/:id` | Update patient. |
+| `DELETE` | `/api/patients/:id` | Delete patient. |
+| `POST` | `/api/queue` | Add patient to queue. |
+| `GET` | `/api/queue/today` | List today's queue. |
+| `GET` | `/api/queue` | List queue entries. |
+| `PATCH` | `/api/queue/:id/status` | Update queue status. |
+| `DELETE` | `/api/queue/:id` | Remove queue entry. |
+| `POST` | `/api/examinations` | Create examination. |
+| `POST` | `/api/examinations/ai/draft` | Generate draft examination fields from text/transcript. |
+| `GET` | `/api/examinations` | List examinations. |
+| `GET` | `/api/examinations/:id` | Get examination detail. |
+| `PATCH` | `/api/examinations/:id` | Update examination. |
+| `DELETE` | `/api/examinations/:id` | Delete examination. |
+| `POST` | `/api/speech/transcribe` | Transcribe uploaded audio through the speech STT service. |
 
 ### Inputs
 
@@ -294,13 +372,37 @@ All endpoints use the `/api` global prefix.
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/forecast/run` | Run deterministic stock forecast. |
+| `POST` | `/api/forecast/ai/run` | Run hosted AI forecast for current user scope with fallback behavior. |
+| `GET` | `/api/forecast/calendar` | Get forecast calendar state for dashboard workflow. |
 | `GET` | `/api/forecast/runs` | List forecast runs. |
 | `GET` | `/api/forecast/runs/:id/results` | Get forecast result rows. |
+| `POST` | `/api/workflow/demo/run` | Start default hosted AI demo workflow. |
+| `GET` | `/api/workflow/demo/state` | Poll default hosted AI demo workflow state. |
+| `POST` | `/api/workflow/ai/run` | Start hosted AI workflow for selected puskesmas and period. |
+| `GET` | `/api/workflow/ai/state` | Poll selected hosted AI workflow state. |
 | `POST` | `/api/lplpo/generate` | Generate predictive LPLPO rows from latest forecast. |
 | `GET` | `/api/lplpo` | List LPLPO rows, optionally filtered by `puskesmasId` and `periode`. |
+| `GET` | `/api/distribution/ifk/dashboard` | IFK dashboard summary. |
+| `GET` | `/api/distribution/ifk/facilities` | IFK facility delivery context. |
+| `GET` | `/api/distribution/ifk/environment` | IFK environment and route-risk context. |
+| `GET` | `/api/distribution/ifk/decision-history` | IFK approval/rejection history. |
+| `GET` | `/api/distribution/recommendations` | List IFK allocation recommendations. |
+| `GET` | `/api/distribution/recommendations/:id` | Get recommendation detail. |
+| `POST` | `/api/distribution/requests` | Submit medicine request. |
+| `POST` | `/api/distribution/ifk/ai-allocation` | Generate AI allocation recommendation. |
+| `PATCH` | `/api/distribution/recommendations/reorder` | Reorder recommendation priority. |
+| `PATCH` | `/api/distribution/recommendations/:id/items/:itemId` | Edit recommendation item quantity/reason. |
+| `PATCH` | `/api/distribution/recommendations/:id/approve` | Approve recommendation. |
+| `PATCH` | `/api/distribution/recommendations/:id/reject` | Reject recommendation. |
+| `POST` | `/api/distribution/recommendations/:id/rerequest` | Request revision for a recommendation. |
+| `GET` | `/api/distribution/recommendations/:id/tracking` | List shipment tracking events. |
+| `POST` | `/api/distribution/recommendations/:id/tracking/events` | Add shipment tracking event. |
 | `GET` | `/api/distribution/alerts` | List distribution alerts. |
 | `POST` | `/api/distribution/plans` | Create allocation plan. |
+| `GET` | `/api/distribution/plans` | List allocation plans. |
 | `GET` | `/api/distribution/plans/:id` | Get allocation plan. |
+| `PATCH` | `/api/distribution/plans/:id` | Update allocation plan. |
+| `DELETE` | `/api/distribution/plans/:id` | Delete allocation plan. |
 | `POST` | `/api/distribution/plans/:id/simulate` | Simulate route and cold-chain risk. |
 
 ## Architecture
@@ -310,22 +412,27 @@ All endpoints use the `/api` global prefix.
 ```mermaid
 flowchart LR
   A["Master puskesmas, medicine, condition, symptom data"] --> B["Monthly clinical, context, and stock inputs"]
-  B --> C["Deterministic forecast"]
+  B --> C["Deterministic or hosted AI forecast"]
   C --> D["Medicine demand prediction"]
   D --> E["Predictive LPLPO"]
-  E --> F["Allocation plan"]
-  F --> G["Distribution simulation"]
-  G --> H["Route and cold-chain alerts"]
+  E --> F["IFK allocation recommendation"]
+  F --> G["Approve, reject, or request revision"]
+  G --> H["Shipment tracking and route risk alerts"]
 ```
 
 ### API Runtime
 
 ```mermaid
 flowchart LR
-  A["Client / Swagger"] -->|"/api/*"| B["NestJS Controller"]
-  B --> C["Service layer"]
-  C --> D["Prisma Client"]
-  D --> E[("PostgreSQL")]
+  A["Browser"] --> B["Next.js app"]
+  B -->|"/api/* rewrite in production"| C["NestJS Controller"]
+  D["Swagger / direct API client"] --> C
+  C --> E["Service layer"]
+  E --> F["Prisma Client"]
+  F --> G[("PostgreSQL")]
+  E --> H["Hosted MaternaLink AI"]
+  E --> I["Speech STT service"]
+  E --> J["Open-Meteo forecast API"]
 ```
 
 ### ERD Diagram
@@ -341,6 +448,11 @@ erDiagram
   PUSKESMAS ||--o{ LPLPO_PREDIKTIF : requests
   PUSKESMAS ||--o{ ALLOCATION_PLAN : receives
   PUSKESMAS ||--o{ ALERT : triggers
+  PUSKESMAS ||--o{ USER_ACCOUNT : owns
+  PUSKESMAS ||--o{ PATIENT : registers
+  PATIENT ||--o{ PREGNANCY : has
+  PATIENT ||--o{ PATIENT_QUEUE : queues
+  PATIENT ||--o{ EXAMINATION : examines
   OBAT ||--o{ KONDISI_OBAT : treats
   KONDISI ||--o{ KONDISI_OBAT : requires
   GEJALA ||--o{ GEJALA_KONDISI : indicates
@@ -356,6 +468,8 @@ erDiagram
   OBAT ||--o{ LOG_REKONSILIASI : evaluated
   ALLOCATION_PLAN ||--o{ ALLOCATION_PLAN_ITEM : contains
   OBAT ||--o{ ALLOCATION_PLAN_ITEM : allocates
+  DISTRIBUTION_RECOMMENDATION ||--o{ DISTRIBUTION_RECOMMENDATION_ITEM : contains
+  DISTRIBUTION_RECOMMENDATION ||--o{ SHIPMENT_TRACKING_EVENT : tracks
 ```
 
 ### Prisma Schema Overview
@@ -468,6 +582,63 @@ classDiagram
     AlertSeverity severity
     Boolean resolved
   }
+  class User {
+    String id
+    String username
+    UserRole role
+    Boolean active
+  }
+  class AiWorkflowJob {
+    String id
+    AiWorkflowKind kind
+    AiWorkflowStatus status
+    String puskesmasId
+    DateTime periode
+  }
+  class Patient {
+    String id
+    String nik
+    String fullName
+    DateTime? dateOfBirth
+  }
+  class Pregnancy {
+    String id
+    String patientId
+    Int? gestationalAge
+    PregnancyRiskLevel riskLevel
+  }
+  class PatientQueue {
+    String id
+    String patientId
+    QueueStatus status
+    DateTime queuedAt
+  }
+  class Examination {
+    String id
+    String patientId
+    ExaminationSource source
+    Json? diagnosis
+    Json? symptoms
+    Json? medication
+  }
+  class DistributionRecommendation {
+    String id
+    RecommendationStatus status
+    RecommendationSource source
+    RecommendationUrgency urgency
+  }
+  class DistributionRecommendationItem {
+    String id
+    String recommendationId
+    String obatId
+    Int aiQuantity
+    Int finalQuantity
+  }
+  class ShipmentTrackingEvent {
+    String id
+    String recommendationId
+    TrackingStatus status
+  }
 
   Puskesmas "1" --> "many" DiagnosisPeriode
   Puskesmas "1" --> "many" GejalaPeriode
@@ -478,27 +649,35 @@ classDiagram
   Puskesmas "1" --> "many" LplpoPrediktif
   Puskesmas "1" --> "many" AllocationPlan
   Puskesmas "1" --> "many" Alert
+  Puskesmas "1" --> "many" User
+  Puskesmas "1" --> "many" Patient
+  Patient "1" --> "many" Pregnancy
+  Patient "1" --> "many" PatientQueue
+  Patient "1" --> "many" Examination
   Obat "1" --> "many" StokPuskesmas
   ForecastRun "1" --> "many" PrediksiStok
   PrediksiStok "1" --> "1" LplpoPrediktif
   AllocationPlan "1" --> "many" AllocationPlanItem
+  DistributionRecommendation "1" --> "many" DistributionRecommendationItem
+  DistributionRecommendation "1" --> "many" ShipmentTrackingEvent
 ```
 
 ## Demo Flow
 
 Recommended demo order:
 
-1. Login as `bidan/password123`.
-2. Open `/patients/new/manual`.
-3. Register patient and confirm patient enters `/queue`.
-4. Call patient, open `/queue/examination`, and save examination.
-5. Open `/forecast-calendar` and run workflow.
-6. Open `/medicine-needs` and verify LPLPO rows.
-7. Logout or open a fresh session, then login as `ifk/password123`.
-8. Open `/ifk/recommendations`.
-9. Drag a recommendation row or use move buttons; order persists through the API.
-10. Edit quantity with reason, then approve or reject.
-11. Open `/ifk/decision-history` to inspect final decisions.
+1. Login as `admin/password123` and verify users, health centers, medicine, and facility profiles under `/admin`.
+2. Logout, then login as `bidan/password123`.
+3. Open `/patients/new/manual`.
+4. Register patient and confirm patient enters `/queue`.
+5. Call patient, open `/queue/examination`, and save examination.
+6. Open `/forecast-calendar` and run the AI workflow.
+7. Open `/medicine-needs` and verify LPLPO rows.
+8. Logout or open a fresh session, then login as `ifk/password123`.
+9. Open `/ifk/recommendations`.
+10. Drag a recommendation row or use move buttons; order persists through the API.
+11. Edit quantity with reason, then approve, reject, or request revision.
+12. Add tracking events and open `/ifk/decision-history` to inspect final decisions.
 
 ## Testing
 
