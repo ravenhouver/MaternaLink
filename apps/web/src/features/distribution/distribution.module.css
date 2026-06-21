@@ -519,6 +519,45 @@
   background: #eceef3;
 }
 
+.emptyMapState {
+  display: flex;
+  min-height: 248px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 28px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  text-align: center;
+}
+
+.emptyMapState span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 9999px;
+  background: #e8f0fe;
+  color: #005bbf;
+}
+
+.emptyMapState strong {
+  color: #191c20;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.emptyMapState p {
+  max-width: 360px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .mapLoading {
   display: flex;
   align-items: center;

@@ -1,16 +1,10 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { PageContainer } from '@/components/layout/page-container';
 import { getRecommendations, rerequestRecommendation, type DistributionRecommendation, type RecommendationStatus, type TrackingEvent, type TrackingStatus } from '@/lib/api';
 import styles from './distribution.module.css';
-
-const DistributionMap = dynamic(() => import('./distribution-map').then((module) => module.DistributionMap), {
-  ssr: false,
-  loading: () => <div className={styles.mapLoading}>Loading shipping map...</div>,
-});
 
 type ShipmentStatus = 'transit' | 'awaiting' | 'delivered' | 'rejected';
 
@@ -190,15 +184,6 @@ export function DistributionPageContent() {
       completionRate,
       totalItems,
       averageDuration: durationText(averageDeliveryDuration(allShipments)),
-      mapLocations: allShipments
-        .filter((shipment) => shipment.source.status === 'DISPATCHED' && shipment.source.puskesmas?.latitude != null && shipment.source.puskesmas?.longitude != null)
-        .map((shipment) => ({
-          id: shipment.id,
-          name: shipment.source.puskesmas?.nama ?? shipment.id,
-          status: shipment.statusLabel,
-          latitude: shipment.source.puskesmas?.latitude ?? 0,
-          longitude: shipment.source.puskesmas?.longitude ?? 0,
-        })),
     };
   }, [recommendations]);
 
@@ -264,14 +249,14 @@ export function DistributionPageContent() {
       </section>
 
       <section className={styles.visualGrid} aria-label="Shipping analytics">
-        {analytics.mapLocations.length ? (
-          <article className={styles.mapCard}>
-            <h2>Active Shipping Locations</h2>
-            <div className={styles.mapShell}>
-              <DistributionMap locations={analytics.mapLocations} />
-            </div>
-          </article>
-        ) : null}
+        <article className={styles.mapCard}>
+          <h2>Active Shipping Locations</h2>
+          <div className={styles.emptyMapState}>
+            <span><AppIcon name="truck" width={24} height={24} /></span>
+            <strong>Tidak ada pengiriman aktif saat ini.</strong>
+            <p>Lokasi pengiriman akan tampil ketika IFK sudah mengirim paket obat ke puskesmas.</p>
+          </div>
+        </article>
 
         <article className={styles.performanceCard}>
           <div>
