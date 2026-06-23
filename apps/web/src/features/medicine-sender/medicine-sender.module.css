@@ -230,12 +230,18 @@
   line-height: 18px;
 }
 
-.topbarProfile img {
+.topbarAvatar {
+  display: grid;
   width: 40px;
   height: 40px;
   border: 2px solid #d8e2ff;
   border-radius: 999px;
-  object-fit: cover;
+  background: linear-gradient(135deg, #dbeafe, #dcfce7);
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  place-items: center;
 }
 
 .page {

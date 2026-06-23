@@ -111,21 +111,23 @@
 }
 
 .patientPhoto {
-  display: block;
+  display: grid;
   width: 56px;
   height: 56px;
   flex: 0 0 56px;
   overflow: hidden;
   border: 1px solid #c1c6d6;
   border-radius: 9999px;
-  background: #ffffff;
+  background: linear-gradient(135deg, #dbeafe, #ecfdf5);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  place-items: center;
 }
 
-.patientPhoto img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.patientInitial {
+  color: #1d4ed8;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .patientInfo h2 {

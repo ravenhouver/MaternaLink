@@ -2,18 +2,24 @@ import 'antd/dist/reset.css';
 import 'leaflet/dist/leaflet.css';
 import './globals.css';
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { cookies, headers } from 'next/headers';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { DomLocalizer } from '@/components/dom-localizer';
+import { ServiceWorkerRegister } from '@/components/service-worker-register';
 import { defaultLocale, isAppLocale, localeCookieName, type AppLocale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
 
 export const metadata: Metadata = {
   title: 'MaternaLink Dashboard',
   description: 'Dashboard shell for MaternaLink supply-chain planning.',
+  manifest: '/manifest.webmanifest',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#1a73e8',
 };
 
 type RootLayoutProps = {
@@ -36,6 +42,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       <body>
         <NextIntlClientProvider locale={locale} messages={getMessages(locale)}>
           <DomLocalizer />
+          <ServiceWorkerRegister />
           <AppShell>{children}</AppShell>
         </NextIntlClientProvider>
       </body>

@@ -34,6 +34,11 @@ const statusLabel: Record<RouteRow['status'], string> = {
   elevated: 'Elevated',
 };
 
+function userInitials(user: CurrentUser | null) {
+  const name = user?.displayName?.trim() || user?.username || 'IFK Operations';
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+}
+
 function RoleSidebar({ user }: { user: CurrentUser | null }) {
   return (
     <aside className={styles.sidebar} aria-label="Medicine sender navigation">
@@ -81,7 +86,7 @@ function Topbar({ user }: { user: CurrentUser | null }) {
             <strong>{user?.displayName ?? user?.username ?? 'IFK Operations'}</strong>
             <small>{user?.role ?? 'IFK_ADMIN'}</small>
           </div>
-          <img src="/figma-dashboard/profil-bidan.png" alt="Pharmacy administrator" />
+          <span className={styles.topbarAvatar} aria-hidden="true">{userInitials(user)}</span>
         </div>
       </div>
     </header>

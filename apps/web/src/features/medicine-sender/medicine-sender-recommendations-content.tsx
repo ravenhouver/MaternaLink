@@ -340,12 +340,13 @@ function RecommendationTable({ isLoading, locale, onDragStart, onDrop, onOpen, o
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const dragHint = locale === 'id' ? 'Seret baris untuk mengubah urutan prioritas pengiriman' : 'Drag rows to reorder delivery priority';
 
   useEffect(() => { if (page > totalPages) onPageChange(totalPages); }, [onPageChange, page, totalPages]);
 
   return (
     <section className={styles.recoTablePanel}>
-      <div className={styles.recoDragHint}><AppIcon name="gripVertical" width={14} height={14} />Seret baris untuk mengubah urutan prioritas pengiriman</div>
+      <div className={styles.recoDragHint}><AppIcon name="gripVertical" width={14} height={14} />{dragHint}</div>
       <div className={styles.recoTableWrap}>
         <table className={styles.recoTable}>
           <thead><tr><th /><th>#</th><th>Nama Klinik</th><th>Obat Dikirim</th><th>Dispatch</th><th>Urgency</th><th>Status</th><th>Aksi</th></tr></thead>

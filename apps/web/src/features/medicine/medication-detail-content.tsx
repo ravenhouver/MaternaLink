@@ -30,6 +30,23 @@ function formatPeriod(value: string) {
   return new Date(value).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
 }
 
+function medicineCategoryLabel(category: string | null | undefined, t: ReturnType<typeof useTranslations>) {
+  if (category === 'OBAT') return t('medicineCategoryMedicine');
+  if (category === 'VAKSIN') return t('medicineCategoryVaccine');
+  if (category === 'ALAT_KESEHATAN') return t('medicineCategoryDevice');
+  return category ?? '-';
+}
+
+function medicineTypeLabel(type: string | null | undefined, t: ReturnType<typeof useTranslations>) {
+  if (type === 'TABLET') return t('tablet');
+  if (type === 'SIRUP') return t('syrup');
+  if (type === 'INJEKSI') return t('injection');
+  if (type === 'KAPSUL') return t('capsule');
+  if (type === 'CAIRAN') return t('liquid');
+  if (type === 'LAINNYA') return t('other');
+  return type ?? '-';
+}
+
 function getChartRows(rows: StokRow[], mode: ChartMode) {
   const sorted = [...rows].sort((left, right) => getPeriodTime(left) - getPeriodTime(right));
   if (mode === 'recent6') return sorted.slice(-6);
@@ -179,9 +196,9 @@ export function MedicationDetailContent() {
             <header><h2>{t('generalInformation')}</h2><AppIcon name="info" width={18} height={18} /></header>
             <dl className={styles.infoGrid}>
               <div><dt>{t('medicationName')}</dt><dd>{medicine ? medicineDisplayName : '-'}</dd></div>
-              <div><dt>{t('type')}</dt><dd>{medicine?.tipe ?? '-'}</dd></div>
+              <div><dt>{t('type')}</dt><dd>{medicineTypeLabel(medicine?.tipe, t)}</dd></div>
               <div><dt>{t('unit')}</dt><dd>{medicine?.satuan ?? '-'}</dd></div>
-              <div><dt>{t('category')}</dt><dd>{medicine?.kategori ?? '-'}</dd></div>
+              <div><dt>{t('category')}</dt><dd>{medicineCategoryLabel(medicine?.kategori, t)}</dd></div>
               <div><dt>{t('coldChain')}</dt><dd>{medicine?.perluColdChain ? t('requiredValue') : t('notRequired')}</dd></div>
             </dl>
           </section>

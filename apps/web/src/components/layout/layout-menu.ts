@@ -63,10 +63,12 @@ export function resolveSelectedKey(pathname: string) {
 }
 
 export function getProfile(user: CurrentUser) {
+  const name = user.displayName?.trim() || user.username;
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || user.username.slice(0, 2).toUpperCase();
   return {
-    name: user.username,
+    name,
     role: user.role === 'SUPER_ADMIN' ? 'Superadmin' : user.role === 'IFK_ADMIN' ? 'Admin IFK' : user.puskesmasId ?? 'Bidan Puskesmas',
-    photo: user.role === 'IFK_ADMIN' ? '/figma-medicine/bidan-sarah.png' : '/figma-patients/doctor-siti.png',
+    initials,
   };
 }
 

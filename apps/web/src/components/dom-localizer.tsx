@@ -228,6 +228,167 @@ Object.assign(idText, {
   Quantity: 'Jumlah',
   'Latest Tracking': 'Pelacakan Terakhir',
   'No delivery data.': 'Tidak ada data pengiriman.',
+  Generated: 'Dibuat',
+  'Shipment received by puskesmas.': 'Pengiriman diterima oleh puskesmas.',
+  'Gagal memuat pengiriman': 'Gagal memuat pengiriman',
+  'Gagal mengirim ulang permintaan': 'Gagal mengirim ulang permintaan',
+  'Gagal mengonfirmasi penerimaan': 'Gagal mengonfirmasi penerimaan',
+  min: 'menit',
+  hours: 'jam',
+  'Total Facilities': 'Total Fasilitas',
+  'Critical (Stockout)': 'Kritis (Stok Habis)',
+  'Centralized registry of health facilities within the Sanctuary network. Real-time monitoring of stock, atmospheric risks, and delivery schedules.': 'Registri terpusat fasilitas kesehatan dalam jaringan Sanctuary. Pemantauan real-time stok, risiko atmosfer, dan jadwal pengiriman.',
+  'Detail Fasilitas': 'Detail Fasilitas',
+  'Notifikasi fasilitas muncul dari alert distribusi aktif.': 'Notifikasi fasilitas muncul dari alert distribusi aktif.',
+  'Gunakan filter risiko, buka detail fasilitas, atau export CSV untuk audit.': 'Gunakan filter risiko, buka detail fasilitas, atau export CSV untuk audit.',
+  'high-risk': 'risiko tinggi',
+  'Head of Clinic': 'Kepala Puskesmas',
+  'Confirmation Status': 'Status Konfirmasi',
+  'Cold Chain Facilities': 'Fasilitas Cold Chain',
+  Ready: 'Siap',
+  Gap: 'Gap',
+  'Endemic Status': 'Status Endemis',
+  'Endemis malaria': 'Endemis malaria',
+  'Non-endemis': 'Non-endemis',
+  'Last Update:': 'Update Terakhir:',
+  'Distribution items:': 'Item distribusi:',
+  'Active pregnancy count:': 'Jumlah kehamilan aktif:',
+  'Recommendation source:': 'Sumber rekomendasi:',
+  'Lead time:': 'Lead time:',
+  'distance to IFK:': 'jarak ke IFK:',
+  'Urgency Score': 'Skor Urgensi',
+  'Equity Priority': 'Prioritas Pemerataan',
+  'AI Source': 'Sumber AI',
+  Unavailable: 'Tidak tersedia',
+  'Hosted AI': 'AI Hosted',
+  'Demo seed': 'Data demo',
+  'Rule fallback': 'Fallback aturan',
+  'Cold chain ready': 'Cold chain siap',
+  'Cold chain gap': 'Gap cold chain',
+  Safe: 'Aman',
+  critical: 'kritis',
+  Days: 'Hari',
+  'Lokasi belum tersedia': 'Lokasi belum tersedia',
+  'Belum tersedia': 'Belum tersedia',
+  'Belum tersedia di database': 'Belum tersedia di database',
+  'Belum ada rekomendasi distribusi aktif.': 'Belum ada rekomendasi distribusi aktif.',
+  'Stockouts Prevented': 'Stok Habis Dicegah',
+  'Loaded from decisions': 'Dimuat dari keputusan',
+  'Approved Decisions': 'Keputusan Disetujui',
+  'IFK recommendations': 'Rekomendasi IFK',
+  'Total Dispatches': 'Total Pengiriman',
+  'Distribution records': 'Catatan distribusi',
+  'Riwayat keputusan diperbarui dari event rekomendasi IFK.': 'Riwayat keputusan diperbarui dari event rekomendasi IFK.',
+  'Belum ada data keputusan final.': 'Belum ada data keputusan final.',
+  matched: 'sesuai',
+  deviated: 'menyimpang',
+  'Showing entries': 'Menampilkan entri',
+  'Showing {from}-{to} of {total} health facilities': 'Menampilkan {from}-{to} dari {total} fasilitas kesehatan',
+  'Requested {value}': 'Diminta {value}',
+  'Expand {value} details': 'Buka detail {value}',
+  'Collapse {value} details': 'Ciutkan detail {value}',
+  'Health Centers': 'Puskesmas',
+  'User Accounts': 'Akun Pengguna',
+  'Medicine List': 'Daftar Obat',
+  'Facility Profiles': 'Profil Fasilitas',
+  'Patient Queue': 'Antrean Pasien',
+  'Prediction Calendar': 'Kalender Prediksi',
+  'Medicine Needs': 'Kebutuhan Obat',
+  'IFK Dashboard': 'Dasbor IFK',
+  Recommendations: 'Rekomendasi',
+  Clinics: 'Klinik',
+  Environment: 'Lingkungan',
+  Delivering: 'Pengiriman',
+  Superadmin: 'Superadmin',
+  'Admin IFK': 'Admin IFK',
+  'Bidan Puskesmas': 'Bidan Puskesmas',
+  'Digital Sanctuary': 'Sanctuary Digital',
+  'Microphone requires HTTPS or localhost.': 'Mikrofon memerlukan HTTPS atau localhost.',
+  'Microphone unavailable': 'Mikrofon tidak tersedia',
+  Tablet: 'Tablet',
+  Ampul: 'Ampul',
+  Botol: 'Botol',
+  Strip: 'Strip',
+  Vial: 'Vial',
+  LOW: 'RENDAH',
+  MEDIUM: 'SEDANG',
+  HIGH: 'TINGGI',
+  EXAMINING: 'DIPERIKSA',
+  'Save Changes': 'Simpan Perubahan',
+  'Approve & Dispatch': 'Setujui & Kirim',
+  'Rejected by IFK review.': 'Ditolak oleh review IFK.',
+  'active filter': 'filter aktif',
+  'Rank #{value} = first delivery': 'Peringkat #{value} = pengiriman pertama',
+  Reducing: 'Mengurangi',
+  Increasing: 'Menambah',
+  Maintaining: 'Mempertahankan',
+  'Stockout risk increased sharply': 'Risiko stok habis meningkat tajam',
+  'Coverage buffer increased': 'Buffer cakupan meningkat',
+  'AI recommendation is unchanged': 'Rekomendasi AI tidak berubah',
+  'days to': 'hari ke',
+  records: 'catatan',
+  'Examination History {value}': 'Riwayat Pemeriksaan {value}',
+  '{value} active filter': '{value} filter aktif',
+  '{action} {name}: {from} to {to} {unit}': '{action} {name}: {from} ke {to} {unit}',
+  'Persalinan Bulan Ini': 'Persalinan Bulan Ini',
+  'Kunjungan ANC': 'Kunjungan ANC',
+  'Pasien Risiko Tinggi': 'Pasien Risiko Tinggi',
+  'ANC Kit': 'Kit ANC',
+  'Persalinan Kit': 'Kit Persalinan',
+  'Buffer Darurat': 'Buffer Darurat',
+  Cukup: 'Cukup',
+  'Perlu Restok': 'Perlu Restok',
+  'Hampir Habis': 'Hampir Habis',
+  'Kebutuhan: {value} {unit}': 'Kebutuhan: {value} {unit}',
+  'Personal Data': 'Data Diri',
+  'Pregnancy Data': 'Data Kehamilan',
+  'Screening & Risk': 'Screening & Risiko',
+  'No symptoms above': 'Tidak ada gejala di atas',
+  'Severe headache': 'Sakit kepala berat',
+  Bleeding: 'Perdarahan',
+  'Severe vomiting': 'Muntah berat',
+  'Severe abdominal pain': 'Nyeri perut berat',
+  'Decreased fetal movement': 'Gerak janin berkurang',
+  Hypertension: 'Hipertensi',
+  Anemia: 'Anemia',
+  'Gestational DM': 'DM Gestasional',
+  Preeclampsia: 'Preeklamsia',
+  Complications: 'Komplikasi',
+  'History of C-section': 'Riwayat operasi sesar',
+  'Gap < 2 Yrs': 'Jarak < 2 Tahun',
+  Infection: 'Infeksi',
+  'Pilih minimal satu tanda bahaya atau No symptoms above.': 'Pilih minimal satu tanda bahaya atau Tidak ada gejala di atas.',
+  'Ketik Manual': 'Ketik Manual',
+  'Isi form langkah demi langkah': 'Isi form langkah demi langkah',
+  'Pilihan terbaik untuk input data mendetail dengan kontrol penuh pada setiap kolom isian.': 'Pilihan terbaik untuk input data mendetail dengan kontrol penuh pada setiap kolom isian.',
+  'Mulai Mengetik': 'Mulai Mengetik',
+  'Input Suara': 'Input Suara',
+  'Cukup bicara, AI yang catat': 'Cukup bicara, AI yang catat',
+  'Metode tercepat saat sedang menangani pasien. Bicara secara natural untuk mencatat anamnesa.': 'Metode tercepat saat sedang menangani pasien. Bicara secara natural untuk mencatat anamnesa.',
+  'Mulai Bicara': 'Mulai Bicara',
+  'Data Diri': 'Data Diri',
+  'Data Kehamilan': 'Data Kehamilan',
+  'Faktor Risiko': 'Faktor Risiko',
+  Hipertensi: 'Hipertensi',
+  'Tekanan darah tinggi': 'Tekanan darah tinggi',
+  'Kurang darah': 'Kurang darah',
+  'Diabetes Gestasional': 'Diabetes Gestasional',
+  'Kadar gula darah tinggi saat hamil': 'Kadar gula darah tinggi saat hamil',
+  'Kehamilan Bermasalah': 'Kehamilan Bermasalah',
+  'Riwayat komplikasi sebelumnya': 'Riwayat komplikasi sebelumnya',
+  'Usia di bawah 18 tahun': 'Usia di bawah 18 tahun',
+  'Risiko kehamilan usia dini': 'Risiko kehamilan usia dini',
+  'Usia di atas 35 tahun': 'Usia di atas 35 tahun',
+  'Risiko tinggi usia matang': 'Risiko tinggi usia matang',
+  'Kehamilan kembar': 'Kehamilan kembar',
+  'Multiplet (Gemelli)': 'Multiplet (Gemelli)',
+  'Vector map of rainfall intensity and geospatial risk': 'Peta vektor intensitas hujan dan risiko geospasial',
+  Critical: 'Kritis',
+  SYSTEM: 'SISTEM',
+  'MaternaLink Dashboard': 'Dasbor MaternaLink',
+  'Dashboard shell for MaternaLink supply-chain planning.': 'Shell dasbor untuk perencanaan rantai pasok MaternaLink.',
+  'Login | MaternaLink': 'Masuk | MaternaLink',
+  'Masuk ke sistem MaternaLink.': 'Masuk ke sistem MaternaLink.',
 });
 
 Object.assign(enText, Object.fromEntries(Object.entries(idText).map(([key, value]) => [value, key])), {
@@ -290,6 +451,32 @@ Object.assign(zhText, { 'Prediksi Hari Ini': '今日预测', 'Belum ada prediksi
 const taText = localeMap({ Home: 'முகப்பு', Dashboard: 'டாஷ்போர்டு', Distribution: 'விநியோகம்', 'Clinic List': 'மருத்துவமனை பட்டியல்', 'Environment Monitoring': 'சூழல் கண்காணிப்பு', 'Medicine Sender': 'மருந்து அனுப்புதல்', Map: 'வரைபடம்', Satellite: 'செயற்கைக்கோள்', Supply: 'வழங்கல்', Timestamp: 'நேரம்', Entity: 'அலகு', Operator: 'இயக்குநர்', Status: 'நிலை', 'All Clinics': 'அனைத்து மருத்துவமனைகள்', 'Export CSV': 'CSV ஏற்றுமதி', 'Add Clinic': 'மருத்துவமனை சேர்', 'Clinic Name': 'மருத்துவமனை பெயர்', Location: 'இடம்', 'Risk Level': 'அபாய நிலை', Action: 'செயல்', Filter: 'வடிகட்டி', Stock: 'கையிருப்பு', Needs: 'தேவை', Sort: 'வரிசைப்படுத்து', 'Medical Record': 'மருத்துவ பதிவு', 'Personal Info': 'தனிப்பட்ட தகவல்', 'Active Pregnancy': 'செயலில் உள்ள கர்ப்பம்', 'Gestational Age': 'கர்ப்ப வயது', 'Due Date': 'பிரசவ தேதி', Queue: 'வரிசை', 'Edit Patient': 'நோயாளியை திருத்து', Allergy: 'ஒவ்வாமை', 'Blood Pressure': 'இரத்த அழுத்தம்', Temperature: 'வெப்பநிலை', 'Full Name': 'முழு பெயர்', Address: 'முகவரி', Phone: 'தொலைபேசி', 'Medicine Shipping': 'மருந்து அனுப்புதல்', Reason: 'காரணம்', Courier: 'கூரியர்', Origin: 'தொடக்கம்', Destination: 'இலக்கு', Distance: 'தூரம்', Critical: 'அவசரம்', Refresh: 'புதுப்பி', Approve: 'ஒப்புதல்', Track: 'கண்காணி', Reject: 'நிராகரி', Cancel: 'ரத்து', Close: 'மூடு', Delete: 'நீக்கு', Medicine: 'மருந்து', Quantity: 'அளவு' });
 Object.assign(taText, { 'Prediksi Hari Ini': 'இன்றைய கணிப்பு', 'Belum ada prediksi': 'இன்னும் கணிப்பு இல்லை', 'Data muncul dari HPL, ANC, dan risiko pasien aktif.': 'தரவு பிரசவ தேதி, ANC மற்றும் செயலில் உள்ள நோயாளர் அபாயத்திலிருந்து தோன்றும்.' });
 
+Object.assign(msText, {
+  'Total Facilities': 'Jumlah Fasiliti', 'Critical (Stockout)': 'Kritikal (Stok Habis)', Generated: 'Dijana', 'Head of Clinic': 'Ketua Klinik', 'Confirmation Status': 'Status Pengesahan', 'Cold Chain Facilities': 'Fasiliti Rantaian Sejuk', Ready: 'Sedia', Gap: 'Jurang', 'Endemic Status': 'Status Endemik', 'Last Update:': 'Kemas Kini Terakhir:', 'Distribution items:': 'Item pengedaran:', 'Active pregnancy count:': 'Jumlah kehamilan aktif:', 'Recommendation source:': 'Sumber cadangan:', 'Lead time:': 'Masa utama:', 'distance to IFK:': 'jarak ke IFK:', 'Urgency Score': 'Skor Kecemasan', 'Equity Priority': 'Keutamaan Kesaksamaan', 'AI Source': 'Sumber AI', Unavailable: 'Tidak tersedia', 'Hosted AI': 'AI Dihoskan', 'Demo seed': 'Data demo', 'Rule fallback': 'Sandaran aturan', Safe: 'Selamat', critical: 'kritikal', Days: 'Hari', 'Stockouts Prevented': 'Stok Habis Dicegah', 'Loaded from decisions': 'Dimuat daripada keputusan', 'Approved Decisions': 'Keputusan Diluluskan', 'IFK recommendations': 'Cadangan IFK', 'Total Dispatches': 'Jumlah Penghantaran', 'Distribution records': 'Rekod pengedaran', 'Showing entries': 'Memaparkan entri', 'Showing {from}-{to} of {total} health facilities': 'Memaparkan {from}-{to} daripada {total} fasiliti kesihatan', 'Requested {value}': 'Diminta {value}', 'Expand {value} details': 'Buka butiran {value}', 'Collapse {value} details': 'Tutup butiran {value}', min: 'minit', hours: 'jam'
+});
+Object.assign(filText, {
+  'Total Facilities': 'Kabuuang Pasilidad', 'Critical (Stockout)': 'Kritikal (Walang Stock)', Generated: 'Nabuo', 'Head of Clinic': 'Pinuno ng Klinika', 'Confirmation Status': 'Katayuan ng Kumpirmasyon', 'Cold Chain Facilities': 'Cold Chain na Pasilidad', Ready: 'Handa', Gap: 'Kulang', 'Endemic Status': 'Endemic na Katayuan', 'Last Update:': 'Huling Update:', 'Distribution items:': 'Mga item sa distribusyon:', 'Active pregnancy count:': 'Bilang ng aktibong pagbubuntis:', 'Recommendation source:': 'Pinagmulan ng rekomendasyon:', 'Lead time:': 'Lead time:', 'distance to IFK:': 'distansya sa IFK:', 'Urgency Score': 'Iskor ng Urhensiya', 'Equity Priority': 'Prayoridad sa Pantay na Akses', 'AI Source': 'Pinagmulan ng AI', Unavailable: 'Hindi available', 'Hosted AI': 'Hosted AI', 'Demo seed': 'Demo data', 'Rule fallback': 'Rule fallback', Safe: 'Ligtas', critical: 'kritikal', Days: 'Araw', 'Stockouts Prevented': 'Naagapang Stockout', 'Loaded from decisions': 'Na-load mula sa mga desisyon', 'Approved Decisions': 'Naaprubahang Desisyon', 'IFK recommendations': 'Mga rekomendasyon ng IFK', 'Total Dispatches': 'Kabuuang Padala', 'Distribution records': 'Mga rekord ng distribusyon', 'Showing entries': 'Ipinapakita ang entries', 'Showing {from}-{to} of {total} health facilities': 'Ipinapakita ang {from}-{to} sa {total} health facilities', 'Requested {value}': 'Hiniling {value}', 'Expand {value} details': 'Buksan ang detalye ng {value}', 'Collapse {value} details': 'Isara ang detalye ng {value}', min: 'min', hours: 'oras'
+});
+Object.assign(thText, {
+  'Total Facilities': 'จำนวนสถานพยาบาลทั้งหมด', 'Critical (Stockout)': 'วิกฤต (สินค้าหมด)', Generated: 'สร้างเมื่อ', 'Head of Clinic': 'หัวหน้าคลินิก', 'Confirmation Status': 'สถานะการยืนยัน', 'Cold Chain Facilities': 'สถานที่ Cold Chain', Ready: 'พร้อม', Gap: 'ยังขาด', 'Endemic Status': 'สถานะโรคประจำถิ่น', 'Last Update:': 'อัปเดตล่าสุด:', 'Distribution items:': 'รายการกระจาย:', 'Active pregnancy count:': 'จำนวนครรภ์ที่ใช้งาน:', 'Recommendation source:': 'แหล่งคำแนะนำ:', 'Lead time:': 'เวลานำ:', 'distance to IFK:': 'ระยะทางถึง IFK:', 'Urgency Score': 'คะแนนเร่งด่วน', 'Equity Priority': 'ลำดับความเท่าเทียม', 'AI Source': 'แหล่ง AI', Unavailable: 'ไม่พร้อมใช้งาน', 'Hosted AI': 'AI ที่โฮสต์', 'Demo seed': 'ข้อมูลสาธิต', 'Rule fallback': 'กฎสำรอง', Safe: 'ปลอดภัย', critical: 'วิกฤต', Days: 'วัน', 'Stockouts Prevented': 'ป้องกันสินค้าหมด', 'Loaded from decisions': 'โหลดจากการตัดสินใจ', 'Approved Decisions': 'การตัดสินใจที่อนุมัติ', 'IFK recommendations': 'คำแนะนำ IFK', 'Total Dispatches': 'การจัดส่งทั้งหมด', 'Distribution records': 'บันทึกการกระจาย', 'Showing entries': 'แสดงรายการ', 'Showing {from}-{to} of {total} health facilities': 'แสดง {from}-{to} จาก {total} สถานพยาบาล', 'Requested {value}': 'ร้องขอ {value}', 'Expand {value} details': 'ขยายรายละเอียด {value}', 'Collapse {value} details': 'ยุบรายละเอียด {value}', min: 'นาที', hours: 'ชั่วโมง'
+});
+Object.assign(viText, {
+  'Total Facilities': 'Tổng cơ sở', 'Critical (Stockout)': 'Nguy cấp (hết hàng)', Generated: 'Đã tạo', 'Head of Clinic': 'Trưởng phòng khám', 'Confirmation Status': 'Trạng thái xác nhận', 'Cold Chain Facilities': 'Cơ sở dây chuyền lạnh', Ready: 'Sẵn sàng', Gap: 'Thiếu', 'Endemic Status': 'Trạng thái lưu hành', 'Last Update:': 'Cập nhật cuối:', 'Distribution items:': 'Mặt hàng phân phối:', 'Active pregnancy count:': 'Số thai kỳ đang theo dõi:', 'Recommendation source:': 'Nguồn khuyến nghị:', 'Lead time:': 'Thời gian xử lý:', 'distance to IFK:': 'khoảng cách tới IFK:', 'Urgency Score': 'Điểm khẩn cấp', 'Equity Priority': 'Ưu tiên công bằng', 'AI Source': 'Nguồn AI', Unavailable: 'Không khả dụng', 'Hosted AI': 'AI lưu trữ', 'Demo seed': 'Dữ liệu demo', 'Rule fallback': 'Quy tắc dự phòng', Safe: 'An toàn', critical: 'nguy cấp', Days: 'Ngày', 'Stockouts Prevented': 'Đã ngăn hết hàng', 'Loaded from decisions': 'Tải từ quyết định', 'Approved Decisions': 'Quyết định đã duyệt', 'IFK recommendations': 'Khuyến nghị IFK', 'Total Dispatches': 'Tổng lượt gửi', 'Distribution records': 'Hồ sơ phân phối', 'Showing entries': 'Đang hiển thị mục', 'Showing {from}-{to} of {total} health facilities': 'Hiển thị {from}-{to} trong {total} cơ sở y tế', 'Requested {value}': 'Đã yêu cầu {value}', 'Expand {value} details': 'Mở chi tiết {value}', 'Collapse {value} details': 'Thu gọn chi tiết {value}', min: 'phút', hours: 'giờ'
+});
+
+Object.assign(msText, { 'Health Centers': 'Pusat Kesihatan', 'User Accounts': 'Akaun Pengguna', 'Medicine List': 'Senarai Ubat', 'Facility Profiles': 'Profil Fasiliti', 'Patient Queue': 'Baris Gilir Pesakit', 'Prediction Calendar': 'Kalendar Ramalan', 'Medicine Needs': 'Keperluan Ubat', 'IFK Dashboard': 'Papan Pemuka IFK', Recommendations: 'Cadangan', Clinics: 'Klinik', Environment: 'Persekitaran', Delivering: 'Penghantaran', 'Digital Sanctuary': 'Sanctuary Digital', Users: 'Pengguna', 'Save Changes': 'Simpan Perubahan', 'Approve & Dispatch': 'Luluskan & Hantar', '{value} active filter': '{value} penapis aktif', records: 'rekod', EXAMINING: 'SEDANG DIPERIKSA' });
+Object.assign(filText, { 'Health Centers': 'Mga Health Center', 'User Accounts': 'Mga Account ng User', 'Medicine List': 'Listahan ng Gamot', 'Facility Profiles': 'Mga Profile ng Pasilidad', 'Patient Queue': 'Pila ng Pasyente', 'Prediction Calendar': 'Kalendaryo ng Prediksyon', 'Medicine Needs': 'Pangangailangan sa Gamot', 'IFK Dashboard': 'Dashboard ng IFK', Recommendations: 'Mga Rekomendasyon', Clinics: 'Mga Klinika', Environment: 'Kapaligiran', Delivering: 'Paghahatid', 'Digital Sanctuary': 'Digital Sanctuary', Users: 'Mga User', 'Save Changes': 'I-save ang Mga Pagbabago', 'Approve & Dispatch': 'Aprubahan at Ipadala', '{value} active filter': '{value} aktibong filter', records: 'rekord', EXAMINING: 'SINUSURI' });
+Object.assign(thText, { 'Health Centers': 'ศูนย์สุขภาพ', 'User Accounts': 'บัญชีผู้ใช้', 'Medicine List': 'รายการยา', 'Facility Profiles': 'โปรไฟล์สถานพยาบาล', 'Patient Queue': 'คิวผู้ป่วย', 'Prediction Calendar': 'ปฏิทินพยากรณ์', 'Medicine Needs': 'ความต้องการยา', 'IFK Dashboard': 'แดชบอร์ด IFK', Recommendations: 'คำแนะนำ', Clinics: 'คลินิก', Environment: 'สิ่งแวดล้อม', Delivering: 'กำลังจัดส่ง', 'Digital Sanctuary': 'Digital Sanctuary', Users: 'ผู้ใช้', 'Save Changes': 'บันทึกการเปลี่ยนแปลง', 'Approve & Dispatch': 'อนุมัติและจัดส่ง', '{value} active filter': 'ตัวกรองที่ใช้งาน {value} รายการ', records: 'รายการ', EXAMINING: 'กำลังตรวจ' });
+Object.assign(viText, { 'Health Centers': 'Trung tâm y tế', 'User Accounts': 'Tài khoản người dùng', 'Medicine List': 'Danh sách thuốc', 'Facility Profiles': 'Hồ sơ cơ sở', 'Patient Queue': 'Hàng đợi bệnh nhân', 'Prediction Calendar': 'Lịch dự báo', 'Medicine Needs': 'Nhu cầu thuốc', 'IFK Dashboard': 'Bảng điều khiển IFK', Recommendations: 'Khuyến nghị', Clinics: 'Phòng khám', Environment: 'Môi trường', Delivering: 'Đang giao', 'Digital Sanctuary': 'Trung tâm số', Users: 'Người dùng', 'Save Changes': 'Lưu thay đổi', 'Approve & Dispatch': 'Duyệt và gửi', '{value} active filter': '{value} bộ lọc đang bật', records: 'bản ghi', EXAMINING: 'ĐANG KHÁM' });
+Object.assign(msText, { 'Persalinan Bulan Ini': 'Kelahiran Bulan Ini', 'Kunjungan ANC': 'Lawatan ANC', 'Pasien Risiko Tinggi': 'Pesakit Berisiko Tinggi', 'ANC Kit': 'Kit ANC', 'Persalinan Kit': 'Kit Kelahiran', 'Buffer Darurat': 'Penimbal Kecemasan', Cukup: 'Mencukupi', 'Perlu Restok': 'Perlu Stok Semula', 'Hampir Habis': 'Hampir Habis', 'Kebutuhan: {value} {unit}': 'Keperluan: {value} {unit}', 'Personal Data': 'Data Peribadi', 'Pregnancy Data': 'Data Kehamilan', 'Screening & Risk': 'Saringan & Risiko', 'No symptoms above': 'Tiada gejala di atas', 'Severe headache': 'Sakit kepala teruk', Bleeding: 'Pendarahan', 'Severe vomiting': 'Muntah teruk', 'Severe abdominal pain': 'Sakit perut teruk', 'Decreased fetal movement': 'Pergerakan janin berkurang', Hypertension: 'Hipertensi', Anemia: 'Anemia', 'Gestational DM': 'DM Gestasi', Preeclampsia: 'Praeklampsia', Complications: 'Komplikasi', 'History of C-section': 'Sejarah pembedahan C-section', 'Gap < 2 Yrs': 'Jarak < 2 Tahun', Infection: 'Jangkitan' });
+Object.assign(filText, { 'Persalinan Bulan Ini': 'Panganganak Ngayong Buwan', 'Kunjungan ANC': 'Mga ANC Visit', 'Pasien Risiko Tinggi': 'High-risk na Pasyente', 'ANC Kit': 'ANC Kit', 'Persalinan Kit': 'Delivery Kit', 'Buffer Darurat': 'Emergency Buffer', Cukup: 'Sapat', 'Perlu Restok': 'Kailangang Mag-restock', 'Hampir Habis': 'Malapit Maubos', 'Kebutuhan: {value} {unit}': 'Kailangan: {value} {unit}', 'Personal Data': 'Personal na Data', 'Pregnancy Data': 'Data ng Pagbubuntis', 'Screening & Risk': 'Screening at Panganib', 'No symptoms above': 'Wala sa mga sintomas sa itaas', 'Severe headache': 'Matinding sakit ng ulo', Bleeding: 'Pagdurugo', 'Severe vomiting': 'Matinding pagsusuka', 'Severe abdominal pain': 'Matinding pananakit ng tiyan', 'Decreased fetal movement': 'Nabawasan ang galaw ng sanggol', Hypertension: 'Altapresyon', Anemia: 'Anemia', 'Gestational DM': 'Gestational DM', Preeclampsia: 'Preeclampsia', Complications: 'Komplikasyon', 'History of C-section': 'Kasaysayan ng C-section', 'Gap < 2 Yrs': 'Agwat < 2 Taon', Infection: 'Impeksiyon' });
+Object.assign(thText, { 'Persalinan Bulan Ini': 'การคลอดเดือนนี้', 'Kunjungan ANC': 'การตรวจ ANC', 'Pasien Risiko Tinggi': 'ผู้ป่วยความเสี่ยงสูง', 'ANC Kit': 'ชุด ANC', 'Persalinan Kit': 'ชุดคลอด', 'Buffer Darurat': 'สำรองฉุกเฉิน', Cukup: 'เพียงพอ', 'Perlu Restok': 'ต้องเติมสต็อก', 'Hampir Habis': 'ใกล้หมด', 'Kebutuhan: {value} {unit}': 'ต้องการ: {value} {unit}', 'Personal Data': 'ข้อมูลส่วนตัว', 'Pregnancy Data': 'ข้อมูลการตั้งครรภ์', 'Screening & Risk': 'คัดกรองและความเสี่ยง', 'No symptoms above': 'ไม่มีอาการข้างต้น', 'Severe headache': 'ปวดศีรษะรุนแรง', Bleeding: 'เลือดออก', 'Severe vomiting': 'อาเจียนรุนแรง', 'Severe abdominal pain': 'ปวดท้องรุนแรง', 'Decreased fetal movement': 'ทารกเคลื่อนไหวน้อยลง', Hypertension: 'ความดันโลหิตสูง', Anemia: 'โลหิตจาง', 'Gestational DM': 'เบาหวานขณะตั้งครรภ์', Preeclampsia: 'ครรภ์เป็นพิษ', Complications: 'ภาวะแทรกซ้อน', 'History of C-section': 'ประวัติผ่าคลอด', 'Gap < 2 Yrs': 'ช่วงห่าง < 2 ปี', Infection: 'การติดเชื้อ' });
+Object.assign(viText, { 'Persalinan Bulan Ini': 'Sinh trong tháng này', 'Kunjungan ANC': 'Lượt khám ANC', 'Pasien Risiko Tinggi': 'Bệnh nhân nguy cơ cao', 'ANC Kit': 'Bộ ANC', 'Persalinan Kit': 'Bộ sinh', 'Buffer Darurat': 'Dự phòng khẩn cấp', Cukup: 'Đủ', 'Perlu Restok': 'Cần bổ sung', 'Hampir Habis': 'Sắp hết', 'Kebutuhan: {value} {unit}': 'Nhu cầu: {value} {unit}', 'Personal Data': 'Dữ liệu cá nhân', 'Pregnancy Data': 'Dữ liệu thai kỳ', 'Screening & Risk': 'Sàng lọc & nguy cơ', 'No symptoms above': 'Không có triệu chứng trên', 'Severe headache': 'Đau đầu dữ dội', Bleeding: 'Chảy máu', 'Severe vomiting': 'Nôn dữ dội', 'Severe abdominal pain': 'Đau bụng dữ dội', 'Decreased fetal movement': 'Thai máy giảm', Hypertension: 'Tăng huyết áp', Anemia: 'Thiếu máu', 'Gestational DM': 'Đái tháo đường thai kỳ', Preeclampsia: 'Tiền sản giật', Complications: 'Biến chứng', 'History of C-section': 'Tiền sử mổ lấy thai', 'Gap < 2 Yrs': 'Khoảng cách < 2 năm', Infection: 'Nhiễm trùng' });
+
+for (const map of [kmText, loText, myText, zhText, taText]) {
+  Object.assign(map, Object.fromEntries(Object.entries(idText).filter(([key]) => !(key in map))));
+}
+
 const localeTexts: Record<string, Record<string, string>> = { en: enText, id: idText, ms: msText, fil: filText, th: thText, vi: viText, km: kmText, lo: loText, my: myText, zh: zhText, ta: taText };
 
 function normalize(value: string) {
@@ -297,11 +484,38 @@ function normalize(value: string) {
 }
 
 function translateText(value: string, translations: Record<string, string>) {
-  const translated = translations[normalize(value)];
+  const normalized = normalize(value);
+  const translated = translations[normalized] ?? translatePattern(normalized, translations);
   if (!translated) return null;
   const prefix = value.match(/^\s*/)?.[0] ?? '';
   const suffix = value.match(/\s*$/)?.[0] ?? '';
   return `${prefix}${translated}${suffix}`;
+}
+
+function formatTemplate(translations: Record<string, string>, key: string, values: Record<string, string>) {
+  return (translations[key] ?? idText[key] ?? key).replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? '');
+}
+
+function translatePattern(value: string, translations: Record<string, string>) {
+  let match = value.match(/^Showing (\d+)-(\d+) of (\d+) health facilities$/);
+  if (match) return formatTemplate(translations, 'Showing {from}-{to} of {total} health facilities', { from: match[1], to: match[2], total: match[3] });
+  match = value.match(/^Requested (.+)$/);
+  if (match) return formatTemplate(translations, 'Requested {value}', { value: match[1] });
+  match = value.match(/^Expand (.+) details$/);
+  if (match) return formatTemplate(translations, 'Expand {value} details', { value: match[1] });
+  match = value.match(/^Collapse (.+) details$/);
+  if (match) return formatTemplate(translations, 'Collapse {value} details', { value: match[1] });
+  match = value.match(/^(\d+) active filter$/);
+  if (match) return formatTemplate(translations, '{value} active filter', { value: match[1] });
+  match = value.match(/^Rank #(\d+) = first delivery$/);
+  if (match) return formatTemplate(translations, 'Rank #{value} = first delivery', { value: match[1] });
+  match = value.match(/^Examination History (\(.+\))$/);
+  if (match) return formatTemplate(translations, 'Examination History {value}', { value: match[1] });
+  match = value.match(/^(Reducing|Increasing|Maintaining) (.+): (\d+) to (\d+) (.+)$/);
+  if (match) return formatTemplate(translations, '{action} {name}: {from} to {to} {unit}', { action: translations[match[1]] ?? match[1], name: match[2], from: match[3], to: match[4], unit: match[5] });
+  match = value.match(/^Kebutuhan: (\d+) (.+)$/);
+  if (match) return formatTemplate(translations, 'Kebutuhan: {value} {unit}', { value: match[1], unit: translations[match[2]] ?? match[2] });
+  return null;
 }
 
 function localizeNode(root: ParentNode, translations: Record<string, string>) {

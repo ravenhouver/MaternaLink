@@ -383,6 +383,7 @@ export function PatientsPageContent() {
 
 function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { patient: PatientRecord; draft: QueueDraft; onChange: (draft: QueueDraft) => void; onClose: () => void; onSubmit: () => void }) {
   const t = useTranslations('patients');
+  const [validationError, setValidationError] = useState<string | null>(null);
   const pregnancy = activePregnancy(patient);
   const priority = inferPriority(patient, draft, t);
   const initials = patient.fullName.trim().charAt(0).toUpperCase() || 'P';
@@ -390,6 +391,15 @@ function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { 
   function toggle(list: keyof Pick<QueueDraft, 'riskFactors' | 'routineMedication'>, value: string) {
     const next = draft[list].includes(value) ? draft[list].filter((item) => item !== value) : [...draft[list], value];
     onChange({ ...draft, [list]: next });
+  }
+
+  function submitScreening() {
+    if (!draft.responsibleDoctor.trim()) {
+      setValidationError(t('attendingPhysicianRequired'));
+      return;
+    }
+    setValidationError(null);
+    onSubmit();
   }
 
   return (
@@ -446,6 +456,7 @@ function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { 
             <div className={styles.assessmentBox}>
               <div className={styles.assessmentMain}>
                 <EditField label={t('attendingPhysician')} value={draft.responsibleDoctor} onChange={(value) => onChange({ ...draft, responsibleDoctor: value })} />
+                {validationError ? <p className={styles.inlineError} role="alert">{validationError}</p> : null}
                 <p className={styles.riskNote}>{priority.message}</p>
               </div>
               <div className={styles.priorityCard}><span>{t('queuePriority')}</span><strong>{priority.level}</strong><small><AppIcon name="zap" width={12} height={12} />{t('estimatedMinutes', { count: priority.minutes })}</small></div>
@@ -454,7 +465,7 @@ function QueueScreeningModal({ draft, onChange, onClose, onSubmit, patient }: { 
         </div>
         <footer className={styles.modalFooter}>
           <p><AppIcon name="info" width={14} height={14} />{t('saveHistoryNote')}</p>
-          <div className={styles.modalFooterActions}><button type="button" className={styles.cancelButton} onClick={onClose}>{t('cancel')}</button><button type="button" className={styles.enterQueueButton} onClick={onSubmit}><AppIcon name="plus" width={14} height={14} />{t('enterQueue')}</button></div>
+          <div className={styles.modalFooterActions}><button type="button" className={styles.cancelButton} onClick={onClose}>{t('cancel')}</button><button type="button" className={styles.enterQueueButton} onClick={submitScreening}><AppIcon name="plus" width={14} height={14} />{t('enterQueue')}</button></div>
         </footer>
       </section>
     </div>

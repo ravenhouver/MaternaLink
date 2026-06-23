@@ -106,7 +106,7 @@ export function Sidebar({ collapsed, user, onToggle }: SidebarProps) {
         {hasTopbar && !collapsed ? (
           <div className={styles.profileCard}>
             <span className={styles.profilePhoto}>
-              <img src={profile.photo} alt={profile.name} />
+              {profile.initials}
             </span>
             <span className={styles.profileCopy}>
               <Typography.Text className={styles.profileName}>{profile.name}</Typography.Text>

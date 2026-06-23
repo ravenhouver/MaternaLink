@@ -1,0 +1,10 @@
+{
+  "name": "MaternaLink",
+  "short_name": "MaternaLink",
+  "description": "Maternal health logistics dashboard for offline-ready clinics.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafd",
+  "theme_color": "#1a73e8"
+}

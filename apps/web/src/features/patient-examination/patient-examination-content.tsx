@@ -43,6 +43,9 @@ type ExaminationFormState = {
 
 type AiDraftMeta = Pick<AiExaminationDraft, 'symptomIds' | 'diagnosisIds' | 'needsReview' | 'minConfidence' | 'model'>;
 
+const SAVE_AI_TIMEOUT_MS = 4_000;
+const aiSaveFallbackNote = 'AI extraction unavailable during save; saved for manual review.';
+
 type MedicationFormRow = {
   id: string;
   medicine: string;
@@ -334,8 +337,24 @@ function applySpeechDraft(current: ExaminationFormState, result: SpeechTranscrip
 async function completeAiDraft(current: ExaminationFormState): Promise<{ form: ExaminationFormState; draft: AiDraftMeta | null }> {
   if (!current.complaint.trim()) return { form: current, draft: null };
   if (current.symptomIds.length > 0 && current.diagnosisIds.length > 0) return { form: current, draft: null };
-  const draft = await createAiExaminationDraft({ complaint: current.complaint, period: currentPeriod() });
-  return { form: applyAiDraft(current, draft), draft };
+  try {
+    const draft = await withTimeout(createAiExaminationDraft({ complaint: current.complaint, period: currentPeriod() }), SAVE_AI_TIMEOUT_MS);
+    return { form: applyAiDraft(current, draft), draft };
+  } catch {
+    return { form: appendNotes(current, aiSaveFallbackNote), draft: null };
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error('AI draft timed out')), timeoutMs);
+    promise.then(resolve, reject).finally(() => window.clearTimeout(timeoutId));
+  });
+}
+
+function appendNotes(current: ExaminationFormState, note: string): ExaminationFormState {
+  if (current.notes.includes(note)) return current;
+  return { ...current, notes: current.notes.trim() ? `${current.notes.trim()}\n${note}` : note };
 }
 
 function applyAiDraft(current: ExaminationFormState, draft: AiExaminationDraft): ExaminationFormState {
@@ -419,10 +438,11 @@ function buildExaminationRiskSummary(form: ExaminationFormState, pregnancyRiskLe
 
 function PatientInfoBar({ queue }: { queue: QueueRecord | null }) {
   const t = useTranslations('examination');
+  const initials = (queue?.patient.fullName ?? 'P').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'P';
   return (
     <section className={styles.patientInfo} aria-label={t('patientInfo')}>
       <div className={styles.patientIdentity}>
-        <span className={styles.patientPhoto}><img src="/figma-dashboard/profil-bidan.png" alt="Mrs. Anisa Rahmawati" /></span>
+        <span className={styles.patientPhoto} aria-hidden="true"><span className={styles.patientInitial}>{initials}</span></span>
         <div>
           <h2>{t('name', { name: queue?.patient.fullName ?? '-' })}</h2>
           <p>NIK: {queue?.patient.nik ?? '-'}</p>

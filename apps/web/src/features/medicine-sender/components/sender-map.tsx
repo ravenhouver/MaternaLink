@@ -31,19 +31,14 @@ export function SenderMap({ points, mode, center = [-3.6, 123.2], zoom = 5 }: Se
       zoomControl: true,
     });
 
-    const tile =
-      mode === 'satellite'
-        ? {
-            url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            attribution: '&copy; Esri',
-          }
-        : {
-            url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            attribution: '&copy; OpenStreetMap contributors',
-          };
+    const tile = {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; OpenStreetMap contributors',
+    };
 
     L.tileLayer(tile.url, {
       attribution: tile.attribution,
+      maxZoom: mode === 'satellite' ? 12 : 14,
     }).addTo(map);
 
     points.forEach((point) => {

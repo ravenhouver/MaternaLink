@@ -43,9 +43,11 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
       zoomControl: true,
     });
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: '&copy; Esri',
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 12,
     }).addTo(map);
+    tileLayer.on('tileerror', () => mapRef.current?.classList.add(styles.mapTileFallback));
 
     const canUseMap = () => !disposed && Boolean(mapRef.current?.isConnected && map.getPane('mapPane'));
     const syncResponsiveView = () => {
@@ -112,10 +114,11 @@ export function EnvironmentMap({ points }: EnvironmentMapProps) {
       disposed = true;
       if (initTimeoutId) clearTimeout(initTimeoutId);
       resizeObserver.disconnect();
+      tileLayer.remove();
       heatLayer.remove();
       map.remove();
     };
   }, [points]);
 
-  return <div ref={mapRef} className={styles.environmentMap} aria-label="Peta Leaflet intensitas hujan dan risiko geospasial" />;
+  return <div ref={mapRef} className={styles.environmentMap} aria-label="Vector map of rainfall intensity and geospatial risk" />;
 }

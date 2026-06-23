@@ -8,13 +8,19 @@ import { getMedicineName } from '@/lib/medicine-i18n';
 import { AdminShell } from './admin-shell';
 import styles from './super-admin-dashboard.module.css';
 
-type MedicineRow = { id: string; name: string; unit: string; category: string; dailyDosage: string; coldChain: boolean };
+type MedicineRow = { id: string; name: string; unit: string; category: string; categoryLabel: string; dailyDosage: string; coldChain: boolean };
 type FormState = UpsertObatPayload;
 
 const emptyForm: FormState = { id: '', nama: '', kategori: 'OBAT', tipe: 'TABLET', perluColdChain: false, satuan: 'tablet', dosisStandarHarian: 0, durasiPengobatanHari: 0 };
 
 function formatDailyDosage(row: ObatRecord) { return row.dosisStandarHarian ? `${row.dosisStandarHarian} ${row.satuan}/day` : '-'; }
-function mapMedicineRows(rows: ObatRecord[], locale: string): MedicineRow[] { return rows.map((row) => ({ id: row.id, name: getMedicineName(row, locale), unit: row.satuan, category: row.kategori, dailyDosage: formatDailyDosage(row), coldChain: row.perluColdChain })); }
+function categoryLabel(category: string, t: ReturnType<typeof useTranslations>) {
+  if (category === 'OBAT') return t('medicineCategoryMedicine');
+  if (category === 'VAKSIN') return t('medicineCategoryVaccine');
+  if (category === 'ALAT_KESEHATAN') return t('medicineCategoryDevice');
+  return category;
+}
+function mapMedicineRows(rows: ObatRecord[], locale: string, t: ReturnType<typeof useTranslations>): MedicineRow[] { return rows.map((row) => ({ id: row.id, name: getMedicineName(row, locale), unit: row.satuan, category: row.kategori, categoryLabel: categoryLabel(row.kategori, t), dailyDosage: formatDailyDosage(row), coldChain: row.perluColdChain })); }
 function toForm(row: ObatRecord): FormState { return { id: row.id, nama: row.nama, kategori: row.kategori as FormState['kategori'], tipe: row.tipe as FormState['tipe'], perluColdChain: row.perluColdChain, satuan: row.satuan, dosisStandarHarian: row.dosisStandarHarian ?? 0, durasiPengobatanHari: row.durasiPengobatanHari ?? 0 }; }
 function categoryTone(category: string) { return category === 'VAKSIN' ? 'essential' : category === 'ALAT_KESEHATAN' ? 'routine' : 'emergency'; }
 function syncLabel(status: AiMasterSyncStatus | null) {
@@ -27,7 +33,7 @@ function syncLabel(status: AiMasterSyncStatus | null) {
 
 function downloadCsv(filename: string, rows: MedicineRow[]) {
   const header = ['id', 'name', 'category', 'unit', 'dailyDosage', 'coldChain'].join(',');
-  const body = rows.map((row) => [row.id, row.name, row.category, row.unit, row.dailyDosage, row.coldChain ? 'yes' : 'no'].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+  const body = rows.map((row) => [row.id, row.name, row.categoryLabel, row.unit, row.dailyDosage, row.coldChain ? 'yes' : 'no'].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
   const blob = new Blob([`${header}\n${body}`], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -59,7 +65,7 @@ export function SuperAdminMedicinesContent() {
 
   useEffect(() => { void reload().catch((loadError) => setError(loadError instanceof Error ? loadError.message : t('unableLoadMedicineData'))); }, [t]);
 
-  const rows = useMemo(() => mapMedicineRows(rawRows, locale), [locale, rawRows]);
+  const rows = useMemo(() => mapMedicineRows(rawRows, locale, t), [locale, rawRows, t]);
   const categories = useMemo(() => ['All', ...Array.from(new Set(rows.map((row) => row.category)))], [rows]);
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -94,7 +100,7 @@ export function SuperAdminMedicinesContent() {
         <section className={styles.medicineToolbar} aria-label={t('medicineFilters')}>
           <div className={styles.medicineFilterGroup}>
             <label className={styles.searchBox}><AppIcon name="search" width={18} height={18} /><input aria-label={t('searchMedicineName')} placeholder={t('searchMedicineName')} value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} /></label>
-            <label className={styles.categoryFilter}><span>{t('filterCategory')}</span><select aria-label={t('filterMedicineCategory')} value={category} onChange={(event) => { setPage(1); setCategory(event.target.value); }}>{categories.map((item) => <option key={item} value={item}>{item === 'All' ? t('all') : item}</option>)}</select><AppIcon name="chevronDown" width={18} height={18} /></label>
+            <label className={styles.categoryFilter}><span>{t('filterCategory')}</span><select aria-label={t('filterMedicineCategory')} value={category} onChange={(event) => { setPage(1); setCategory(event.target.value); }}>{categories.map((item) => <option key={item} value={item}>{item === 'All' ? t('all') : categoryLabel(item, t)}</option>)}</select><AppIcon name="chevronDown" width={18} height={18} /></label>
           </div>
           <div className={styles.toolbarIconActions}><button type="button" aria-label={t('downloadMedicineList')} onClick={() => downloadCsv('maternalink-medicines.csv', filteredRows)}><AppIcon name="download" width={18} height={18} /></button></div>
         </section>
@@ -105,7 +111,7 @@ export function SuperAdminMedicinesContent() {
               <thead><tr><th>ID</th><th>{tCommon('name')}</th><th>{t('unit')}</th><th>{t('category')}</th><th>{t('dailyDosage')}</th><th>{t('coldChain')}</th><th>{tCommon('actions')}</th></tr></thead>
               <tbody>
                 {visibleRows.map((row) => (
-                  <tr key={row.id}><td>{row.id}</td><td><strong>{row.name}</strong></td><td>{row.unit}</td><td><span className={styles.categoryBadge} data-tone={categoryTone(row.category)}>{row.category}</span></td><td>{row.dailyDosage}</td><td><span className={styles.coldChainStatus} data-active={row.coldChain}><AppIcon name={row.coldChain ? 'checkCircle' : 'circleStop'} width={15} height={15} />{row.coldChain ? t('yes') : t('no')}</span></td><td><div className={styles.textActions}><button type="button" onClick={() => setForm(toForm(rawRows.find((item) => item.id === row.id)!))}>{tCommon('edit')}</button><button type="button" onClick={() => void removeRow(row)}>{tCommon('delete')}</button></div></td></tr>
+                  <tr key={row.id}><td>{row.id}</td><td><strong>{row.name}</strong></td><td>{row.unit}</td><td><span className={styles.categoryBadge} data-tone={categoryTone(row.category)}>{row.categoryLabel}</span></td><td>{row.dailyDosage}</td><td><span className={styles.coldChainStatus} data-active={row.coldChain}><AppIcon name={row.coldChain ? 'checkCircle' : 'circleStop'} width={15} height={15} />{row.coldChain ? t('yes') : t('no')}</span></td><td><div className={styles.textActions}><button type="button" onClick={() => setForm(toForm(rawRows.find((item) => item.id === row.id)!))}>{tCommon('edit')}</button><button type="button" onClick={() => void removeRow(row)}>{tCommon('delete')}</button></div></td></tr>
                 ))}
                 {filteredRows.length === 0 ? <tr><td colSpan={7}>{t('noMedicineForFilter')}</td></tr> : null}
               </tbody>
@@ -129,7 +135,7 @@ function MedicineModal({ form, setForm, submitForm, close }: { form: FormState; 
         <label>ID<input required value={form.id} onChange={(event) => setForm({ ...form, id: event.target.value })} /></label>
         <label>{tCommon('name')}<input required value={form.nama} onChange={(event) => setForm({ ...form, nama: event.target.value })} /></label>
         <label>{t('category')}<select value={form.kategori} onChange={(event) => setForm({ ...form, kategori: event.target.value as FormState['kategori'] })}><option value="OBAT">{t('medicineCategoryMedicine')}</option><option value="VAKSIN">{t('medicineCategoryVaccine')}</option><option value="ALAT_KESEHATAN">{t('medicineCategoryDevice')}</option></select></label>
-        <label>{t('type')}<select value={form.tipe} onChange={(event) => setForm({ ...form, tipe: event.target.value as FormState['tipe'] })}><option value="TABLET">Tablet</option><option value="SIRUP">{t('syrup')}</option><option value="INJEKSI">{t('injection')}</option><option value="KAPSUL">{t('capsule')}</option><option value="CAIRAN">{t('liquid')}</option><option value="LAINNYA">{t('other')}</option></select></label>
+        <label>{t('type')}<select value={form.tipe} onChange={(event) => setForm({ ...form, tipe: event.target.value as FormState['tipe'] })}><option value="TABLET">{t('tablet')}</option><option value="SIRUP">{t('syrup')}</option><option value="INJEKSI">{t('injection')}</option><option value="KAPSUL">{t('capsule')}</option><option value="CAIRAN">{t('liquid')}</option><option value="LAINNYA">{t('other')}</option></select></label>
         <label>{t('unit')}<input required value={form.satuan} onChange={(event) => setForm({ ...form, satuan: event.target.value })} /></label>
         <label>{t('dailyDose')}<input type="number" min="0" step="0.1" value={form.dosisStandarHarian ?? 0} onChange={(event) => setForm({ ...form, dosisStandarHarian: Number(event.target.value) })} /></label>
         <label>{t('treatmentDuration')}<input type="number" min="0" value={form.durasiPengobatanHari ?? 0} onChange={(event) => setForm({ ...form, durasiPengobatanHari: Number(event.target.value) })} /></label>
